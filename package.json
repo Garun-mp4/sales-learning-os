@@ -14,7 +14,7 @@
     "build": "astro build && pagefind --site dist --output-subdir pagefind && node scripts/after-build.mjs",
     "preview": "astro preview",
     "check": "astro check",
-    "lint": "npm run prepare:content && node --check astro.config.mjs && node --check src/scripts/app.js && node --check src/lib/remark-course-links.mjs && node --check src/lib/rehype-wrap-tables.mjs && node --check scripts/after-build.mjs && node tests/test_astro_source_integrity.mjs && prettier --check astro.config.mjs \"src/**/*.{css,js,ts,tsx}\" \"scripts/**/*.{js,mjs}\" \"tests/**/*.{js,mjs}\"",
+    "lint": "npm run prepare:content && node --check astro.config.mjs && node --check src/scripts/user-store.js && node --check src/scripts/app.js && node --check src/lib/remark-course-links.mjs && node --check src/lib/rehype-wrap-tables.mjs && node --check scripts/after-build.mjs && node tests/test_astro_source_integrity.mjs && prettier --check astro.config.mjs \"src/**/*.{css,js,ts,tsx}\" \"scripts/**/*.{js,mjs}\" \"tests/**/*.{js,mjs}\"",
     "test": "python tests/test_static.py && python tests/test_browser_embedded.py && python tests/test_final_project_embedded.py",
     "test:e2e": "playwright test",
     "test:static": "python tests/test_static.py",

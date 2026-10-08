@@ -9,6 +9,7 @@ import json,re
 from playwright.sync_api import sync_playwright
 CSS=(ROOT/'src/styles/app.css').read_text(encoding='utf-8')
 JS=(ROOT/'src/scripts/app.js').read_text(encoding='utf-8')
+STORE_JS=(ROOT/'src/scripts/user-store.js').read_text(encoding='utf-8')
 INDEX=json.loads((SITE/'assets/client-index.json').read_text(encoding='utf-8'))
 SEARCH=json.loads((SITE/'assets/search-index.json').read_text(encoding='utf-8'))
 SHOT=ROOT/'test-results'/'screenshots';SHOT.mkdir(parents=True,exist_ok=True)
@@ -21,6 +22,7 @@ def load(page,route):
     # about:blank is a deliberately synthetic environment with no first-party origin.
     page.evaluate('''(v)=>{const map={};Object.defineProperty(window,'localStorage',{configurable:true,value:{getItem:k=>map[k]??null,setItem:(k,val)=>map[k]=String(val),removeItem:k=>delete map[k],key:i=>Object.keys(map)[i],get length(){return Object.keys(map).length}}});window.fetch=async url=>({ok:true,json:async()=>String(url).includes('client-index')?v.index:v.search});window.confirm=()=>true;history.replaceState=()=>{};}''',{'index':INDEX,'search':SEARCH})
     errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+    page.add_script_tag(content=STORE_JS)
     page.add_script_tag(content=JS)
     return errors
 

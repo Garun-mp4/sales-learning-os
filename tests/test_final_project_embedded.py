@@ -33,7 +33,7 @@ def main():
         upload_json(page, backup)
         assert get_state(page)['lessonStatuses']['01-001'] == 'theory_completed'
         assert page.evaluate("localStorage.getItem('sales-os-note-FINAL_PROJECT')") == notes
-        assert 'Импорт успешно завершён' in page.locator('#toast').inner_text()
+        assert 'Импорт завершён и сохранён на этом устройстве' in page.locator('#toast').inner_text()
         print('PASS: standalone final project note survives validated v2 import')
 
         # Prototype keys are not real lesson/answer IDs. Reject them instead of

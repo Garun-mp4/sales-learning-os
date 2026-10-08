@@ -24,6 +24,7 @@ async function walk(dir) {
 await walk(root);
 const version = createHash("sha256")
   .update(await readFile("src/scripts/app.js"))
+  .update(await readFile("src/scripts/user-store.js"))
   .update(await readFile("src/generated/content-manifest.json"))
   .digest("hex")
   .slice(0, 12);

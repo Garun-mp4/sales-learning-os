@@ -16,6 +16,7 @@ __pycache__/
 *.log
 /public/assets/app.css
 /public/assets/app.js
+/public/assets/user-store.js
 /public/assets/client-index.json
 /public/assets/search-index.json
 /public/assets/offline-files.json

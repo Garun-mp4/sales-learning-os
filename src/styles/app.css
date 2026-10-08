@@ -848,6 +848,20 @@ summary:focus-visible {
   color: var(--muted);
   margin: 9px 0;
 }
+.note-recovery,
+.note-conflict {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+.note-recovery p,
+.note-conflict p {
+  margin: 0;
+}
+.note-recovery .btn,
+.note-conflict .btn {
+  min-height: 40px;
+}
 .status-select {
   border-radius: 6px;
   padding: 9px 11px;

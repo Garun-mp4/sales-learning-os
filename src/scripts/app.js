@@ -1,6 +1,6 @@
 /* Sales OS local-first interface. No analytics, cookies, trackers, or external APIs. */
 const root = document.documentElement.dataset.root || "./";
-const STORE = "sales-os-v2";
+const userStore = window.SalesOSUserStore;
 const statusLabels = {
   not_started: "Не начато",
   in_progress: "Изучаю",
@@ -10,7 +10,8 @@ const statusLabels = {
   completed: "Выполнено",
 };
 let contentIndex = null;
-let state = loadState();
+let state = userStore.initialState;
+const noteEditors = new Map();
 function defaultState() {
   return {
     format: "sales-os-v2",
@@ -22,42 +23,57 @@ function defaultState() {
     legacyImported: false,
   };
 }
-function loadState() {
-  try {
-    const s = JSON.parse(localStorage.getItem(STORE) || "null");
-    if (!s || s.format !== "sales-os-v2" || s.version !== 2)
-      return defaultState();
-    const safe = defaultState();
-    safe.lessonStatuses =
-      s.lessonStatuses &&
-      typeof s.lessonStatuses === "object" &&
-      !Array.isArray(s.lessonStatuses)
-        ? s.lessonStatuses
-        : {};
-    safe.practiceStatuses =
-      s.practiceStatuses &&
-      typeof s.practiceStatuses === "object" &&
-      !Array.isArray(s.practiceStatuses)
-        ? s.practiceStatuses
-        : {};
-    safe.bookmarks = Array.isArray(s.bookmarks)
-      ? s.bookmarks.filter((x) => typeof x === "string")
-      : [];
-    safe.lastVisited = typeof s.lastVisited === "string" ? s.lastVisited : null;
-    safe.legacyImported = s.legacyImported === true;
-    return safe;
-  } catch {
-    return defaultState();
-  }
+function renderUserState() {
+  window.dispatchEvent(new Event("salesstatechange"));
+  document.querySelectorAll("[data-status-control]").forEach((el) => {
+    const statuses =
+      el.dataset.kind === "theory"
+        ? state.lessonStatuses
+        : state.practiceStatuses;
+    el.value = statuses[el.dataset.statusControl] || "not_started";
+  });
+  bookmarkSync();
+  if (contentIndex) updateProgress(contentIndex);
 }
-function persist() {
-  try {
-    localStorage.setItem(STORE, JSON.stringify(state));
-    window.dispatchEvent(new Event("salesstatechange"));
-  } catch {
-    toast("Недостаточно места. Сохраните резервную копию.");
+function updateStorageWarning(mode, errorMessage = "") {
+  const main = document.querySelector("#main");
+  if (!main) return;
+  let warning = document.querySelector("#storage-warning");
+  if (!errorMessage && mode === "indexeddb") {
+    warning?.remove();
+    return;
   }
+  if (!warning) {
+    warning = document.createElement("section");
+    warning.id = "storage-warning";
+    warning.className = "notice storage-warning";
+    warning.setAttribute("role", "status");
+    warning.setAttribute("aria-live", "polite");
+    main.prepend(warning);
+  }
+  warning.replaceChildren();
+  const message = document.createElement("p");
+  message.textContent =
+    errorMessage ||
+    (mode === "memory"
+      ? "Браузер не разрешил постоянное хранилище. Изменения останутся только в этой вкладке; скачайте резервную копию до перехода на другую страницу или закрытия окна."
+      : "IndexedDB недоступна. Данные сохраняются через резервное хранилище браузера, у которого ниже лимит. Регулярно скачивайте резервную копию.");
+  warning.append(message);
+  const exportButton = document.createElement("button");
+  exportButton.className = "btn smallbtn";
+  exportButton.type = "button";
+  exportButton.textContent = "Скачать резервную копию";
+  exportButton.addEventListener("click", () => {
+    exportData().catch(() => toast("Не удалось подготовить резервную копию"));
+  });
+  warning.append(exportButton);
 }
+userStore.ready.then(({ state: loadedState, mode }) => {
+  state = loadedState;
+  renderUserState();
+  updateStorageWarning(mode);
+});
+userStore.subscribe(handleStoreMessage);
 function escapeHtml(s) {
   return String(s).replace(
     /[&<>"']/g,
@@ -86,7 +102,7 @@ function showTheme(pref) {
     .querySelectorAll("[data-theme-select]")
     .forEach((e) => (e.value = pref));
 }
-const currentTheme = () => localStorage.getItem("sales-os-theme") || "system";
+const currentTheme = () => userStore.readTheme();
 showTheme(currentTheme());
 window
   .matchMedia("(prefers-color-scheme: dark)")
@@ -95,7 +111,7 @@ window
   });
 document.querySelectorAll("[data-theme-select]").forEach((el) =>
   el.addEventListener("change", () => {
-    localStorage.setItem("sales-os-theme", el.value);
+    userStore.writeTheme(el.value);
     showTheme(el.value);
     toast("Тема изменена");
   }),
@@ -233,8 +249,17 @@ getIndex()
 const docId = document.body.dataset.docId;
 const docKind = document.body.dataset.docKind;
 if (docId && (docKind === "theory" || docKind === "practice")) {
-  state.lastVisited = docId;
-  persist();
+  userStore
+    .updateState((current) => ({ ...current, lastVisited: docId }))
+    .then((result) => {
+      state = result.state;
+      renderUserState();
+      if (!result.durable)
+        updateStorageWarning(
+          result.mode,
+          "Не удалось надёжно сохранить прогресс. Изменение доступно в этой вкладке — скачайте резервную копию перед выходом.",
+        );
+    });
 }
 document.querySelectorAll("[data-status-control]").forEach((el) => {
   const id = el.dataset.statusControl,
@@ -242,11 +267,35 @@ document.querySelectorAll("[data-status-control]").forEach((el) => {
   el.value =
     (kind === "theory" ? state.lessonStatuses : state.practiceStatuses)[id] ||
     "not_started";
-  el.addEventListener("change", () => {
-    (kind === "theory" ? state.lessonStatuses : state.practiceStatuses)[id] =
-      el.value;
-    persist();
-    toast("Прогресс сохранён");
+  el.addEventListener("change", async () => {
+    const value = el.value;
+    const field = kind === "theory" ? "lessonStatuses" : "practiceStatuses";
+    try {
+      const result = await userStore.updateState((current) => ({
+        ...current,
+        [field]: { ...current[field], [id]: value },
+      }));
+      state = result.state;
+      renderUserState();
+      if (result.durable) toast("Прогресс сохранён");
+      else {
+        updateStorageWarning(
+          result.mode,
+          "Прогресс изменён, но не сохранён надёжно. Скачайте резервную копию до выхода.",
+        );
+        toast("Прогресс доступен только во временной памяти");
+      }
+    } catch {
+      el.value =
+        (kind === "theory" ? state.lessonStatuses : state.practiceStatuses)[
+          id
+        ] || "not_started";
+      updateStorageWarning(
+        userStore.getMode(),
+        "Не удалось сохранить прогресс. Прежние сохранённые данные не изменены.",
+      );
+      toast("Не удалось сохранить прогресс");
+    }
   });
 });
 function bookmarkSync() {
@@ -258,147 +307,333 @@ function bookmarkSync() {
 }
 bookmarkSync();
 document.querySelectorAll("[data-bookmark]").forEach((el) =>
-  el.addEventListener("click", () => {
+  el.addEventListener("click", async () => {
     const id = el.dataset.bookmark;
-    if (state.bookmarks.includes(id))
-      state.bookmarks = state.bookmarks.filter((x) => x !== id);
-    else state.bookmarks.push(id);
-    persist();
-    bookmarkSync();
-    toast(
-      state.bookmarks.includes(id)
-        ? "Сохранено в закладках"
-        : "Удалено из закладок",
-    );
+    try {
+      const result = await userStore.updateState((current) => ({
+        ...current,
+        bookmarks: current.bookmarks.includes(id)
+          ? current.bookmarks.filter((item) => item !== id)
+          : [...current.bookmarks, id],
+      }));
+      state = result.state;
+      renderUserState();
+      if (result.durable)
+        toast(
+          state.bookmarks.includes(id)
+            ? "Сохранено в закладках"
+            : "Удалено из закладок",
+        );
+      else {
+        updateStorageWarning(
+          result.mode,
+          "Закладка изменена, но не сохранена надёжно. Скачайте резервную копию до выхода.",
+        );
+        toast("Изменение доступно только во временной памяти");
+      }
+    } catch {
+      bookmarkSync();
+      updateStorageWarning(
+        userStore.getMode(),
+        "Не удалось сохранить закладку. Прежние сохранённые данные не изменены.",
+      );
+      toast("Не удалось сохранить закладку");
+    }
   }),
 );
-// IndexedDB: personal notes and answers never leave this device.
-const DBNAME = "sales-os-personal";
-const DBSTORE = "notes";
-function storageKeys() {
-  const keys = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key !== null) keys.push(key);
-  }
-  return keys;
+// User notes are saved only on this device. IDB transactions arbitrate edits across tabs.
+function setNoteStatus(editor, message, stateName) {
+  editor.saveLabel.textContent = message;
+  editor.saveLabel.dataset.state = stateName;
 }
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (!("indexedDB" in window)) {
-      reject(Error("indexedDB unavailable"));
+function addButton(parent, label, action) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "btn smallbtn";
+  button.textContent = label;
+  button.addEventListener("click", action);
+  parent.append(button);
+  return button;
+}
+function createNoteEditor(el) {
+  const id = el.dataset.note;
+  const container = el.closest(".editbox");
+  const saveLabel = container?.querySelector("[data-save-hint]");
+  if (!container || !saveLabel) return null;
+  saveLabel.setAttribute("role", "status");
+  saveLabel.setAttribute("aria-live", "polite");
+
+  let revision = 0;
+  let noteGeneration = 0;
+  let editVersion = 0;
+  let dirty = false;
+  let saveInFlight = false;
+  let timer = null;
+  let conflictRecord = null;
+  const fallbackPanel = document.createElement("div");
+  fallbackPanel.className = "notice note-recovery";
+  fallbackPanel.hidden = true;
+  const fallbackText = document.createElement("p");
+  fallbackText.textContent =
+    "Ответ остался в поле, но браузер не подтвердил сохранение. Скачайте копию перед уходом со страницы.";
+  fallbackPanel.append(fallbackText);
+  addButton(fallbackPanel, "Скачать резервную копию", () => {
+    exportData().catch(() => toast("Не удалось подготовить резервную копию"));
+  });
+  container.append(fallbackPanel);
+
+  const conflictPanel = document.createElement("div");
+  conflictPanel.className = "notice note-conflict";
+  conflictPanel.hidden = true;
+  conflictPanel.setAttribute("role", "group");
+  conflictPanel.setAttribute("aria-label", "Разрешение конфликта заметки");
+  const conflictText = document.createElement("p");
+  conflictPanel.append(conflictText);
+  addButton(conflictPanel, "Использовать сохранённую версию", () => {
+    if (!conflictRecord) return;
+    el.value = conflictRecord.text;
+    revision = conflictRecord.revision;
+    noteGeneration = conflictRecord.generation;
+    editVersion++;
+    dirty = false;
+    conflictRecord = null;
+    conflictPanel.hidden = true;
+    fallbackPanel.hidden = true;
+    userStore.clearDraft(id);
+    setNoteStatus({ saveLabel }, "Загружена версия из другой вкладки", "saved");
+  });
+  addButton(conflictPanel, "Сохранить мой текст вместо этой версии", () => {
+    if (!conflictRecord) return;
+    revision = conflictRecord.revision;
+    noteGeneration = conflictRecord.generation;
+    conflictRecord = null;
+    conflictPanel.hidden = true;
+    dirty = true;
+    setNoteStatus({ saveLabel }, "Сохраняем выбранную версию…", "saving");
+    scheduleSave();
+  });
+  container.append(conflictPanel);
+
+  const editor = {
+    id,
+    element: el,
+    saveLabel,
+    get dirty() {
+      return dirty;
+    },
+    get revision() {
+      return revision;
+    },
+    showConflict(record) {
+      if (!record || record.writerId === userStore.clientId) return;
+      conflictRecord = record;
+      conflictText.textContent =
+        "В другой вкладке сохранена новая версия этой заметки. Ваш текст оставлен здесь; выберите, какую версию оставить.";
+      conflictPanel.hidden = false;
+      setNoteStatus(
+        { saveLabel },
+        "Конфликт версий — выберите вариант ниже",
+        "conflict",
+      );
+    },
+    receiveRecord(record) {
+      if (record.revision === revision && record.text === el.value) {
+        noteGeneration = record.generation;
+        return;
+      }
+      if (dirty) {
+        this.showConflict(record);
+        return;
+      }
+      revision = record.revision;
+      noteGeneration = record.generation;
+      el.value = record.text;
+      setNoteStatus({ saveLabel }, "Обновлено в другой вкладке", "saved");
+    },
+    replaceFromImport(record) {
+      revision = record.revision;
+      noteGeneration = record.generation;
+      editVersion++;
+      dirty = false;
+      conflictRecord = null;
+      el.value = record.text;
+      conflictPanel.hidden = true;
+      fallbackPanel.hidden = true;
+      setNoteStatus({ saveLabel }, "Заметка заменена импортом", "saved");
+    },
+    cacheDraft() {
+      if (dirty) userStore.cacheDraft(id, el.value, revision, noteGeneration);
+    },
+    flush() {
+      if (dirty) void persistEditor();
+    },
+  };
+
+  async function persistEditor() {
+    if (!dirty || saveInFlight) return;
+    saveInFlight = true;
+    try {
+      await persistCurrentEditorValue();
+    } finally {
+      saveInFlight = false;
+    }
+  }
+
+  async function persistCurrentEditorValue() {
+    const savedVersion = editVersion;
+    const text = el.value;
+    setNoteStatus({ saveLabel }, "Сохраняем…", "saving");
+    const result = await userStore.saveNote(id, text, revision, noteGeneration);
+    if (!result.ok && result.reason === "conflict") {
+      dirty = true;
+      editor.showConflict(result.record);
+      userStore.cacheDraft(id, el.value, revision, noteGeneration);
       return;
     }
-    const req = indexedDB.open(DBNAME, 1);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(DBSTORE))
-        req.result.createObjectStore(DBSTORE);
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-async function noteGet(id) {
-  try {
-    const db = await openDB();
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction(DBSTORE, "readonly"),
-        req = tx.objectStore(DBSTORE).get(id);
-      req.onsuccess = () => resolve(req.result || "");
-      req.onerror = () => reject(req.error);
-      tx.oncomplete = () => db.close();
-    });
-  } catch {
-    return localStorage.getItem("sales-os-note-" + id) || "";
-  }
-}
-async function notePut(id, val) {
-  try {
-    const db = await openDB();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(DBSTORE, "readwrite");
-      tx.objectStore(DBSTORE).put(val, id);
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
-    try {
-      localStorage.setItem("sales-os-note-" + id, val);
-    } catch {}
-  } catch {
-    try {
-      localStorage.setItem("sales-os-note-" + id, val);
-    } catch {
-      toast("Память переполнена — сделайте экспорт");
+    if (!result.ok) {
+      dirty = true;
+      userStore.cacheDraft(id, el.value, revision, noteGeneration);
+      fallbackPanel.hidden = false;
+      setNoteStatus(
+        { saveLabel },
+        "Не удалось сохранить — текст остался в поле",
+        "error",
+      );
+      updateStorageWarning(
+        result.mode,
+        "Браузер не подтвердил сохранение пользовательских данных. Текст заметки остаётся на странице; скачайте резервную копию до выхода.",
+      );
+      return;
     }
-  }
-}
-async function allNotes() {
-  try {
-    const db = await openDB();
-    const val = await new Promise((resolve, reject) => {
-      let data = {};
-      const tx = db.transaction(DBSTORE, "readonly"),
-        store = tx.objectStore(DBSTORE);
-      const req = store.openCursor();
-      req.onsuccess = () => {
-        const c = req.result;
-        if (c) {
-          data[c.key] = c.value;
-          c.continue();
-        } else resolve(data);
-      };
-      req.onerror = () => reject(req.error);
-      tx.oncomplete = () => db.close();
-    });
-    for (const k of storageKeys()) {
-      if (k.startsWith("sales-os-note-")) {
-        const id = k.slice("sales-os-note-".length);
-        val[id] = localStorage.getItem(k) ?? val[id];
-      }
+
+    revision = result.record.revision;
+    noteGeneration = result.record.generation;
+    userStore.clearDraft(id);
+    fallbackPanel.hidden = true;
+    if (savedVersion === editVersion && text === el.value) {
+      dirty = false;
+      conflictRecord = null;
+      conflictPanel.hidden = true;
+      setNoteStatus({ saveLabel }, "Сохранено на этом устройстве", "saved");
+      return;
     }
-    return val;
-  } catch {
-    return Object.fromEntries(
-      storageKeys()
-        .filter((x) => x.startsWith("sales-os-note-"))
-        .map((x) => [
-          x.substring("sales-os-note-".length),
-          localStorage.getItem(x),
-        ]),
+    dirty = true;
+    setNoteStatus(
+      { saveLabel },
+      "Предыдущие изменения сохранены; сохраняем новые…",
+      "saving",
     );
+    scheduleSave();
   }
-}
-let noteTimers = {};
-window.addEventListener("pagehide", () => {
-  document.querySelectorAll("[data-note]").forEach((el) => {
-    try {
-      localStorage.setItem("sales-os-note-" + el.dataset.note, el.value);
-    } catch {}
-  });
-});
-document.querySelectorAll("[data-note]").forEach((el) => {
-  const id = el.dataset.note;
-  let dirty = false;
-  // Attach the listener before asynchronous IndexedDB hydration: otherwise a
-  // fast typist could lose a fresh answer when the old value arrives.
+
+  function scheduleSave() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      persistEditor().catch(() => {
+        dirty = true;
+        fallbackPanel.hidden = false;
+        setNoteStatus(
+          { saveLabel },
+          "Не удалось сохранить — текст остался в поле",
+          "error",
+        );
+        updateStorageWarning(
+          userStore.getMode(),
+          "Не удалось сохранить пользовательские данные. Скачайте резервную копию до выхода.",
+        );
+      });
+    }, 450);
+  }
+
   el.addEventListener("input", () => {
     dirty = true;
-    const saveLabel = el.closest(".editbox")?.querySelector("[data-save-hint]");
-    if (saveLabel) saveLabel.textContent = "Сохранение…";
-    clearTimeout(noteTimers[id]);
-    noteTimers[id] = setTimeout(async () => {
-      await notePut(id, el.value);
-      if (saveLabel) saveLabel.textContent = "Сохранено локально";
-    }, 450);
+    editVersion++;
+    fallbackPanel.hidden = true;
+    setNoteStatus({ saveLabel }, "Несохранённые изменения", "dirty");
+    scheduleSave();
   });
-  const immediate = localStorage.getItem("sales-os-note-" + id);
-  if (immediate !== null) el.value = immediate;
-  else
-    noteGet(id).then((previous) => {
-      if (!dirty) el.value = previous;
+
+  userStore
+    .getNote(id)
+    .then(({ record, draft }) => {
+      if (dirty) return;
+      revision = record.revision;
+      noteGeneration = record.generation;
+      if (draft) {
+        el.value = draft.text;
+        dirty = true;
+        editVersion++;
+        if (
+          draft.baseRevision !== record.revision ||
+          draft.baseGeneration !== record.generation
+        ) {
+          revision = draft.baseRevision;
+          noteGeneration = draft.baseGeneration;
+          editor.showConflict(record);
+        } else {
+          noteGeneration = record.generation;
+          setNoteStatus(
+            { saveLabel },
+            "Восстановлен незавершённый ответ — сохраняем…",
+            "dirty",
+          );
+          scheduleSave();
+        }
+      } else {
+        el.value = record.text;
+      }
+    })
+    .catch(() => {
+      setNoteStatus(
+        { saveLabel },
+        "Не удалось прочитать сохранённую заметку",
+        "error",
+      );
     });
+
+  return editor;
+}
+for (const el of document.querySelectorAll("[data-note]")) {
+  const editor = createNoteEditor(el);
+  if (editor) noteEditors.set(editor.id, editor);
+}
+function cacheAndFlushNotes() {
+  for (const editor of noteEditors.values()) {
+    editor.cacheDraft();
+    editor.flush();
+  }
+}
+window.addEventListener("pagehide", cacheAndFlushNotes);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") cacheAndFlushNotes();
 });
+window.addEventListener("beforeunload", (event) => {
+  if (![...noteEditors.values()].some((editor) => editor.dirty)) return;
+  cacheAndFlushNotes();
+  event.preventDefault();
+  event.returnValue = "";
+});
+async function handleStoreMessage(message) {
+  if (message.source === userStore.clientId) return;
+  if (message.type === "state" || message.type === "replace") {
+    state = message.state || (await userStore.getState());
+    renderUserState();
+  }
+  if (message.type === "note" && message.id) {
+    const editor = noteEditors.get(message.id);
+    if (!editor) return;
+    const { record } = message.record
+      ? { record: message.record }
+      : await userStore.getNote(message.id);
+    editor.receiveRecord(record);
+  }
+  if (message.type === "replace") {
+    for (const editor of noteEditors.values()) {
+      const { record } = await userStore.getNote(editor.id);
+      editor.receiveRecord(record);
+    }
+  }
+}
 async function downloadJSON(data, filename) {
   const b = new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json;charset=utf-8",
@@ -411,10 +646,13 @@ async function downloadJSON(data, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 async function exportData() {
+  const exportedState = await userStore.getState();
+  const notes = await userStore.getAllNotes();
+  Object.assign(notes, userStore.getDrafts());
   for (const el of document.querySelectorAll("[data-note]"))
-    await notePut(el.dataset.note, el.value);
+    notes[el.dataset.note] = el.value;
   downloadJSON(
-    { ...state, notes: await allNotes(), exportedAt: new Date().toISOString() },
+    { ...exportedState, notes, exportedAt: new Date().toISOString() },
     "sales-os-backup.json",
   );
   toast("Резервная копия подготовлена");
@@ -545,38 +783,27 @@ async function importData(file) {
   }
   if (
     !confirm(
-      "Импорт заменит текущий прогресс и заметки. Убедитесь, что сохранили резервную копию. Продолжить?",
+      "Импорт заменит текущий прогресс и заметки, включая незавершённые изменения в открытой вкладке. Убедитесь, что скачали резервную копию. Продолжить?",
     )
   )
     return;
-  // Clear notes first, then replace the lightweight progress state. The backup's
-  // notes field must NEVER be persisted a second time inside localStorage state.
-  try {
-    const db = await openDB();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(DBSTORE, "readwrite");
-      tx.objectStore(DBSTORE).clear();
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
-  } catch (err) {
-    // No IndexedDB (private mode / browser restrictions): localStorage remains available.
-    // If the DB opens but its transaction fails, do not silently keep stale notes.
-    if (
-      err &&
-      err.name !== "SecurityError" &&
-      err.message !== "indexedDB unavailable"
-    )
-      throw err;
+  const result = await userStore.replaceAll(next, notes);
+  state = result.state;
+  renderUserState();
+  for (const editor of noteEditors.values()) {
+    const { record } = await userStore.getNote(editor.id);
+    editor.replaceFromImport(record);
   }
-  for (const key of storageKeys())
-    if (key.startsWith("sales-os-note-")) localStorage.removeItem(key);
-  state = next;
-  persist();
-  for (const [id, body] of Object.entries(notes)) await notePut(id, body);
-  toast("Импорт успешно завершён");
-  setTimeout(() => location.reload(), 600);
+  if (result.durable) {
+    toast("Импорт завершён и сохранён на этом устройстве");
+    setTimeout(() => location.reload(), 600);
+  } else {
+    updateStorageWarning(
+      result.mode,
+      "Импорт доступен только в этой вкладке и не сохранён надёжно. Скачайте резервную копию до выхода.",
+    );
+    toast("Импорт загружен только во временную память");
+  }
 }
 document
   .querySelector("[data-export]")
@@ -590,8 +817,10 @@ document
     if (!file) return;
     try {
       await importData(file);
-    } catch (err) {
-      toast("Импорт не удался: файл повреждён или имеет неизвестный формат");
+    } catch {
+      toast(
+        "Импорт не удался. Прежние сохранённые данные не изменены; проверьте файл и свободное место.",
+      );
     }
     e.target.value = "";
   });

@@ -52,10 +52,12 @@ write_if_changed(
 )
 
 app_js = (ROOT / "src/scripts/app.js").read_bytes()
+user_store_js = (ROOT / "src/scripts/user-store.js").read_bytes()
 app_css = (ROOT / "src/styles/app.css").read_bytes()
 client_index = (ROOT / "src/generated/client-index.json").read_bytes()
 manifest_bytes = MANIFEST_PATH.read_bytes()
 for name, content in (
+    ("user-store.js", user_store_js),
     ("app.js", app_js),
     ("app.css", app_css),
     ("client-index.json", client_index),
@@ -75,6 +77,7 @@ urls = {
     "final-project/",
     "settings/",
     "assets/app.js",
+    "assets/user-store.js",
     "assets/app.css",
     "assets/client-index.json",
     "assets/search-index.json",
@@ -88,7 +91,7 @@ urls.update(
     f"{route_kinds[entry['kind']]}/{identifier}/"
     for identifier, entry in entries.items()
 )
-version = hashlib.sha256(app_js + manifest_bytes).hexdigest()[:12]
+version = hashlib.sha256(user_store_js + app_js + manifest_bytes).hexdigest()[:12]
 write_if_changed(
     ASSETS / "offline-files.json",
     json.dumps({"version": version, "urls": sorted(urls)}, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
