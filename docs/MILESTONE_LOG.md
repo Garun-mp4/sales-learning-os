@@ -82,16 +82,19 @@
 | Новый этап | Статус | Последняя запись |
 |---|---|---|
 | M0 — baseline и архитектурное решение | **PASS** | 2026-10-09; результаты выше |
-| M1 | **IN PROGRESS** | Исходники, сборки и все локальные Windows gates готовы; ожидаются GitHub CI Windows/Linux и Vercel preview |
+| M1 | **PASS** | 2026-10-09; локальные gates, GitHub CI Windows/Linux и Vercel Preview прошли |
 | M2–M8 | **NOT STARTED** | Начинать по одному этапу после приёмки предыдущего |
 
-### M1 — воспроизводимая сборка и доставка (IN PROGRESS, 2026-10-09)
+### M1 — воспроизводимая сборка и доставка (PASS, 2026-10-09)
 
 - Переведён renderer на Astro 7.3.8 / React integration 7.0.1; direct Content Collection читает 430 канонических Markdown-источников без синхронизирующей копии. Критическая Astro image-processing уязвимость устранена обновлением; `npm audit` сообщает 0 уязвимостей.
 - Путь Python `--out-dir` ограничен выделенным `dist-fallback/`: регрессионный тест доказывает, что попытка записывать сборку в произвольную папку отклоняется без удаления существующего файла.
 - Python fallback выводится отдельно в `dist-fallback/`; build/dev/lint/check подготавливают только необходимые входы. Собранные `dist/`, производные `public/` и временные `src/generated/` удалены из Git index и исключены через `.gitignore`; файлы на диске остаются локальными результатами сборки.
 - Добавлены manifest-driven проверки 476 страниц, нормализация offline URL для Windows/POSIX, кастомный 404, Astro Markdown table wrappers, formatting/syntax gates, независимые fallback-проверки и матрица CI Windows/Linux. Исправлена Windows-обёртка verification script: сначала используется доступный `python`, fallback явно выбирает `py -3.12`, так как `py -3` на этом хосте попадает в недоступную 3.14.
 - Первый GitHub matrix run подтвердил Linux gate и выявил Windows-only CP1252 decoding в чтении `legacy.json` без encoding. Для всех project Python text reads установлен UTF-8, а подготовка и Python quality checks запускаются с `EncodingWarning` как ошибкой; тот же сценарий теперь воспроизводимо обнаруживается до CI.
+- Повторный Windows CI выявил, что Windows checkout переводит исходники в CRLF и Prettier ошибочно считает 14 файлов неотформатированными. `.gitattributes` фиксирует LF для текстовых исходников и CRLF для `.bat`/`.ps1`; проверка отдельного checkout с `core.autocrlf=true` прошла.
 - Фактически пройдено в Windows: `npm ci` (420 пакетов, 0 уязвимостей), `npm run lint`, `npm run check` (42 файла, 0 errors/warnings/hints), `npm run build` (476 страниц, Pagefind 408, offline 937), `npm run test:quality` (включая 150 responsive views и storage tests), `npm run test:e2e` (5/5 URL tests), `npm run test:fallback` (статические, browser, data, responsive и worker gates), плюс полный `verify-windows.ps1` (exit 0).
 - Параллельный dev/build smoke: `npm run build` завершился при запущенном `astro dev`; урок `/lesson/01-001/` продолжал отвечать HTTP 200. Обновлены устаревшие команды проверки и установка зависимостей.
-- Осталось до PASS: отправить ветку с подготовленными изменениями для чистого GitHub CI Windows/Linux и проверить, что веточная Vercel Preview собирается из этого commit. Push в `main` здесь запускает Production deployment и в текущий scope не входит.
+- Первый Vercel Preview build обнаружил PEP 668: системный Python управляется `uv` и не принимает глобальный `pip install`. Vercel теперь создаёт игнорируемый `.venv`, устанавливает туда `requirements.txt` и использует его `python` в build `PATH`.
+- GitHub Actions run `37845937407` для `2b2cb12` завершился PASS на Ubuntu и Windows. Vercel Preview для того же commit достиг READY; через защищённый branch alias проверены главная, урок, практика и поиск (HTTP 200), а несуществующий путь показал приложение 404 и HTTP 404. Локальные Windows, remote CI и настоящий Vercel build/HTTP gates пройдены.
+- M1 завершён. Push/merge в `main` запускает Production deployment и в текущий scope не входит.
