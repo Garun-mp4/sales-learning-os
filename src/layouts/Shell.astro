@@ -2,14 +2,15 @@
 import '../styles/tailwind.css';
 import { modules, stages } from '../lib/course';
 import Icon from '../components/Icon.astro';
-interface Props { title: string; active?: string; module?: string; documentId?: string; documentKind?: string; reading?: boolean }
-const {title, active, module, documentId, documentKind, reading=false}=Astro.props;
+interface Props { title: string; active?: string; module?: string; documentId?: string; documentKind?: string; libraryId?: string; reading?: boolean }
+const {title, active, module, documentId, documentKind, libraryId, reading=false}=Astro.props;
 const pathname = Astro.url.pathname;
 const currentSection = active ?? (
   pathname === '/' ? 'home' :
   /^\/(?:roadmap|level|module|lesson)\//.test(pathname) ? 'roadmap' :
   /^\/(?:practice|final-project)\//.test(pathname) ? 'practice' :
   /^\/(?:sources|source)\//.test(pathname) ? 'sources' :
+  /^\/library\//.test(pathname) ? 'library' :
   /^\/(?:search|bookmarks|settings)\//.test(pathname) ? pathname.split('/')[1] :
   undefined
 );
@@ -33,7 +34,7 @@ const currentSection = active ?? (
     try {const s=localStorage.getItem('sales-os-theme')||'system';const dark=s==='dark'||s==='system'&&matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('[data-theme-color]').content=dark?'#000000':'#ffffff'} catch {}
   </script>
 </head>
-<body data-doc-id={documentId} data-doc-kind={documentKind}>
+<body data-doc-id={documentId} data-doc-kind={documentKind} data-library-id={libraryId}>
   <a class="skip" href="#main">К основному содержимому</a>
   <div class="mobile-shade" aria-hidden="true"></div>
   <div class="app">
@@ -46,6 +47,7 @@ const currentSection = active ?? (
         <a class:list={['nav-item',currentSection==='practice'&&'active']} href="/practice/" aria-label="Практика" aria-current={currentSection==='practice'?'page':undefined} title="Практика"><Icon name="practice"/><span>Практика</span></a>
         <a class:list={['nav-item',currentSection==='search'&&'active']} href="/search/" aria-label="Поиск" aria-current={currentSection==='search'?'page':undefined} title="Поиск"><Icon name="search"/><span>Поиск</span></a>
         <a class:list={['nav-item',currentSection==='sources'&&'active']} href="/sources/" aria-label="Источники" aria-current={currentSection==='sources'?'page':undefined} title="Источники"><Icon name="library"/><span>Источники</span></a>
+        <a class:list={['nav-item',currentSection==='library'&&'active']} href="/library/" aria-label="Справочные материалы" aria-current={currentSection==='library'?'page':undefined} title="Справочные материалы"><Icon name="book"/><span>Справочники</span></a>
         <a class:list={['nav-item',currentSection==='bookmarks'&&'active']} href="/bookmarks/" aria-label="Закладки" aria-current={currentSection==='bookmarks'?'page':undefined} title="Закладки"><Icon name="star"/><span>Закладки</span></a>
         <div class="nav-caption">Программа · 4 уровня</div>
         {stages.map(s=><details class="nav-group" open={modules.some(m=>m.module===module&&m.stage===s.id)||s.id===1}>

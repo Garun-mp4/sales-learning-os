@@ -3,12 +3,13 @@ import { render, type CollectionEntry } from 'astro:content';
 import Shell from '../layouts/Shell.astro';
 import PageHeading from './PageHeading.astro';
 import EntryRow from './EntryRow.astro';
-import { entries,href,neighbor,sources } from '../lib/course';
+import { entries,href,neighbor,relatedLibraries,sources } from '../lib/course';
 interface Props { doc:CollectionEntry<'documents'> }
 const {doc}=Astro.props;const d=doc.data;const e=entries[d.id];
 if(!e||e.kind!==d.kind)throw Error(`Unknown learning document: ${d.id}`);
 const {Content,headings}=await render(doc);
 const related=d.related_practice.map(id=>entries[id]).filter(Boolean);
+const references=relatedLibraries(e);
 const {previous,next}=neighbor(e);
 const isPractice=d.kind==='practice';
 const tocHeadings=headings.filter(h=>h.depth===2||h.depth===3);
@@ -30,6 +31,7 @@ const tocHeadings=headings.filter(h=>h.depth===2||h.depth===3);
   {tocHeadings.length>0&&<details class="toc-disclosure"><summary>Содержание материала<span aria-hidden="true">⌄</span></summary><nav class="toc" aria-label="Содержание материала">{tocHeadings.map(h=><a class={h.depth===3?'depth3':'depth2'} href={`#${h.slug}`}>{h.text}</a>)}</nav></details>}
   <div class="reader-grid"><div class="reader">
     <article class="article" data-pagefind-body><Content /></article>
+    {references.length>0&&<section class="library-references" aria-labelledby="related-library-title"><div class="section-head"><h2 class="h2" id="related-library-title">Справка по теме</h2></div><div class="library-reference-list">{references.map(reference=><a class="library-reference" href={`/library/${reference.id}/`}><span class="badge">Справочник</span><strong>{reference.title}</strong><span class="small muted">Открыть →</span></a>)}</div></section>}
     <div class="source-chips">{d.sources.filter(id=>sources.some(s=>s.id===id)).map(id=><a class="badge" href={`/source/${id}/`}>{id} · источник</a>)}</div>
     {!isPractice&&related.length>0&&<section class="module-section"><h2 class="h2">Связанная практика</h2><div class="stack">{related.map(x=><EntryRow entry={x}/>)}</div></section>}
     {isPractice&&<div class="notice">Проверка самостоятельная: отметка «Выполнено» не является независимой оценкой.</div>}

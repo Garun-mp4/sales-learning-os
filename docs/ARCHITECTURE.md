@@ -6,6 +6,8 @@ Sales OS — статическая русскоязычная обучающа�
 
 - `scripts/audit.py` проверяет исходный курс и создаёт `src/generated/content-manifest.json` и клиентский индекс.
 - `src/content.config.ts` подключает Astro Content Collection напрямую к `sales-knowledge-base/modules/`; курс не копируется в параллельное дерево.
+- `sales-knowledge-base/editorial-review-ledger.json` хранит проверки отдельных тезисов; `scripts/audit.py` сверяет записи с ID документов и источников и не допускает статуса `verified` без полной проверки. `/editorial-review/` показывает карту состояния корпуса, а правила работы с реестром находятся в `sales-knowledge-base/EDITORIAL_REVIEW_WORKFLOW.md`.
+- `sales-knowledge-base/GLOSSARY.md`, `CASE_LIBRARY.md` и `TEMPLATE_LIBRARY.md` доступны как исходные документы коллекции на маршрутах `/library/`; связанная библиотека предлагается из релевантных материалов. Поиск индексирует их наряду с курсом.
 - `scripts/prepare_astro.py` создаёт поисковый индекс, runtime-ассеты и очищенный снимок итогового проекта из исходников. Он не строит второй сайт перед Astro.
 - Astro 7 собирает production-сайт из `src/pages/`, `src/layouts/`, компонентов, стилей и исходной коллекции. `scripts/after-build.mjs` добавляет Pagefind-independent offline URL manifest и service worker в `dist/`.
 - `dist/` — одноразовый, игнорируемый результат Astro. Python fallback запускается явно через `python scripts/build.py --out-dir dist-fallback`; он не очищает и не подменяет Astro output.

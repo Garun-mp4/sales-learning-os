@@ -1,0 +1,55 @@
+---
+import PageHeading from '../../components/PageHeading.astro';
+import Shell from '../../layouts/Shell.astro';
+import { all, editorialReviews, modules, sources } from '../../lib/course';
+
+const reviewsByDocument = new Map<string, typeof editorialReviews>();
+for (const review of editorialReviews) {
+  const current = reviewsByDocument.get(review.documentId) ?? [];
+  current.push(review);
+  reviewsByDocument.set(review.documentId, current);
+}
+const pendingCount = all.filter((entry) => entry.status !== 'verified').length;
+const verifiedCount = all.length - pendingCount;
+const sourceById = new Map(sources.map((source) => [source.id, source]));
+const modulesWithContent = modules.map((module) => ({
+  module,
+  documents: all.filter((entry) => entry.module === module.module).sort((a, b) => (a.kind === 'module' ? -1 : a.id.localeCompare(b.id))),
+}));
+---
+
+<Shell title="Готовность материалов" active="library">
+  <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <a href="/library/">Справочники</a> › <span aria-current="page">Готовность материалов</span></nav>
+  <PageHeading eyebrow="РЕДАКТОРСКАЯ ПРИЁМКА" title="Готовность материалов" description={`Проверяемая карта редакционного статуса ${all.length} основных материалов курса.`} />
+  <section class="notice editorial-notice" aria-labelledby="editorial-status-title">
+    <div><strong id="editorial-status-title">Редакторский gate открыт</strong><p>{verifiedCount} из {all.length} документов имеют запись полной редакторской проверки; {pendingCount} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div>
+  </section>
+  <div class="stat-grid editorial-summary" aria-label="Сводка редакционной проверки">
+    <div class="stat"><div class="label">Документы с полной проверкой</div><div class="value">{verifiedCount} / {all.length}</div></div>
+    <div class="stat"><div class="label">Ожидают рецензента</div><div class="value">{pendingCount}</div></div>
+    <div class="stat"><div class="label">Записи проверки тезисов</div><div class="value">{editorialReviews.length}</div></div>
+  </div>
+  <p class="muted editorial-scope">Указанные в карточке материала источники — исходные рекомендации, а не доказательство того, что каждый тезис сверен. Проверка фиксируется отдельно для конкретного тезиса, источника, даты, охвата и ответственного рецензента. Правовые и платформенные правила требуют профильной проверки на указанную дату.</p>
+  {modulesWithContent.map(({ module, documents }) => {
+    const moduleReviews = documents.reduce((count, entry) => count + (reviewsByDocument.get(entry.id)?.length ?? 0), 0);
+    return <details class="editorial-module">
+      <summary><span>{module.module} · {module.title}</span><span class="badge">{documents.filter((entry) => entry.status !== 'verified').length} ожидают · {moduleReviews} записей</span></summary>
+      <div class="table-wrap" role="group" tabindex="0" aria-label={`Материалы модуля ${module.module}. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.`}>
+        <table class="editorial-table"><thead><tr><th scope="col">Материал</th><th scope="col">Указанные источники</th><th scope="col">Статус</th><th scope="col">Рецензент</th><th scope="col">Дата и scope проверки</th></tr></thead><tbody>
+          {documents.map((entry) => {
+            const records = reviewsByDocument.get(entry.id) ?? [];
+            const route = entry.kind === 'module' ? `/module/${entry.id}/` : entry.kind === 'practice' ? `/practice/${entry.id}/` : `/lesson/${entry.id}/`;
+            return <tr>
+              <th scope="row"><a href={route}>{entry.id} · {entry.title}</a></th>
+              <td>{entry.sources.length ? entry.sources.map((id) => sourceById.has(id) ? <a class="source-ref" href={`/source/${id}/`}>{id}</a> : <span class="source-ref">{id}</span>) : <span class="muted">Не указаны</span>}<span class="small muted source-ref-note">Не подтверждают тезисы без записи проверки</span></td>
+              <td><span class:list={['badge', entry.status === 'verified' ? 'ok' : 'warning']}>{entry.status === 'verified' ? 'Проверен' : 'Ожидает проверки'}</span></td>
+              <td>{records.length ? records.map((record) => <span class="review-record">{record.reviewer}<span class="small muted">{record.reviewerRole}</span></span>) : <span class="muted">Не назначен</span>}</td>
+              <td>{records.length ? records.map((record) => <span class="review-record">{record.checkedOn} · {record.coverage === 'full_document' ? 'весь документ' : 'выбранные тезисы'}<span class="small muted">{record.scope}</span></span>) : <span class="muted">Нет записи</span>}</td>
+            </tr>;
+          })}
+        </tbody></table>
+      </div>
+    </details>;
+  })}
+  <a class="btn" href="/library/">← Ко всем справочникам</a>
+</Shell>

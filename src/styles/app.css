@@ -1390,6 +1390,216 @@ summary:focus-visible,
     flex-direction: column;
   }
 }
+
+/* Course continuation and reference-library surfaces. */
+.next-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 29px;
+  align-items: stretch;
+}
+.next-steps .dash-hero {
+  flex: 1 1 320px;
+  min-width: 0;
+  margin: 0;
+}
+.next-steps .return-step[hidden] {
+  display: none;
+}
+.next-steps h2 {
+  overflow-wrap: anywhere;
+}
+.home-resources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.home-resources a,
+.library-reference {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  text-decoration: none;
+  background: var(--bg);
+}
+.home-resources a:hover,
+.library-reference:hover {
+  background: var(--bg2);
+  border-color: var(--fg3);
+}
+.home-resources span {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+.library-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.library-card {
+  min-width: 0;
+  text-decoration: none;
+}
+.library-card h2 {
+  margin: 14px 0 8px;
+  font-size: 17px;
+  letter-spacing: -0.025em;
+}
+.library-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.library-card .small {
+  display: inline-block;
+  margin-top: 10px;
+}
+.library-reference-list {
+  display: grid;
+  gap: 8px;
+}
+.library-reference strong {
+  margin-right: auto;
+  overflow-wrap: anywhere;
+}
+.editorial-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 20px 0;
+}
+.editorial-notice p {
+  max-width: 760px;
+  margin: 6px 0 0;
+}
+.editorial-summary {
+  margin: 20px 0;
+}
+.editorial-scope {
+  max-width: 900px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.editorial-module {
+  margin: 10px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.editorial-module > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  list-style-position: inside;
+}
+.editorial-module[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+.editorial-module .table-wrap {
+  margin: 0;
+}
+.editorial-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.editorial-table th,
+.editorial-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.editorial-table thead th {
+  color: var(--muted);
+  background: var(--bg2);
+  font-weight: 600;
+}
+.editorial-table tbody tr:last-child th,
+.editorial-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.editorial-table tbody th {
+  max-width: 360px;
+  font-weight: 550;
+}
+.source-ref {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+.source-ref-note,
+.review-record .small {
+  display: block;
+}
+.review-record + .review-record {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.library-content h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.template-copy {
+  flex: 0 0 auto;
+}
+@media (max-width: 900px) {
+  .library-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .home-resources,
+  .library-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home-resources a,
+  .editorial-notice,
+  .editorial-module > summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .home-resources span {
+    text-align: left;
+  }
+  .editorial-module > summary .badge {
+    margin-left: 22px;
+  }
+  .library-reference {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .library-reference strong {
+    margin-right: 0;
+  }
+  .library-content h2 {
+    align-items: flex-start;
+  }
+}
 @media (max-width: 360px) {
   .topbar .toplink {
     display: none;

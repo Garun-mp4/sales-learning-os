@@ -50,6 +50,15 @@ def md_html(e,depth):
  md=MarkdownIt('default',{'html':False,'linkify':False,'typographer':True}).enable('table').enable('strikethrough')
  markup=md.render(body)
  soup=BeautifulSoup(markup,'html.parser')
+ if e['kind']=='module':
+  if soup.h1:soup.h1.decompose()
+  for heading in list(soup.find_all('h2')):
+   if heading.get_text(' ',strip=True) not in ('Порядок изучения','Обязательная практика'):continue
+   node=heading
+   while node:
+    following=node.find_next_sibling()
+    if node is not heading and node.name=='h2':break
+    node.decompose();node=following
  toc=[];anchors=collections.Counter()
  for head in soup.find_all(['h2','h3']):
   label=head.get_text(' ',strip=True);slug=slugify(label);anchors[slug]+=1
@@ -78,7 +87,7 @@ def page_shell(body,title,depth,active='',doc=None):
  current=active;mod=doc.get('module') if doc else None
  if not current and doc:
   current='practice' if doc.get('kind')=='practice' else 'roadmap'
- nav_top=[('dashboard','Обзор','', 'home'),('map','Roadmap','roadmap/','roadmap'),('check','Практика','practice/','practice'),('search','Поиск','search/','search'),('library','Источники','sources/','sources'),('star','Закладки','bookmarks/','bookmarks')]
+ nav_top=[('dashboard','Обзор','', 'home'),('map','Roadmap','roadmap/','roadmap'),('check','Практика','practice/','practice'),('search','Поиск','search/','search'),('library','Источники','sources/','sources'),('book','Справочники','library/','library'),('star','Закладки','bookmarks/','bookmarks')]
  nav=''.join(f'<a class="nav-item {"active" if current==a else ""}" href="{p(url)}" aria-label="{h(label)}" {"aria-current=\"page\"" if current==a else ""} title="{h(label)}">{icon(ic)}<span>{h(label)}</span></a>' for ic,label,url,a in nav_top)
  groups=''
  for s in STAGES:
@@ -116,6 +125,8 @@ def render_module(e):
  stage=e['stage'];txt=breadcrumb([('Roadmap','roadmap/'),(next(s['title'] for s in STAGES if s['id']==stage),f'level/{stage}/'),(e['title'],None)],depth)
  txt+=header(f'МОДУЛЬ {mod} · УРОВЕНЬ {stage}',e['title'],e.get('description',''),f'<div class="row wrap">{editorial_badge()}<span class="badge">{len(theory)} тем</span><span class="badge">{len(practice)} практик</span><span class="badge">{h(e.get("time",""))}</span></div>')
  txt+=f'<div class="module-summary"><strong>Результат изучения</strong><p>{h(e.get("outcome", ""))}</p></div>'
+ module_body,_=md_html(e,depth)
+ txt+='<article class="article module-reading" data-pagefind-body>'+module_body+'</article>'
  txt+='<div class="section-head"><h2 class="h2">Теория</h2><span class="small muted">По порядку, от основ к практике</span></div>'
  for k,items in g.items():txt+=f'<section class="module-section"><h2>{h(k)} <span class="badge">{len(items)}</span></h2><div class="stack">'+''.join(list_item(x,depth) for x in items)+'</div></section>'
  txt+='<div class="section-head"><h2 class="h2">Практика</h2><span class="small muted">Применить знания</span></div><div class="stack">'+''.join(list_item(x,depth) for x in practice)+'</div>'
@@ -126,6 +137,19 @@ def related_links(e,depth):
  targets=[ENTRIES[x] for x in e.get('related_practice',[]) if x in ENTRIES];
  if not targets:return ''
  return '<section class="module-section"><h2 class="h2">Связанная практика</h2><div class="stack">'+''.join(list_item(x,depth) for x in targets)+'</div></section>'
+
+LIBRARIES={
+ 'glossary':('Глоссарий продаж','Рабочие определения терминов и сокращений курса.',re.compile(r'\b(?:b2b|b2c|b2g|spin|bant|spiced|meddpicc|icp|jtbd|crm|roi|cac|ltv|tco|nps|csat|rfp|batna|zopa)\b|воронк|метрик|квалификац|позиционирован|ценообразован|окупаемост|юнит.?эконом',re.I),'GLOSSARY.md'),
+ 'cases':('Сквозные учебные кейсы','Вымышленные ситуации для разбора решений и ограничений.',re.compile(r'клиент|покупател|ситуац|кейс|диалог|возражен|переговор|discovery|квалификац|заинтересованн|лид',re.I),'CASE_LIBRARY.md'),
+ 'templates':('Рабочие шаблоны','Редактируемые черновики сообщений, документов и рабочих записей.',re.compile(r'сообщен|follow.?up|переписк|скрипт|шаблон|предложен|\bкп\b|бриф|карточк|чек.?лист|письменн|текстов|контакт|договор|предоплат|демонстрац|ответ на',re.I),'TEMPLATE_LIBRARY.md'),
+}
+
+def related_libraries(e,depth):
+ topic=(e['title']+' '+e.get('group','')).lower()
+ matches=[(key,value) for key,value in LIBRARIES.items() if value[2].search(topic)]
+ if not matches:return ''
+ items=''.join(f'<a class="library-reference" href="{link("library/"+key+"/",depth)}"><span class="badge">Справочник</span><strong>{h(value[0])}</strong><span class="small muted">Открыть →</span></a>' for key,value in matches)
+ return '<section class="library-references" aria-labelledby="related-library-title"><div class="section-head"><h2 class="h2" id="related-library-title">Справка по теме</h2></div><div class="library-reference-list">'+items+'</div></section>'
 
 def sources_chips(e,depth):
  return '<div class="source-chips">'+''.join(f'<a class="badge" href="{link("source/"+sid+"/",depth)}">{h(sid)} · источник</a>' for sid in e['sources'] if any(s['id']==sid for s in SOURCES))+'</div>'
@@ -143,7 +167,7 @@ def render_document(e):
   text+=''.join(f'<a class="depth{3 if node=="h3" else 2}" href="#{h(slug)}">{h(label)}</a>' for label,slug,node in toc)
   text+='</nav></details>'
  notes_title='Мой ответ на задание' if isprac else 'Мои заметки по теме'
- text+='<div class="reader-grid"><div class="reader"><article class="article" data-pagefind-body>'+mark+'</article>'+sources_chips(e,depth)
+ text+='<div class="reader-grid"><div class="reader"><article class="article" data-pagefind-body>'+mark+'</article>'+related_libraries(e,depth)+sources_chips(e,depth)
  if not isprac:text+=related_links(e,depth)
  else:
   text+='<div class="notice">Практическое задание оценивается самостоятельно. Отметка «Выполнено» не является независимой проверкой работы.</div>'
@@ -155,6 +179,60 @@ def render_document(e):
  text+=''.join(f'<a class="depth{3 if node=="h3" else 2}" href="#{h(slug)}">{h(label)}</a>' for label,slug,node in toc)
  text+='</nav></aside></div>'
  return page_shell(text,e['title'],depth,'',e)
+
+def render_library(identifier):
+ title,description,_,filename=LIBRARIES[identifier]
+ raw=(CONTENT/filename).read_text(encoding='utf-8')
+ parts=raw.split('---',2)
+ if len(parts)!=3:raise ValueError(f'Missing library metadata: {filename}')
+ markup=MarkdownIt('default',{'html':False}).enable('table').render(parts[2])
+ soup=BeautifulSoup(markup,'html.parser')
+ if soup.h1:soup.h1.decompose()
+ anchors=collections.Counter()
+ for heading in soup.find_all(['h2','h3']):
+  slug=slugify(heading.get_text(' ',strip=True));anchors[slug]+=1
+  heading['id']=slug if anchors[slug]==1 else f'{slug}-{anchors[slug]}'
+ for anchor in soup.select('a[href]'):
+  url=anchor.get('href','')
+  if url.startswith(('http://','https://')):anchor['rel']='noopener noreferrer';anchor['target']='_blank'
+  elif url.startswith(('javascript:','data:')):anchor['href']='#'
+ for table in soup.select('table'):
+  table.wrap(soup.new_tag('div',attrs={'class':'table-wrap','role':'group','tabindex':'0','aria-label':'Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.'}))
+ depth=2
+ crumb=breadcrumb([('Обзор',''),('Справочники','library/'),(title,None)],depth)
+ text=crumb+header('СПРАВОЧНЫЙ МАТЕРИАЛ · РЕДАКЦИОННЫЙ ЧЕРНОВИК',title,description)
+ copy=' data-template-copy=""' if identifier=='templates' else ''
+ text+=f'<article class="article library-content" data-pagefind-body{copy}>{soup}</article><a class="btn" href="{link("library/",depth)}">← Ко всем справочникам</a>'
+ return page_shell(text,title,depth,'library')
+
+def render_editorial_review():
+ ledger=json.loads((CONTENT/'editorial-review-ledger.json').read_text(encoding='utf-8'))
+ reviews_by_document=collections.defaultdict(list)
+ for record in ledger['records']:reviews_by_document[record['documentId']].append(record)
+ pending=sum(entry['status']!='verified' for entry in ENTRIES.values());verified=len(ENTRIES)-pending
+ text=breadcrumb([('Обзор',''),('Справочники','library/'),('Готовность материалов',None)],1)
+ text+=header('РЕДАКТОРСКАЯ ПРИЁМКА','Готовность материалов',f'Проверяемая карта редакционного статуса {len(ENTRIES)} основных материалов курса.')
+ text+=f'<section class="notice editorial-notice" aria-labelledby="editorial-status-title"><div><strong id="editorial-status-title">Редакторский gate открыт</strong><p>{verified} из {len(ENTRIES)} документов имеют запись полной редакторской проверки; {pending} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div></section>'
+ text+=f'<div class="stat-grid editorial-summary" aria-label="Сводка редакционной проверки"><div class="stat"><div class="label">Документы с полной проверкой</div><div class="value">{verified} / {len(ENTRIES)}</div></div><div class="stat"><div class="label">Ожидают рецензента</div><div class="value">{pending}</div></div><div class="stat"><div class="label">Записи проверки тезисов</div><div class="value">{len(ledger["records"])}</div></div></div>'
+ text+='<p class="muted editorial-scope">Указанные в карточке материала источники — исходные рекомендации, а не доказательство того, что каждый тезис сверен. Проверка фиксируется отдельно для конкретного тезиса, источника, даты, охвата и ответственного рецензента. Правовые и платформенные правила требуют профильной проверки на указанную дату.</p>'
+ source_ids={source['id'] for source in SOURCES}
+ for module in sorted((entry for entry in ENTRIES.values() if entry['kind']=='module'),key=lambda entry:entry['module']):
+  documents=sorted((entry for entry in ENTRIES.values() if entry['module']==module['module']),key=lambda entry:(entry['kind']!='module',entry['id']))
+  module_reviews=sum(len(reviews_by_document.get(entry['id'],[])) for entry in documents)
+  wait=sum(entry['status']!='verified' for entry in documents)
+  text+=f'<details class="editorial-module"><summary><span>{h(module["module"])} · {h(module["title"])}</span><span class="badge">{wait} ожидают · {module_reviews} записей</span></summary><div class="table-wrap" role="group" tabindex="0" aria-label="Материалы модуля {h(module["module"])}. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы."><table class="editorial-table"><thead><tr><th scope="col">Материал</th><th scope="col">Указанные источники</th><th scope="col">Статус</th><th scope="col">Рецензент</th><th scope="col">Дата и scope проверки</th></tr></thead><tbody>'
+  for entry in documents:
+   route_path=route(entry)
+   records=reviews_by_document.get(entry['id'],[])
+   source_refs=''.join(f'<a class="source-ref" href="{link("source/"+sid+"/",1)}">{h(sid)}</a>' for sid in entry['sources'] if sid in source_ids) or '<span class="muted">Не указаны</span>'
+   source_refs+='<span class="small muted source-ref-note">Не подтверждают тезисы без записи проверки</span>'
+   status='<span class="badge ok">Проверен</span>' if entry['status']=='verified' else '<span class="badge warning">Ожидает проверки</span>'
+   reviewers=''.join(f'<span class="review-record">{h(record["reviewer"])}<span class="small muted">{h(record["reviewerRole"])}</span></span>' for record in records) or '<span class="muted">Не назначен</span>'
+   checks=''.join(f'<span class="review-record">{h(record["checkedOn"])} · {"весь документ" if record["coverage"]=="full_document" else "выбранные тезисы"}<span class="small muted">{h(record["scope"])}</span></span>' for record in records) or '<span class="muted">Нет записи</span>'
+   text+=f'<tr><th scope="row"><a href="{link(route_path,1)}">{h(entry["id"])} · {h(entry["title"])}</a></th><td>{source_refs}</td><td>{status}</td><td>{reviewers}</td><td>{checks}</td></tr>'
+  text+='</tbody></table></div></details>'
+ text+='<a class="btn" href="../library/">← Ко всем справочникам</a>'
+ return page_shell(text,'Готовность материалов',1,'library')
 
 def build_pages(output_dir=DEFAULT_OUT):
  out=pathlib.Path(output_dir)
@@ -174,7 +252,9 @@ def build_pages(output_dir=DEFAULT_OUT):
  # Home
  st=f'<div class="eyebrow">ПЕРСОНАЛЬНАЯ СИСТЕМА ОБУЧЕНИЯ</div><h1 class="h1">Продажи. От понимания — к практике.</h1><p class="intro">Структурированная база знаний для работы с клиентами через переписку: 22 модуля, теория, упражнения и реальные проекты. Изучайте по порядку и сохраняйте свой прогресс.</p>'
  st+='<div class="stat-grid"><div class="stat"><div class="label">Пройдено теории</div><div class="value" data-global-theory>0 / 336</div><div class="label">336 уроков</div></div><div class="stat"><div class="label">Практика</div><div class="value" data-global-practice>0 / 72</div><div class="label">72 задания</div></div><div class="stat"><div class="label">Общий прогресс</div><div class="value" data-global-pct>0%</div><div class="progress" role="progressbar" aria-label="Общий прогресс обучения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0%" data-global-progress><span data-global-fill></span></div></div></div>'
- st+='<div class="dash-hero"><div class="eyebrow">ВАШ СЛЕДУЮЩИЙ ШАГ</div><h2 data-continue-title>Обмен ценностью</h2><p>Откройте последнюю тему или начните изучение с основ продаж.</p><a data-continue class="btn primary" href="lesson/01-001/">Продолжить изучение '+icon('arrow')+'</a></div>'
+ st+='<section class="next-steps" aria-label="Следующие шаги обучения"><div class="dash-hero return-step" data-return-card hidden><div class="eyebrow">ПОСЛЕДНИЙ ОТКРЫТЫЙ МАТЕРИАЛ</div><h2 data-return-title>Ваш последний материал</h2><p>Вернитесь туда, где вы остановились.</p><a data-return class="btn" href="lesson/01-001/">Вернуться к материалу →</a></div><div class="dash-hero program-step"><div class="eyebrow">ПРОГРАММА · ПО ПОРЯДКУ</div><h2 data-program-title>Начните с основ продаж</h2><p data-program-description>Сначала разберите обязательные темы, затем закрепите их практикой. Продвинутые материалы доступны в любой момент.</p><a data-continue class="btn primary" href="lesson/01-001/">Начать программу →</a></div></section>'
+ pending=sum(e['status']!='verified' for e in ENTRIES.values())
+ st+=f'<section class="home-resources" aria-label="Справочные материалы"><a href="library/">Глоссарий, кейсы и шаблоны <span>Открыть справочники →</span></a><a href="editorial-review/">Готовность материалов <span>{pending} документов ожидают рецензента →</span></a></section>'
  st+='<div class="section-head"><h2 class="h2">Ваш путь обучения</h2><a href="roadmap/" class="small muted">Все 22 модуля →</a></div>'
  for s in STAGES:
   st+=f'<div class="level-head"><h2>0{s["id"]}. {h(s["title"])}</h2><a class="small muted" href="level/{s["id"]}/">Перейти к уровню →</a></div><div class="grid">'+''.join(intro_card(e,0) for e in STAGE_GROUPS[s['id']][:2])+'</div>'
@@ -220,6 +300,41 @@ def build_pages(output_dir=DEFAULT_OUT):
   text+=f'<div class="section-head"><h2 class="h2">Связанные уроки</h2><span class="badge">{len(connected)}</span></div><div class="stack">'+''.join(list_item(e,2) for e in connected[:80])+'</div>'
   if len(connected)>80:text+='<p class="pill-note">Показаны первые 80 уроков.</p>'
   save(f'source/{s["id"]}/index.html',page_shell(text,s['title'],2,'sources'))
+ # Existing reference libraries and the claim-level editorial readiness map.
+ text=breadcrumb([('Обзор',''),('Справочники',None)],1)+header('СПРАВОЧНЫЕ МАТЕРИАЛЫ','Библиотека курса','Термины, учебные ситуации и рабочие заготовки — рядом с учебным маршрутом и поиском.')
+ text+='<div class="library-card-grid">'
+ for identifier,(title,description,_,_) in LIBRARIES.items():
+  text+=f'<a class="card library-card" href="{link("library/"+identifier+"/",1)}"><span class="badge">Справочник</span><h2>{h(title)}</h2><p>{h(description)}</p><span class="small muted">Открыть →</span></a>'
+ text+='</div>'
+ pending=sum(e['status']!='verified' for e in ENTRIES.values())
+ text+=f'<section class="notice editorial-notice" aria-labelledby="editorial-readiness-title"><div><strong id="editorial-readiness-title">Редакторская готовность курса</strong><p>Все {len(ENTRIES)} основных документов пока имеют статус редакционного черновика. Источники и состояние проверки можно сверить по материалам.</p></div><a class="btn smallbtn" href="{link("editorial-review/",1)}">Открыть карту проверки →</a></section>'
+ save('library/index.html',page_shell(text,'Справочники',1,'library'))
+ for identifier in LIBRARIES:save(f'library/{identifier}/index.html',render_library(identifier))
+ ledger=json.loads((CONTENT/'editorial-review-ledger.json').read_text(encoding='utf-8'))
+ reviews_by_document=collections.defaultdict(list)
+ for record in ledger['records']:reviews_by_document[record['documentId']].append(record)
+ verified=len(ENTRIES)-pending
+ text=breadcrumb([('Обзор',''),('Справочники','library/'),('Готовность материалов',None)],1)+header('РЕДАКТОРСКАЯ ПРИЁМКА','Готовность материалов',f'Проверяемая карта редакционного статуса {len(ENTRIES)} основных материалов курса.')
+ text+=f'<section class="notice editorial-notice" aria-labelledby="editorial-status-title"><div><strong id="editorial-status-title">Редакторский gate открыт</strong><p>{verified} из {len(ENTRIES)} документов имеют запись полной редакторской проверки; {pending} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div></section>'
+ text+=f'<div class="stat-grid editorial-summary" aria-label="Сводка редакционной проверки"><div class="stat"><div class="label">Документы с полной проверкой</div><div class="value">{verified} / {len(ENTRIES)}</div></div><div class="stat"><div class="label">Ожидают рецензента</div><div class="value">{pending}</div></div><div class="stat"><div class="label">Записи проверки тезисов</div><div class="value">{len(ledger["records"])}</div></div></div>'
+ text+='<p class="muted editorial-scope">Указанные в карточке материала источники — исходные рекомендации, а не доказательство того, что каждый тезис сверен. Проверка фиксируется отдельно для конкретного тезиса, источника, даты, охвата и ответственного рецензента. Правовые и платформенные правила требуют профильной проверки на указанную дату.</p>'
+ source_ids={source['id'] for source in SOURCES}
+ for module in sorted((entry for entry in ENTRIES.values() if entry['kind']=='module'),key=lambda entry:entry['module']):
+  documents=sorted((entry for entry in ENTRIES.values() if entry['module']==module['module']),key=lambda entry:(entry['kind']!='module',entry['id']))
+  module_reviews=sum(len(reviews_by_document.get(entry['id'],[])) for entry in documents)
+  wait=sum(entry['status']!='verified' for entry in documents)
+  text+=f'<details class="editorial-module"><summary><span>{h(module["module"])} · {h(module["title"])}</span><span class="badge">{wait} ожидают · {module_reviews} записей</span></summary><div class="table-wrap" role="group" tabindex="0" aria-label="Материалы модуля {h(module["module"])}. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы."><table class="editorial-table"><thead><tr><th scope="col">Материал</th><th scope="col">Указанные источники</th><th scope="col">Статус</th><th scope="col">Рецензент</th><th scope="col">Дата и scope проверки</th></tr></thead><tbody>'
+  for entry in documents:
+   records=reviews_by_document.get(entry['id'],[])
+   source_refs=''.join(f'<a class="source-ref" href="{link("source/"+sid+"/",1)}">{h(sid)}</a>' for sid in entry['sources'] if sid in source_ids) or '<span class="muted">Не указаны</span>'
+   source_refs+='<span class="small muted source-ref-note">Не подтверждают тезисы без записи проверки</span>'
+   status='<span class="badge ok">Проверен</span>' if entry['status']=='verified' else '<span class="badge warning">Ожидает проверки</span>'
+   reviewers=''.join(f'<span class="review-record">{h(record["reviewer"])}<span class="small muted">{h(record["reviewerRole"])}</span></span>' for record in records) or '<span class="muted">Не назначен</span>'
+   checks=''.join(f'<span class="review-record">{h(record["checkedOn"])} · {"весь документ" if record["coverage"]=="full_document" else "выбранные тезисы"}<span class="small muted">{h(record["scope"])}</span></span>' for record in records) or '<span class="muted">Нет записи</span>'
+   text+=f'<tr><th scope="row"><a href="{link(route(entry),1)}">{h(entry["id"])} · {h(entry["title"])}</a></th><td>{source_refs}</td><td>{status}</td><td>{reviewers}</td><td>{checks}</td></tr>'
+  text+='</tbody></table></div></details>'
+ text+='<a class="btn" href="../library/">← Ко всем справочникам</a>'
+ save('editorial-review/index.html',page_shell(text,'Готовность материалов',1,'library'))
  # Saved
  text=breadcrumb([('Обзор',''),('Закладки',None)],1)+header('ЛИЧНАЯ БИБЛИОТЕКА','Закладки','Сохранённые уроки и упражнения. Все данные остаются в браузере.')+'<section data-bookmark-results role="region" aria-label="Закладки" aria-busy="true"><div class="notice" data-bookmark-status role="status" aria-live="polite" aria-atomic="true">Загрузка закладок…</div><div class="stack" data-bookmark-list></div></section>'
  save('bookmarks/index.html',page_shell(text,'Закладки',1,'bookmarks'))
@@ -251,13 +366,17 @@ def build_pages(output_dir=DEFAULT_OUT):
   raw=(CONTENT/e['path']).read_text(encoding='utf-8').split('---',2)[2]
   text=re.sub(r'\[([^]]+)\]\([^)]*\)',r'\1',raw)
   index.append({'id':e['id'],'kind':e['kind'],'module':e['module'],'title':e['title'],'text':text[:20000]})
+ for identifier,(title,_,_,filename) in LIBRARIES.items():
+  raw=(CONTENT/filename).read_text(encoding='utf-8').split('---',2)[2]
+  text=re.sub(r'\[([^]]+)\]\([^)]*\)',r'\1',raw)
+  index.append({'id':identifier,'kind':'library','module':'Справочник','title':title,'text':text[:20000]})
  save('assets/search-index.json',json.dumps(index,ensure_ascii=False,separators=(',',':')))
  # Manifest + offline installation list
  save('manifest.webmanifest',json.dumps({'name':'Sales OS — база знаний по продажам','short_name':'Sales OS','lang':'ru','start_url':'./','display':'standalone','background_color':'#ffffff','theme_color':'#000000','icons':[{'src':'assets/brand/app-icon-192.png','sizes':'192x192','type':'image/png','purpose':'any'},{'src':'assets/brand/app-icon-512.png','sizes':'512x512','type':'image/png','purpose':'any'},{'src':'assets/brand/app-icon-512-maskable.png','sizes':'512x512','type':'image/png','purpose':'maskable'}]},ensure_ascii=False))
  srcs=['index.html','roadmap/index.html','settings/index.html','sources/index.html','search/index.html','bookmarks/index.html','practice/index.html','final-project/index.html','assets/user-store.js','assets/app.js','assets/app.css','assets/client-index.json','assets/search-index.json','assets/offline-files.json','manifest.webmanifest']
  srcs += [p.relative_to(out).as_posix() for asset_dir in ('brand','fonts') for p in (out/'assets'/asset_dir).rglob('*') if p.is_file()]
  urls=sorted(set((u[:-len('index.html')] if u.endswith('index.html') else u) for u in srcs+[p.relative_to(out).as_posix() for p in out.rglob('*.html')]))
- version=hashlib.sha256((ROOT/'src/styles/app.css').read_bytes()+(ROOT/'src/scripts/user-store.js').read_bytes()+(ROOT/'src/scripts/app.js').read_bytes()+b''.join((CONTENT/e['path']).read_bytes() for e in sorted(ENTRIES.values(),key=lambda e:e['id']))).hexdigest()[:12]
+ version=hashlib.sha256((ROOT/'src/styles/app.css').read_bytes()+(ROOT/'src/scripts/user-store.js').read_bytes()+(ROOT/'src/scripts/app.js').read_bytes()+b''.join((CONTENT/e['path']).read_bytes() for e in sorted(ENTRIES.values(),key=lambda e:e['id']))+b''.join((CONTENT/filename).read_bytes() for _,_,_,filename in LIBRARIES.values())+json.dumps(index,ensure_ascii=False,separators=(',',':')).encode('utf-8')).hexdigest()[:12]
  save('assets/offline-files.json',json.dumps({'version':version,'urls':urls},ensure_ascii=False))
  # Worker standard network-first; cache all on explicit command from settings. Same-origin only.
  save('sw.js',f'''self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{{const req=e.request;if(req.method!=='GET'||new URL(req.url).origin!==self.location.origin)return;e.respondWith((async()=>{{try{{return await fetch(req)}}catch{{const names=(await caches.keys()).filter(k=>k.startsWith('sales-os-offline-')).reverse();for(const name of names){{const c=await caches.open(name);const hit=await c.match(req);if(hit)return hit;}}return Response.error()}}}})());}});''')

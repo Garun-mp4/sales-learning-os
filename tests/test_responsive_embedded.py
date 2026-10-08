@@ -9,7 +9,7 @@ import json
 import re
 from playwright.sync_api import sync_playwright
 CSS=(ROOT/'src/styles/app.css').read_text(encoding='utf-8')
-ROUTES=['','roadmap','sources','search','settings','practice','lesson/01-001','practice/01-P01'] + [f'module/{n:02d}-MODULE' for n in range(1,23)]
+ROUTES=['','roadmap','sources','search','settings','practice','lesson/01-001','practice/01-P01','library','library/glossary','library/cases','library/templates','editorial-review'] + [f'module/{n:02d}-MODULE' for n in range(1,23)]
 WIDTHS=(320,390,768,1024,1440)
 CONTENT=json.loads((ROOT/'src/generated/content-manifest.json').read_text(encoding='utf-8'))
 PRACTICE_ROUTES=[f"practice/{entry['id']}" for entry in CONTENT['entries'].values() if entry['kind']=='practice']
@@ -116,7 +116,7 @@ def main():
       assert page.locator('.reader-aside').evaluate("el=>getComputedStyle(el).display")!='none'
       if failures:
         print('\n'.join(failures[:30]));raise AssertionError(f'{len(failures)} responsive failures')
-      print(f'PASS: {count} representative responsive views (30 routes × 5 widths) and {practice_views} practice views (72 routes × 320/390px), zero document-level overflow')
+      print(f'PASS: {count} representative responsive views ({len(ROUTES)} routes × 5 widths) and {practice_views} practice views (72 routes × 320/390px), zero document-level overflow')
       print('PASS: light/dark foreground, background and accessible link color tokens')
       print('PASS: accessible wide tables, title-first practice rows, stacked mobile actions and compact TOC')
       browser.close()

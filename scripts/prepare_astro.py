@@ -41,6 +41,22 @@ for entry in entries.values():
         | {"text": text[:20000]}
     )
 
+library_pages = {
+    "glossary": ("Глоссарий продаж", "GLOSSARY.md"),
+    "cases": ("Сквозные учебные кейсы", "CASE_LIBRARY.md"),
+    "templates": ("Рабочие шаблоны", "TEMPLATE_LIBRARY.md"),
+}
+for identifier, (title, filename) in library_pages.items():
+    raw = (CONTENT / filename).read_text(encoding="utf-8")
+    parts = raw.split("---", 2)
+    if len(parts) != 3:
+        raise SystemExit(f"Missing library metadata: {filename}")
+    body = parts[2]
+    text = re.sub(r"\[([^]]+)\]\([^)]*\)", r"\1", body)
+    search_index.append(
+        {"id": identifier, "kind": "library", "module": "Справочник", "title": title, "text": text[:20000]}
+    )
+
 final_markdown = (CONTENT / "FINAL_PROJECT.md").read_text(encoding="utf-8")
 final_html = MarkdownIt("default", {"html": False}).enable("table").render(final_markdown)
 final_soup = BeautifulSoup(final_html, "html.parser")
@@ -85,6 +101,8 @@ urls = {
     "search/",
     "bookmarks/",
     "final-project/",
+    "library/",
+    "editorial-review/",
     "settings/",
     "assets/app.js",
     "assets/user-store.js",
@@ -107,11 +125,14 @@ if legacy_favicon.is_file() and legacy_favicon.read_bytes() == old_favicon:
     legacy_favicon.unlink()
 urls.update(f"level/{stage['id']}/" for stage in manifest["stages"])
 urls.update(f"source/{source['id']}/" for source in manifest["sources"])
+urls.update(f"library/{identifier}/" for identifier in library_pages)
 urls.update(
     f"{route_kinds[entry['kind']]}/{identifier}/"
     for identifier, entry in entries.items()
 )
-version = hashlib.sha256(user_store_js + app_js + manifest_bytes).hexdigest()[:12]
+search_index_bytes = json.dumps(search_index, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+library_bytes = b"".join((CONTENT / filename).read_bytes() for _, filename in library_pages.values())
+version = hashlib.sha256(user_store_js + app_js + manifest_bytes + search_index_bytes + library_bytes).hexdigest()[:12]
 write_if_changed(
     ASSETS / "offline-files.json",
     json.dumps({"version": version, "urls": sorted(urls)}, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),

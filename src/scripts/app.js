@@ -241,6 +241,98 @@ function isDone(e) {
     ? value === "theory_completed" || value === "mastered"
     : value === "completed" || value === "self_reviewed";
 }
+function statusOf(e) {
+  return e.kind === "theory"
+    ? state.lessonStatuses[e.id]
+    : state.practiceStatuses[e.id];
+}
+function coursePlan(idx) {
+  const modules = Object.values(idx.entries)
+    .filter((entry) => entry.kind === "module")
+    .sort((a, b) => a.module.localeCompare(b.module, "en", { numeric: true }));
+  return modules.flatMap((module) => {
+    const inModule = Object.values(idx.entries).filter(
+      (entry) => entry.module === module.module,
+    );
+    const requiredLessons = inModule
+      .filter((entry) => entry.kind === "theory" && entry.level !== "advanced")
+      .sort((a, b) => a.order - b.order);
+    const requiredPractice = inModule
+      .filter(
+        (entry) => entry.kind === "practice" && entry.level !== "advanced",
+      )
+      .sort((a, b) => a.order - b.order);
+    return [...requiredLessons, ...requiredPractice];
+  });
+}
+function hrefForLearningEntry(entry) {
+  return (
+    root +
+    (entry.kind === "practice" ? "practice/" : "lesson/") +
+    encodeURIComponent(entry.id) +
+    "/"
+  );
+}
+function updateLearningNextSteps(idx) {
+  const returnCard = document.querySelector("[data-return-card]");
+  const returnLink = document.querySelector("[data-return]");
+  const returnTitle = document.querySelector("[data-return-title]");
+  const last = state.lastVisited && idx.entries[state.lastVisited];
+  if (
+    returnCard &&
+    returnLink &&
+    returnTitle &&
+    last &&
+    (last.kind === "theory" || last.kind === "practice")
+  ) {
+    returnCard.hidden = false;
+    returnLink.href = hrefForLearningEntry(last);
+    returnTitle.textContent = last.title;
+    returnLink.textContent = "Вернуться к последнему материалу →";
+  } else if (returnCard) {
+    returnCard.hidden = true;
+  }
+
+  const continueLink = document.querySelector("[data-continue]");
+  const programTitle = document.querySelector("[data-program-title]");
+  const programDescription = document.querySelector(
+    "[data-program-description]",
+  );
+  if (!continueLink || !programTitle || !programDescription) return;
+
+  const plan = coursePlan(idx);
+  const current =
+    plan.find((entry) => statusOf(entry) === "in_progress") ||
+    plan.find((entry) => !isDone(entry));
+  if (!current) {
+    continueLink.href = root + "final-project/";
+    continueLink.textContent = "Открыть итоговый проект →";
+    programTitle.textContent = "Основной маршрут завершён";
+    programDescription.textContent =
+      "Все обязательные уроки и практики отмечены. Продвинутые темы по-прежнему доступны из любого модуля.";
+    return;
+  }
+
+  const position = plan.indexOf(current);
+  const previous = position > 0 ? plan[position - 1] : null;
+  continueLink.href = hrefForLearningEntry(current);
+  continueLink.textContent = "Продолжить программу →";
+  programTitle.textContent = current.title;
+  if (current.kind === "practice") {
+    programDescription.textContent = `Темы модуля ${current.module} идут перед упражнениями. Отметьте, что уже изучили, и примените знания в этой практике.`;
+  } else if (
+    previous &&
+    previous.module !== current.module &&
+    isDone(previous)
+  ) {
+    programDescription.textContent = `Основные темы и практика модуля ${previous.module} завершены. Следующий обязательный шаг — модуль ${current.module}.`;
+  } else if (position === 0) {
+    programDescription.textContent =
+      "Начните с обязательных основ. Продвинутые темы доступны напрямую и не блокируются прогрессом.";
+  } else {
+    programDescription.textContent = `Следующая незавершённая обязательная тема модуля ${current.module}. Продвинутые материалы остаются доступны отдельно.`;
+  }
+}
 function statIndex(idx) {
   const es = Object.values(idx.entries);
   let theory = es.filter((e) => e.kind === "theory"),
@@ -310,20 +402,7 @@ function updateProgress(idx) {
     el.textContent = statusLabels[value] || "Не начато";
     el.classList.toggle("ok", isDone(e));
   }
-  const continueBtn = document.querySelector("[data-continue]");
-  if (continueBtn) {
-    let id = state.lastVisited;
-    let e = idx.entries[id];
-    if (!e) {
-      e = Object.values(idx.entries).find((x) => x.kind === "theory");
-    }
-    if (e) {
-      continueBtn.href =
-        root + (e.kind === "practice" ? "practice/" : "lesson/") + e.id + "/";
-      const title = document.querySelector("[data-continue-title]");
-      if (title) title.textContent = e.title;
-    }
-  }
+  updateLearningNextSteps(idx);
 }
 getIndex()
   .then((idx) => {
@@ -1048,10 +1127,23 @@ if (searchInput) {
       .slice(0, 60);
     if (mine !== serial) return;
     const html = matches
-      .map(
-        (item) =>
-          `<a class="item" href="${root}${item.kind === "theory" ? "lesson" : item.kind === "practice" ? "practice" : "module"}/${encodeURIComponent(item.id)}/"><span class="number">${escapeHtml(item.id)}</span><div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${item.kind === "theory" ? "Теория" : item.kind === "practice" ? "Практика" : "Модуль"} · ${escapeHtml(item.module)}</div></div><span class="ic-right">→</span></a>`,
-      )
+      .map((item) => {
+        const route =
+          {
+            theory: "lesson",
+            practice: "practice",
+            module: "module",
+            library: "library",
+          }[item.kind] || "module";
+        const kindLabel =
+          {
+            theory: "Теория",
+            practice: "Практика",
+            module: "Модуль",
+            library: "Справочник",
+          }[item.kind] || "Материал";
+        return `<a class="item" href="${root}${route}/${encodeURIComponent(item.id)}/"><span class="number">${escapeHtml(item.id)}</span><div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${kindLabel}${item.kind === "library" ? "" : ` · ${escapeHtml(item.module)}`}</div></div><span class="ic-right">→</span></a>`;
+      })
       .join("");
     searchStatus.textContent = matches.length
       ? `Найдено: ${matches.length}${matches.length === 60 ? " (показаны первые 60)" : ""}`
@@ -1180,3 +1272,42 @@ document
       if (key.startsWith("sales-os-")) await caches.delete(key);
     toast("Кэш приложения очищен. Личные записи сохранены.");
   });
+
+const templateLibrary = document.querySelector("[data-template-copy]");
+if (templateLibrary) {
+  for (const heading of templateLibrary.querySelectorAll("h2")) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn smallbtn template-copy";
+    button.textContent = "Скопировать";
+    button.setAttribute(
+      "aria-label",
+      `Скопировать шаблон «${heading.textContent.trim()}»`,
+    );
+    heading.append(button);
+    button.addEventListener("click", async () => {
+      const chunks = [
+        heading.textContent.replace(button.textContent, "").trim(),
+      ];
+      for (
+        let sibling = heading.nextElementSibling;
+        sibling;
+        sibling = sibling.nextElementSibling
+      ) {
+        if (sibling.matches("h1, h2")) break;
+        chunks.push(sibling.innerText || sibling.textContent || "");
+      }
+      const text = chunks.filter(Boolean).join("\n\n").trim();
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          throw new Error("Clipboard API unavailable");
+        }
+        toast("Текст шаблона скопирован");
+      } catch {
+        toast("Не удалось скопировать. Выделите текст шаблона вручную.");
+      }
+    });
+  }
+}

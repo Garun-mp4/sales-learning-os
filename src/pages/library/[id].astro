@@ -1,0 +1,25 @@
+---
+import { getCollection, render } from 'astro:content';
+import PageHeading from '../../components/PageHeading.astro';
+import Shell from '../../layouts/Shell.astro';
+import { libraries } from '../../lib/course';
+
+export async function getStaticPaths() {
+  const documents = await getCollection('libraries');
+  return documents.map((doc) => ({ params: { id: doc.data.id }, props: { doc } }));
+}
+
+const { doc } = Astro.props;
+const library = libraries.find((item) => item.id === doc.data.id);
+if (!library) throw new Error(`Unknown library: ${doc.data.id}`);
+const { Content } = await render(doc);
+---
+
+<Shell title={library.title} active="library" libraryId={library.id} reading>
+  <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <a href="/library/">Справочники</a> › <span aria-current="page">{library.title}</span></nav>
+  <PageHeading eyebrow="СПРАВОЧНЫЙ МАТЕРИАЛ · РЕДАКЦИОННЫЙ ЧЕРНОВИК" title={library.title} description={library.description} />
+  <article class="article library-content" data-pagefind-body data-template-copy={library.id === 'templates' ? '' : undefined}>
+    <Content />
+  </article>
+  <a class="btn" href="/library/">← Ко всем справочникам</a>
+</Shell>

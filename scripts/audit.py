@@ -70,10 +70,47 @@ for mi,m in enumerate(legacy['modules']):
 for kind,want in [('module',22),('theory',336),('practice',72)]:
     if stats[kind]!=want:issues.append(f'{kind} count {stats[kind]} != {want}')
 if len(legacy_map)!=408:issues.append(f'Legacy keys {len(legacy_map)} != 408')
+ledger_path=CONTENT/'editorial-review-ledger.json'
+try:
+    ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
+except (OSError,json.JSONDecodeError) as error:
+    ledger={'format':None,'records':[]}
+    issues.append(f'Editorial review ledger cannot be read: {error}')
+if ledger.get('format')!='sales-os-editorial-review-v1' or not isinstance(ledger.get('records'),list):
+    issues.append('Editorial review ledger has an unsupported format')
+reviews_by_document=collections.defaultdict(list);review_ids=set()
+for record in ledger.get('records',[]):
+    if not isinstance(record,dict):
+        issues.append('Editorial review record must be an object');continue
+    required=('recordId','documentId','claimId','claim','sourceIds','checkedOn','scope','reviewer','reviewerRole','coverage','reviewType','status')
+    if not all(key in record for key in required):
+        issues.append(f'Incomplete editorial review record {record.get("recordId","<unknown>")}');continue
+    rid=record['recordId'];document_id=record['documentId'];entry=entries.get(document_id)
+    if not isinstance(rid,str) or not rid or rid in review_ids:issues.append(f'Invalid or duplicate editorial review ID {rid}')
+    review_ids.add(rid)
+    if not entry:issues.append(f'Editorial review references missing document {document_id}');continue
+    if not all(isinstance(record[key],str) and record[key].strip() for key in ('claimId','claim','scope','reviewer','reviewerRole')):issues.append(f'Editorial review {rid} has empty claim/review details')
+    if not isinstance(record['sourceIds'],list) or not record['sourceIds']:issues.append(f'Editorial review {rid} must link at least one source')
+    else:
+        for source_id in record['sourceIds']:
+            if source_id not in all_source_ids:issues.append(f'Editorial review {rid} references missing source {source_id}')
+            if source_id not in entry.get('sources',[]):issues.append(f'Editorial review {rid} source {source_id} is not linked to {document_id}')
+    try:datetime.date.fromisoformat(record['checkedOn'])
+    except (TypeError,ValueError):issues.append(f'Editorial review {rid} has an invalid checkedOn date')
+    if record['coverage'] not in ('selected_claims','full_document'):issues.append(f'Editorial review {rid} has an invalid coverage value')
+    if record['reviewType'] not in ('editorial','legal','platform'):issues.append(f'Editorial review {rid} has an invalid reviewType')
+    if record['status'] not in ('verified','needs_revision'):issues.append(f'Editorial review {rid} has an invalid status')
+    if record['reviewType'] in ('legal','platform') and record['status']=='verified' and record.get('specialistConfirmed') is not True:issues.append(f'Editorial review {rid} needs specialist confirmation')
+    reviews_by_document[document_id].append(record)
+for document_id,entry in entries.items():
+    if entry['status']=='verified':
+        records=reviews_by_document.get(document_id,[])
+        if not records or not any(record['coverage']=='full_document' for record in records) or any(record['status']!='verified' for record in records):
+            issues.append(f'Cannot mark {document_id} verified without complete, clean editorial review records')
 if issues:
     for issue in issues[:100]:print('ERROR:',issue)
     raise SystemExit(f'Failed audit with {len(issues)} issues')
-manifest={'stages':legacy['stages'],'entries':entries,'legacyMap':legacy_map,'sources':source_items}
+manifest={'stages':legacy['stages'],'entries':entries,'legacyMap':legacy_map,'sources':source_items,'editorialReviews':ledger.get('records',[])}
 write_if_changed(ROOT/'src/generated/content-manifest.json',manifest)
 write_if_changed(ROOT/'src/generated/client-index.json',{'stages':legacy['stages'],'entries':{k:{x:e[x] for x in ['id','title','module','kind','level','order','stage'] if x in e} for k,e in entries.items()},'legacyMap':legacy_map})
 print('PASS: modules',stats['module'],'lessons',stats['theory'],'practice',stats['practice'],'source records',len(source_items),'legacy map',len(legacy_map),'links OK')

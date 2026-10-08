@@ -1,3 +1,12 @@
+---
+id: glossary
+title: Глоссарий продаж
+kind: glossary
+status: editorial_draft
+updated: "2026-10-09"
+sources: []
+---
+
 # Глоссарий
 
 | Термин | Рабочее определение |

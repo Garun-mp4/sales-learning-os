@@ -53,6 +53,8 @@ Vercel устанавливает npm-зависимости из `package-lock.
 | Путь | Назначение |
 |---|---|
 | `sales-knowledge-base/` | Исходные Markdown и библиотека материалов |
+| `sales-knowledge-base/editorial-review-ledger.json` | Проверки тезисов с источником, датой, охватом, рецензентом и статусом |
+| `sales-knowledge-base/EDITORIAL_REVIEW_WORKFLOW.md` | Правила редакторской проверки и перехода материала в `verified` |
 | `src/generated/content-manifest.json` | Проверенный manifest маршрутов и корпуса |
 | `src/content.config.ts` | Zod-схема Astro Content Collection |
 | `src/pages/` | Маршруты приложения и страниц курса, включая 404 |
@@ -67,6 +69,8 @@ Vercel устанавливает npm-зависимости из `package-lock.
 | `tests/` | Статические, браузерные, data, responsive и URL E2E проверки |
 | `docs/IMPLEMENTATION_ROADMAP.md` | План этапов до полной готовности |
 | `docs/MILESTONE_LOG.md` | Проверяемый статус этапов и результаты QA |
+
+Курс и три справочника доступны через интерфейс `/library/`; редакционная карта находится на `/editorial-review/`. Все основные учебные документы остаются `editorial_draft`, пока проверка каждого из них не внесена в реестр и не пройдены условия полного охвата.
 
 ## Дизайн
 

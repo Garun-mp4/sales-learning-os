@@ -35,6 +35,11 @@ expected.update(
         "search/index.html",
         "bookmarks/index.html",
         "final-project/index.html",
+        "library/index.html",
+        "library/glossary/index.html",
+        "library/cases/index.html",
+        "library/templates/index.html",
+        "editorial-review/index.html",
         "settings/index.html",
         *(f"level/{stage['id']}/index.html" for stage in manifest["stages"]),
         *(f"source/{source['id']}/index.html" for source in manifest["sources"]),
@@ -113,8 +118,38 @@ if not search_index_path.is_file():
     issues.append("Missing search index")
 else:
     page_indexes = json.loads(search_index_path.read_text(encoding="utf8"))
-if len(page_indexes) != len(entries):
-    issues.append(f"Search count mismatch: {len(page_indexes)}/{len(entries)}")
+if len(page_indexes) != len(entries) + 3:
+    issues.append(f"Search count mismatch: {len(page_indexes)}/{len(entries) + 3}")
+library_index = {item.get("id"): item for item in page_indexes if item.get("kind") == "library"}
+if set(library_index) != {"glossary", "cases", "templates"}:
+    issues.append("Search index does not include all three course libraries")
+for identifier in library_index:
+    library = BeautifulSoup((DIST / "library" / identifier / "index.html").read_text(encoding="utf8"), "html.parser")
+    if not library.select_one("article[data-pagefind-body]"):
+        issues.append("Library missing searchable body " + identifier)
+    if len(library.select("h1")) != 1:
+        issues.append("Library must have exactly one h1 " + identifier)
+if "data-template-copy" not in (DIST / "library/templates/index.html").read_text(encoding="utf8"):
+    issues.append("Template library does not expose copy controls")
+for document_id, library_id in (("06-002", "templates"), ("08-001", "cases"), ("16-001", "glossary")):
+    lesson_path = DIST / "lesson" / document_id / "index.html"
+    lesson = BeautifulSoup(lesson_path.read_text(encoding="utf8"), "html.parser")
+    if not any(anchor.get("href", "").endswith(f"library/{library_id}/") for anchor in lesson.select(".library-references a[href]")):
+        issues.append(f"Missing contextual {library_id} link on {document_id}")
+
+editorial_html = BeautifulSoup((DIST / "editorial-review/index.html").read_text(encoding="utf8"), "html.parser")
+if len(editorial_html.select(".editorial-table tbody tr")) != len(entries):
+    issues.append("Editorial coverage map does not list every learning document")
+if "0 / 430" not in editorial_html.get_text(" ", strip=True):
+    issues.append("Editorial coverage map does not show the current review state")
+
+for identifier in [key for key, entry in entries.items() if entry["kind"] == "module"]:
+    module_html = BeautifulSoup((DIST / "module" / identifier / "index.html").read_text(encoding="utf8"), "html.parser")
+    chapter = module_html.select_one("article.module-reading[data-pagefind-body]")
+    if not chapter or not chapter.select_one("h2"):
+        issues.append("Module missing its rendered integration chapter " + identifier)
+    elif chapter.select_one("h2#порядок-изучения, h2#обязательная-практика"):
+        issues.append("Module duplicates its generated lesson/practice navigation " + identifier)
 
 for issue in issues[:40]:
     print("ERROR", issue)

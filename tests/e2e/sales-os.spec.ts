@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 declare global {
   interface Window {
@@ -7,6 +8,18 @@ declare global {
     __importStarted?: boolean;
   }
 }
+type CourseIndexEntry = {
+  id: string;
+  module: string;
+  kind: string;
+  level: string;
+};
+const courseIndex = JSON.parse(
+  readFileSync(
+    new URL("../../src/generated/client-index.json", import.meta.url),
+    "utf8",
+  ),
+) as { entries: Record<string, CourseIndexEntry> };
 test("Roadmap shows exactly 22 modules", async ({ page }) => {
   await page.goto("/roadmap/");
   await expect(page.locator("a.card")).toHaveCount(22);
@@ -14,6 +27,12 @@ test("Roadmap shows exactly 22 modules", async ({ page }) => {
 test("Module isolation and direct lesson navigation", async ({ page }) => {
   await page.goto("/module/01-MODULE/");
   await expect(page.locator(".pagehead h1")).toContainText("Природа");
+  await expect(page.locator("article.module-reading")).toContainText(
+    "Концептуальная основа",
+  );
+  await expect(
+    page.locator("article.module-reading h2#порядок-изучения"),
+  ).toHaveCount(0);
   await expect(page.locator(".stack > a.item").first()).toHaveAttribute(
     "href",
     /01-/,
@@ -22,6 +41,163 @@ test("Module isolation and direct lesson navigation", async ({ page }) => {
   await expect(page.locator("article.article")).toContainText(
     "Обмен ценностью",
   );
+});
+test("Learning continuation distinguishes last visited from the next core item", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator("[data-return-card]")).toBeHidden();
+  await expect(page.locator("[data-program-title]")).toContainText(
+    "Обмен ценностью",
+  );
+  await expect(page.locator("[data-continue]")).toHaveAttribute(
+    "href",
+    "/lesson/01-001/",
+  );
+
+  await page.goto("/practice/22-P01/");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () => (await window.SalesOSUserStore.getState()).lastVisited,
+      ),
+    )
+    .toBe("22-P01");
+  await page.goto("/");
+  await expect(page.locator("[data-return-card]")).toBeVisible();
+  await expect(page.locator("[data-return]")).toHaveAttribute(
+    "href",
+    "/practice/22-P01/",
+  );
+  await expect(page.locator("[data-return-title]")).toContainText("Playbook");
+  await expect(page.locator("[data-continue]")).toHaveAttribute(
+    "href",
+    "/lesson/01-001/",
+  );
+});
+test("Program moves from required lessons to practice and then to the next module", async ({
+  page,
+}) => {
+  const requiredModuleLessons = Object.values(courseIndex.entries)
+    .filter(
+      (entry) =>
+        entry.module === "01" &&
+        entry.kind === "theory" &&
+        entry.level === "required",
+    )
+    .map((entry) => entry.id);
+  const requiredModulePractice = Object.values(courseIndex.entries)
+    .filter(
+      (entry) =>
+        entry.module === "01" &&
+        entry.kind === "practice" &&
+        entry.level === "required",
+    )
+    .map((entry) => entry.id);
+  await page.addInitScript((lessonIds) => {
+    localStorage.setItem(
+      "sales-os-v2",
+      JSON.stringify({
+        format: "sales-os-v2",
+        version: 2,
+        lessonStatuses: Object.fromEntries(
+          lessonIds.map((id) => [id, "theory_completed"]),
+        ),
+        practiceStatuses: {},
+        bookmarks: [],
+        lastVisited: null,
+        legacyImported: false,
+      }),
+    );
+  }, requiredModuleLessons);
+  await page.goto("/");
+  await expect(page.locator("[data-continue]")).toHaveAttribute(
+    "href",
+    "/practice/01-P01/",
+  );
+  await expect(page.locator("[data-program-description]")).toContainText(
+    "упражнениями",
+  );
+
+  const nextState = {
+    format: "sales-os-v2",
+    version: 2,
+    lessonStatuses: Object.fromEntries(
+      requiredModuleLessons.map((id) => [id, "theory_completed"]),
+    ),
+    practiceStatuses: Object.fromEntries(
+      requiredModulePractice.map((id) => [id, "self_reviewed"]),
+    ),
+    bookmarks: [],
+    lastVisited: null,
+    legacyImported: false,
+  };
+  await page.evaluate(async (value) => {
+    await window.SalesOSUserStore.replaceAll(value, {});
+  }, nextState);
+  await page.reload();
+  await expect(page.locator("[data-continue]")).toHaveAttribute(
+    "href",
+    "/lesson/02-001/",
+  );
+
+  const completeState = {
+    ...nextState,
+    lessonStatuses: Object.fromEntries(
+      Object.values(courseIndex.entries)
+        .filter(
+          (entry) => entry.kind === "theory" && entry.level === "required",
+        )
+        .map((entry) => [entry.id, "theory_completed"]),
+    ),
+    practiceStatuses: Object.fromEntries(
+      Object.values(courseIndex.entries)
+        .filter(
+          (entry) => entry.kind === "practice" && entry.level === "required",
+        )
+        .map((entry) => [entry.id, "self_reviewed"]),
+    ),
+  };
+  await page.evaluate(async (value) => {
+    await window.SalesOSUserStore.replaceAll(value, {});
+  }, completeState);
+  await page.reload();
+  await expect(page.locator("[data-program-title]")).toHaveText(
+    "Основной маршрут завершён",
+  );
+  await expect(page.locator("[data-continue]")).toHaveAttribute(
+    "href",
+    "/final-project/",
+  );
+  await page.goto("/lesson/01-012/");
+  await expect(page.locator(".pagehead")).toContainText("Продвинутый материал");
+});
+test("Course libraries are navigable, indexed in fallback search and copyable", async ({
+  page,
+}) => {
+  await page.route("**/pagefind/pagefind.js", (route) => route.abort());
+  await page.goto("/search/");
+  await page.locator("[data-search-input]").fill("MEDDPICC");
+  await expect(
+    page.locator('[data-search-results] a[href="/library/glossary/"]'),
+  ).toBeVisible();
+
+  await page.goto("/library/templates/");
+  await expect(page.locator("article[data-template-copy]")).toContainText(
+    "Первое деловое сообщение",
+  );
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page
+    .getByRole("button", {
+      name: "Скопировать шаблон «Первое деловое сообщение»",
+    })
+    .click();
+  await expect(page.locator("#toast")).toContainText(
+    "Текст шаблона скопирован",
+  );
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("Здравствуйте!");
 });
 test("Theme, progress and notes persist", async ({ page }) => {
   await page.goto("/lesson/01-001/");

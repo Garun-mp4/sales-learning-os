@@ -36,4 +36,22 @@ const documents = defineCollection({
         });
     }),
 });
-export const collections = { documents };
+
+// These existing reference documents are also rendered directly from their
+// Markdown sources instead of being duplicated into route components.
+const libraries = defineCollection({
+  loader: glob({
+    pattern: "{GLOSSARY,CASE_LIBRARY,TEMPLATE_LIBRARY}.md",
+    base: "./sales-knowledge-base",
+  }),
+  schema: z.object({
+    id: z.enum(["glossary", "cases", "templates"]),
+    title: z.string().min(3),
+    kind: z.enum(["glossary", "cases", "templates"]),
+    status: z.enum(["editorial_draft", "verified"]),
+    updated: z.string(),
+    sources: z.array(z.string()),
+  }),
+});
+
+export const collections = { documents, libraries };
