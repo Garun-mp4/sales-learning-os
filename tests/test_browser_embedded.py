@@ -7,14 +7,14 @@ from site_helpers import ROOT, SITE
 from pathlib import Path
 import json,re
 from playwright.sync_api import sync_playwright
-CSS=(ROOT/'src/styles/app.css').read_text()
-JS=(ROOT/'src/scripts/app.js').read_text()
-INDEX=json.loads((SITE/'assets/client-index.json').read_text())
-SEARCH=json.loads((SITE/'assets/search-index.json').read_text())
+CSS=(ROOT/'src/styles/app.css').read_text(encoding='utf-8')
+JS=(ROOT/'src/scripts/app.js').read_text(encoding='utf-8')
+INDEX=json.loads((SITE/'assets/client-index.json').read_text(encoding='utf-8'))
+SEARCH=json.loads((SITE/'assets/search-index.json').read_text(encoding='utf-8'))
 SHOT=ROOT/'test-results'/'screenshots';SHOT.mkdir(parents=True,exist_ok=True)
 
 def load(page,route):
-    html=(SITE/route/'index.html').read_text()
+    html=(SITE/route/'index.html').read_text(encoding='utf-8')
     html=re.sub(r'<link rel="stylesheet"[^>]*>', '<style>'+CSS+'</style>', html)
     html=re.sub(r'<script[^>]*\bsrc="[^"]+"[^>]*></script>', '', html)
     page.set_content(html,wait_until='domcontentloaded')

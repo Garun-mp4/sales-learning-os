@@ -7,12 +7,12 @@ from site_helpers import ROOT, SITE
 from pathlib import Path
 import re
 from playwright.sync_api import sync_playwright
-CSS=(ROOT/'src/styles/app.css').read_text()
+CSS=(ROOT/'src/styles/app.css').read_text(encoding='utf-8')
 ROUTES=['','roadmap','sources','search','settings','practice','lesson/01-001','practice/01-P01'] + [f'module/{n:02d}-MODULE' for n in range(1,23)]
 WIDTHS=(320,390,768,1024,1440)
 
 def render(page,route):
-    html=(SITE/route/'index.html').read_text()
+    html=(SITE/route/'index.html').read_text(encoding='utf-8')
     html=re.sub(r'<link rel="stylesheet"[^>]*>','<style>'+CSS+'</style>',html)
     html=re.sub(r'<script[^>]*\bsrc="[^"]+"[^>]*></script>','',html)
     page.set_content(html,wait_until='domcontentloaded')

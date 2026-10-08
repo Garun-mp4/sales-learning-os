@@ -10,7 +10,7 @@ def write_if_changed(path, content):
         temporary.write_bytes(encoded);os.replace(temporary,path)
     finally:
         temporary.unlink(missing_ok=True)
-legacy=json.loads((ROOT/'src/generated/legacy.json').read_text())
+legacy=json.loads((ROOT/'src/generated/legacy.json').read_text(encoding='utf-8'))
 entries={}; issues=[]; path_ids={}; legacy_map={}; stats=collections.Counter()
 for path in sorted((CONTENT/'modules').rglob('*.md')):
     raw=path.read_text(encoding='utf-8'); parts=raw.split('---',2)

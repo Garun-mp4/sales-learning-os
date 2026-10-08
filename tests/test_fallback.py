@@ -8,6 +8,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 environment = os.environ.copy()
 environment["SALES_OS_SITE_DIR"] = str(ROOT / "dist-fallback")
+strict_python = [
+    sys.executable,
+    "-X",
+    "warn_default_encoding",
+    "-W",
+    "error::EncodingWarning",
+]
 
 test_results = ROOT / "test-results"
 test_results.mkdir(exist_ok=True)
@@ -26,11 +33,11 @@ with tempfile.TemporaryDirectory(prefix="build-output-guard-", dir=test_results)
 print("PASS: fallback builder refuses an arbitrary output directory without deleting its files")
 
 commands = [
-    [sys.executable, "tests/test_static.py", "--site", "dist-fallback"],
-    [sys.executable, "tests/test_browser_embedded.py"],
-    [sys.executable, "tests/test_user_data_embedded.py"],
-    [sys.executable, "tests/test_responsive_embedded.py"],
-    [sys.executable, "tests/test_final_project_embedded.py"],
+    [*strict_python, "tests/test_static.py", "--site", "dist-fallback"],
+    [*strict_python, "tests/test_browser_embedded.py"],
+    [*strict_python, "tests/test_user_data_embedded.py"],
+    [*strict_python, "tests/test_responsive_embedded.py"],
+    [*strict_python, "tests/test_final_project_embedded.py"],
     ["node", "tests/test_offline_worker.mjs", "dist-fallback"],
 ]
 for command in commands:
