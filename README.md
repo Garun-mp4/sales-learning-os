@@ -59,7 +59,8 @@ Vercel устанавливает npm-зависимости из `package-lock.
 | `src/layouts/Shell.astro` | Общая оболочка и навигация |
 | `src/components/` | Повторно используемые компоненты курса |
 | `src/styles/app.css` | Vercel-ориентированные токены, темы и адаптивные стили |
-| `src/scripts/app.js` | Клиентское состояние, поиск, импорт/экспорт и offline UI |
+| `src/scripts/user-store.js` | IndexedDB-first пользовательские данные, миграции, транзакции и межвкладочная синхронизация |
+| `src/scripts/app.js` | UI состояния, поиск, backup/restore и offline UI через единый data store |
 | `scripts/build.py` | Отдельный Python fallback renderer (`dist-fallback/`) |
 | `scripts/prepare_astro.py` | Подготовка runtime-индексов и статьи итогового проекта |
 | `scripts/after-build.mjs` | Генерация offline manifest и service worker после Astro/Pagefind |

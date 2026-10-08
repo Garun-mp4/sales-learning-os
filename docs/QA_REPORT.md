@@ -2,9 +2,9 @@
 
 ## Текущая проверка (2026-10-09)
 
-Milestone M1 прошёл приёмку 2026-10-09. Полный Windows `verify-windows.ps1` завершился exit 0: чистый `npm ci`, lint, Astro check (42 файла, 0 diagnostics), production build (476 маршрутов, 408 страниц в Pagefind, 937 offline URLs), quality suite, URL Playwright E2E (5/5) и Python fallback suite. GitHub Actions run `37845937407` прошёл на Ubuntu и Windows. Vercel Preview из commit `2b2cb12` достиг READY; protected HTTP smoke подтвердил главную, урок, практику и поиск (200), а пользовательскую 404-страницу (404). В первом preview была найдена и устранена несовместимость глобального `pip install` с PEP 668 через отдельное `.venv`. Параллельный dev/build smoke и `npm audit` (0 уязвимостей) также прошли.
+M1 и M2 прошли инженерную приёмку. M1: полный Windows `verify-windows.ps1` завершился exit 0; GitHub Actions run `37845937407` прошёл на Ubuntu и Windows, а protected HTTP smoke M1 подтвердил главную, урок, практику, поиск и 404. M2: локальные lint, Astro check, production build, quality suite, Playwright URL E2E и Python fallback прошли; GitHub Actions runs `37850003700` и `37850409541` прошли на Ubuntu и Windows. В M2 добавлено IndexedDB-first транзакционное хранилище, обработка конкурирующих вкладок, ограниченного режима и атомарного импорта. Preview для финального M2 commit `17ca14d` достиг `READY`, но HTTP-smoke именно этого deployment не подтверждён: подключённая Vercel-интеграция отказала с 403 при авторизации к проекту, а Vercel CLI отсутствует в окружении. Настройки защиты не менялись.
 
-Выполненные M1 изменения и доказательства приведены в `docs/MILESTONE_LOG.md`. Следующий этап реализации — M2. Технические тесты не являются фактологической рецензией учебного корпуса; все материалы пока остаются `editorial_draft`.
+Выполненные изменения и результаты приведены в `docs/MILESTONE_LOG.md`. Следующий этап реализации — M3. Технические тесты не являются фактологической рецензией учебного корпуса; все материалы пока остаются `editorial_draft`.
 
 Следующие результаты ниже — архивная запись предыдущей проверки от 2026-10-08. Их статусы не описывают текущее состояние после M1.
 
