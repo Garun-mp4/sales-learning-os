@@ -51,3 +51,35 @@
 - M2–M9: исправлены логика заметок, импорт/экспорт, безопасность ID, fallback поиск и статическая проверка ссылок; доступные DOM и структурные тесты проходят.
 - M10: симуляция офлайн-кэша проходит; реальный network-offline тест заблокирован.
 - M11: итоговая приёмка **НЕ ЗАВЕРШЕНА**, см. `docs/ITERATION_4_HANDOFF.md`.
+
+## Текущий roadmap: baseline и выполнение M0–M8
+
+План текущих этапов: `docs/IMPLEMENTATION_ROADMAP.md`. Старые таблицы выше фиксируют состояние первоначальной реализации на 8 октября 2026 года и остаются историей, а не статусом нового roadmap.
+
+### M0 — baseline (PASS, 2026-10-09)
+
+- Исходная точка: ветка `main`, commit `1060a0a`, `origin/main` синхронизирован. Единственные незакоммиченные файлы — предоставленные пользователем исходники `Sales OS Stepped Logo.png` и `faviicon.png`; они сохранены и не включались в команды сборки или коммиты.
+- Окружение: Node 22.22.2, npm 10.9.7, Python 3.12.10, Playwright browsers Chromium и WebKit установлены.
+- Delivery decision: Astro — канонический production renderer; Python renderer сохраняется отдельно как fallback. `dist/` сейчас содержит 938 tracked files; текущие npm lifecycle hooks запускают Python generator и затем Astro в одном output. Поэтому baseline Astro build проверен только в игнорируемом `.astro/baseline-dist/`, а full build/dev lifecycle будет проверен после разведения выходов в M1.
+- Документация M0: `docs/ARCHITECTURE.md` описывает текущую архитектуру, её сборочный риск и целевое состояние после M1.
+
+| Проверка baseline | Результат |
+|---|---|
+| `npx astro check` | FAIL: 3 ошибки из-за отсутствующих Node types (`process`, `node:path`, `node:fs/promises`), плюс 6 hints |
+| `npx astro build --outDir .astro/baseline-dist` | PASS: Astro сгенерировал 475 страниц; Pagefind и post-build в этой изолированной проверке не запускались |
+| `npm run test:quality` | FAIL на первом тесте: `test_static.py` ожидает 476 страниц, фактически 475; последующие тесты этим запуском не выполнялись |
+| `node tests/test_offline_worker.mjs` | FAIL: offline manifest содержит Windows-путь `dist\\...` вместо URL |
+| `node tests/test_remark_links.mjs` | PASS |
+| `python tests/test_browser_embedded.py` | PASS: изолированные сценарии; реальные URL и сетевой offline не проверяются этим тестом |
+| `python tests/test_user_data_embedded.py` | PASS: существующие backup/migration/persistence сценарии; multi-tab и blocked-storage дефекты покрыты недостаточно |
+| `python tests/test_responsive_embedded.py` | FAIL: `/practice/01-P01/` имеет scrollWidth 538 px при viewport 320 и 390 px |
+| `python tests/test_final_project_embedded.py` | PASS |
+| `node tests/test_astro_source_integrity.mjs` | FAIL при прямом запуске: нет `src/content/sales/...`; тест зависит от отдельной синхронизации Astro content, которая пока не выражена в его setup |
+| Полный URL E2E через `npm run test:e2e` | Не запускался в baseline: текущий `predev` сначала генерирует tracked `dist/`; сначала изолировать build hooks в M1 |
+
+Базовый Astro renderer работает, но это не подтверждает full production pipeline. Прямой изолированный build и проверки не меняли tracked `dist/`; рабочая копия по-прежнему содержит только два исходных PNG.
+
+| Новый этап | Статус | Последняя запись |
+|---|---|---|
+| M0 — baseline и архитектурное решение | **PASS** | 2026-10-09; результаты выше |
+| M1–M8 | **NOT STARTED** | Реализация будет отмечаться после каждого отдельного gate |
