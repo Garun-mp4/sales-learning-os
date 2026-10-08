@@ -1,0 +1,14 @@
+---
+import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';
+import {readFile} from 'node:fs/promises';
+import path from 'node:path';
+// The prebuild copies sanitized final-project HTML outside dist/.
+// Unlike dist/, src/generated is not cleared when Astro starts its build.
+const rendered=await readFile(path.resolve('src/generated/final-project.html'),'utf8');
+if(!rendered.trim())throw Error('Final project renderer missing after prepare:content');
+---
+<Shell title="Итоговый проект" active="practice"><div class="breadcrumb"><a href="/">Обзор</a> › <span>Итоговый проект</span></div>
+<PageHeading eyebrow="СКВОЗНАЯ ПРАКТИКА" title="От первого клиента до сделки" description="Практический маршрут для применения знаний на собственных проектах."/>
+<article class="article" set:html={rendered}></article>
+<div class="editbox"><strong>Мой итоговый проект</strong><textarea data-note="FINAL_PROJECT" aria-label="Заметки итогового проекта" placeholder="Цели, результаты, ссылки на документы и выводы..."></textarea><p class="hint" data-save-hint>Данные остаются в браузере</p></div>
+</Shell>

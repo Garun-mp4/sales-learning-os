@@ -1,0 +1,8 @@
+node_modules/
+.astro/
+.astro-cache/
+.playwright/
+test-results/
+playwright-report/
+src/content/sales/
+*.log

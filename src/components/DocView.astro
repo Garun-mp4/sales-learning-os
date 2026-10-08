@@ -1,0 +1,40 @@
+---
+import { render, type CollectionEntry } from 'astro:content';
+import Shell from '../layouts/Shell.astro';
+import PageHeading from './PageHeading.astro';
+import EntryRow from './EntryRow.astro';
+import { entries,href,neighbor,sources } from '../lib/course';
+interface Props { doc:CollectionEntry<'documents'> }
+const {doc}=Astro.props;const d=doc.data;const e=entries[d.id];
+if(!e||e.kind!==d.kind)throw Error(`Unknown learning document: ${d.id}`);
+const {Content,headings}=await render(doc);
+const related=d.related_practice.map(id=>entries[id]).filter(Boolean);
+const {previous,next}=neighbor(e);
+const isPractice=d.kind==='practice';
+---
+<Shell title={d.title} module={d.module} documentId={d.id} documentKind={d.kind} reading>
+  <div class="breadcrumb"><a href="/roadmap/">Roadmap</a> › <a href={`/module/${d.module}-MODULE/`}>Модуль {d.module}</a> › <span>{d.id}</span></div>
+  <PageHeading eyebrow={`${isPractice?'ПРАКТИЧЕСКОЕ ЗАДАНИЕ':'УЧЕБНЫЙ МАТЕРИАЛ'} · ${d.id}`} title={d.title}>
+    <div class="row wrap"><span class="badge warning">Редакционный черновик</span><span class="badge">{d.group}</span><span class="badge">{d.level==='required'?'Обязательный':'Продвинутый'} материал</span></div>
+  </PageHeading>
+  <div class="reading-controls">
+    <label class="small muted" for="status">Мой статус</label>
+    <select id="status" class="status-select" data-status-control={d.id} data-kind={d.kind}>
+      <option value="not_started">Не начато</option><option value="in_progress">В процессе</option>
+      {isPractice?<><option value="self_reviewed">Самопроверка выполнена</option><option value="completed">Выполнено (самооценка)</option></>:<><option value="theory_completed">Теория изучена</option><option value="mastered">Навык освоен (самооценка)</option></>}
+    </select>
+    <button type="button" class="btn smallbtn" data-bookmark={d.id} aria-pressed="false">☆ В закладки</button>
+    <a class="btn smallbtn" href={`/module/${d.module}-MODULE/`}>К модулю</a>
+  </div>
+  <div class="reader-grid"><div class="reader">
+    <article class="article" data-pagefind-body><Content /></article>
+    <div class="source-chips">{d.sources.filter(id=>sources.some(s=>s.id===id)).map(id=><a class="badge" href={`/source/${id}/`}>{id} · источник</a>)}</div>
+    {!isPractice&&related.length>0&&<section class="module-section"><h2 class="h2">Связанная практика</h2><div class="stack">{related.map(x=><EntryRow entry={x}/>)}</div></section>}
+    {isPractice&&<div class="notice">Проверка самостоятельная: отметка «Выполнено» не является независимой оценкой.</div>}
+    <div class="editbox"><strong>{isPractice?'Мой ответ на задание':'Мои заметки по теме'}</strong><p class="hint">Сохраняется только на устройстве. Не публикуйте персональные данные заказчиков.</p><textarea data-note={d.id} aria-label={isPractice?'Ответ на задание':'Заметки по уроку'} placeholder="Ваши выводы, ответ или ссылка на рабочий документ..."></textarea><div class="hint" data-save-hint>Сохранение на устройстве</div></div>
+    <nav class="navprevnext" aria-label="Соседние материалы">
+      {previous&&<a href={href(previous)}>← Предыдущий материал<strong>{previous.title}</strong></a>}
+      {next&&<a href={href(next)}>Следующий материал →<strong>{next.title}</strong></a>}
+    </nav>
+  </div><aside class="reader-aside"><h3>В этом материале</h3><nav class="toc">{headings.filter(h=>h.depth===2||h.depth===3).map(h=><a class={h.depth===3?'depth3':'depth2'} href={`#${h.slug}`}>{h.text}</a>)}</nav></aside></div>
+</Shell>

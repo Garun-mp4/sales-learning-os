@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Интерактивная дорожная карта по продажам через переписку: теория, практические задания, CRM, переговоры и продажа собственных IT-проектов.">
+  <title>Sales OS — Дорожная карта продаж</title>
+  <style>
+    :root{--bg:#f8f9fa;--paper:#fff;--ink:#16191d;--secondary:#707781;--muted:#9399a1;--border:#e7e9ed;--line:#eff0f2;--accent:#151a21;--green:#176449;--greenbg:#e8f5ef;--purple:#6552a3;--purplebg:#f0edfa;--blue:#315c9c;--bluebg:#ebf1fb;--amber:#a06a24;--amberbg:#fdf4e8;--radius:15px;--shadow:0 10px 35px rgba(19,24,33,.035)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.58 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased}button,input,textarea{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #8eacdd;outline-offset:3px}::selection{background:#dae5f5}
+    .shell{display:grid;grid-template-columns:274px minmax(0,1fr);min-height:100vh}.sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;background:#fff;border-right:1px solid var(--border);padding:31px 19px 19px;display:flex;flex-direction:column;gap:24px;scrollbar-width:thin}.brand{display:flex;align-items:center;gap:11px;padding:0 9px}.brand-mark{width:36px;height:36px;border-radius:11px;background:#151a21;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;letter-spacing:-1.4px}.brand strong{font-size:16px;letter-spacing:-.55px}.brand small{display:block;color:var(--secondary);font-size:11px;letter-spacing:.09em;font-weight:700;margin-top:-2px}.side-title{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#9299a3;font-weight:800;padding:0 12px;margin-bottom:11px}.nav-group{display:grid;gap:3px}.side-link{display:flex;gap:12px;padding:11px 12px;align-items:center;border-radius:10px;color:#59616c;font-size:12px;font-weight:600;transition:.15s}.side-link:hover{background:#f5f6f8;color:var(--ink)}.side-link.active{background:#f0f2f5;color:#171c23}.side-link .nav-num{font-size:10px;color:#9ba1aa;font-variant-numeric:tabular-nums;letter-spacing:.05em;min-width:20px}.side-link .nav-label{flex:1}.side-link .nav-count{font-size:10px;color:#9fa5ae;font-variant-numeric:tabular-nums}.side-bottom{margin-top:auto;border-top:1px solid var(--border);padding:17px 11px 0}.save-indicator{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--secondary)}.save-indicator:before{content:"";width:7px;height:7px;border-radius:50%;background:#4ba27b}.side-small{font-size:11px;color:#a1a6af;margin-top:7px}
+    .main{min-width:0}.content{max-width:1080px;padding:48px 60px 95px;margin:0 auto}.topline{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:37px}.crumb{font-size:11px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#858c96}.top-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #e1e4e8;background:#fff;color:#313843;border-radius:9px;min-height:36px;padding:8px 12px;font-size:11px;font-weight:750;white-space:nowrap;transition:.15s}.btn:hover{background:#f5f6f7;border-color:#cbd0d7}.btn.primary{background:#161b22;color:white;border-color:#161b22}.btn.primary:hover{background:#343b44}.btn svg{width:14px;height:14px;stroke:currentColor}.hero{display:grid;grid-template-columns:minmax(0,1fr) 200px;align-items:end;gap:26px;margin-bottom:29px}.eyebrow{display:inline-flex;align-items:center;gap:8px;color:#6a737e;font-size:11px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;margin-bottom:17px}.eyebrow i{width:7px;height:7px;background:#1d8d61;border-radius:50%}h1{font-size:clamp(37px,4.5vw,58px);line-height:1.065;letter-spacing:-.062em;font-weight:770;margin:0;max-width:720px}.h1-light{color:#8e959e}.intro{max-width:700px;color:#707985;font-size:14px;line-height:1.85;margin:17px 0 0}.hero-right{border:1px solid var(--border);border-radius:13px;background:#fff;padding:17px 19px}.hero-right small{display:block;color:#9aa1aa;font-size:10px;text-transform:uppercase;letter-spacing:.11em;font-weight:800}.hero-right strong{display:block;font-size:24px;letter-spacing:-1.2px;line-height:1.3;margin:4px 0}.hero-right span{font-size:11px;color:#7f8790}.statgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:30px 0}.stat{background:#fff;border:1px solid var(--border);padding:17px 20px;border-radius:12px;min-height:103px}.stat-label{font-size:11px;color:#89919c;font-weight:600}.stat-value{font-size:27px;font-weight:770;letter-spacing:-.055em;line-height:1.2;margin:7px 0 2px;font-variant-numeric:tabular-nums}.stat-note{font-size:10px;color:#9da4ac}.progress-track{height:7px;background:#eceff1;border-radius:20px;overflow:hidden}.progress-fill{height:100%;width:0;background:#222831;border-radius:20px;transition:width .25s}.progress-section{background:#fff;border:1px solid var(--border);border-radius:13px;padding:19px 21px 18px;margin-bottom:31px}.progress-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.progress-heading strong{font-size:12px}.progress-heading span{font-size:11px;color:var(--secondary)}.progress-foot{display:flex;justify-content:space-between;margin-top:10px;font-size:10px;color:#949ba5}.guide{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 37px}.guide-item{border:1px solid var(--border);background:#fff;border-radius:12px;padding:17px 19px}.guide-title{font-size:12px;font-weight:750;margin-bottom:6px}.guide p{font-size:11.5px;line-height:1.7;color:#77808b;margin:0}.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.tag{display:inline-flex;align-items:center;font-weight:720;font-size:10px;letter-spacing:.02em;padding:4px 8px;border:1px solid #e9ebef;border-radius:6px;color:#6a737f;background:#f8f9fa}.tag.advanced{background:#f1eff9;border-color:#ece9f8;color:#725fa3}.tag.practice{background:#ecf6f0;border-color:#e0f0e6;color:#297653}.tag.time{background:#f6f7f8;color:#89909a;border-color:#f0f1f3}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:17px}.section-head h2{font-size:24px;letter-spacing:-.055em;line-height:1.2;margin:0}.section-sub{font-size:12px;color:#8a929b;margin:6px 0 0}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:22px;align-items:center}.search-wrap{flex:1;min-width:200px;position:relative}.search-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#a5abb3;fill:none;stroke-width:1.8}.search{height:42px;padding:0 12px 0 39px;width:100%;background:#fff;border:1px solid var(--border);outline:0;border-radius:10px;font-size:12px;color:var(--ink)}.search:focus{border-color:#a4abb6;box-shadow:0 0 0 3px #eff2f5}.search::placeholder{color:#9ca4ad}.filter-buttons{display:flex;background:#fff;border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}.filter{background:transparent;border:0;border-radius:7px;padding:7px 10px;font-size:11px;color:#7b8390;font-weight:700}.filter.active{background:#161b22;color:#fff}.module-list{display:grid;gap:13px}.stage-heading{display:flex;align-items:center;gap:12px;margin:30px 0 13px;scroll-margin-top:20px}.stage-heading:first-child{margin-top:0}.stage-number{height:28px;min-width:28px;border-radius:7px;background:#e9edf1;color:#444f5b;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}.stage-heading .stage-copy{flex:1;min-width:0}.stage-heading h3{font-size:14px;margin:0;line-height:1.3;letter-spacing:-.02em}.stage-heading p{font-size:11px;color:#8a929a;margin:3px 0 0}.stage-label{font-size:10px;color:#9097a0;font-variant-numeric:tabular-nums}
+    details.module{background:#fff;border:1px solid var(--border);border-radius:13px;scroll-margin-top:20px;overflow:hidden;box-shadow:0 3px 14px rgba(25,32,42,.018)}details.module[open]{box-shadow:var(--shadow)}details.module.done{border-color:#cee7d9}details.module summary{list-style:none;cursor:pointer;padding:18px 20px;display:flex;gap:14px;align-items:center}details.module summary::-webkit-details-marker{display:none}.mod-index{font-size:12px;font-weight:800;letter-spacing:-.04em;color:#9da4ae;min-width:23px;align-self:flex-start;margin-top:3px}.mod-main{min-width:0;flex:1}.mod-kicker{font-size:10px;color:#959da7;font-weight:700;letter-spacing:.11em;text-transform:uppercase;margin-bottom:5px}.mod-title{font-size:15px;letter-spacing:-.025em;font-weight:755;line-height:1.35;margin:0}.mod-description{font-size:11.5px;color:#8a929d;margin-top:5px;line-height:1.55}.mod-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}.mini-progress{background:#eef0f2;width:82px;height:5px;border-radius:8px;overflow:hidden;margin-left:auto}.mini-progress i{display:block;height:100%;background:#20262e;border-radius:8px}.pct{font-size:10px;min-width:30px;color:#939ba4;text-align:right;font-variant-numeric:tabular-nums}.chevron{width:16px;height:16px;color:#989fa8;flex-shrink:0;transition:transform .18s;margin-left:7px}details[open] .chevron{transform:rotate(180deg)}.module-body{padding:0 20px 20px 57px;border-top:1px solid #f0f1f3}.outcome{display:flex;gap:9px;margin:17px 0 19px;color:#5e6c77;background:#f7f9fa;padding:12px 14px;border-radius:8px;font-size:11.5px;line-height:1.7}.outcome strong{color:#2e363f}.part-heading{font-size:11px;letter-spacing:.11em;text-transform:uppercase;font-weight:820;color:#717a85;margin:20px 0 10px;display:flex;align-items:center;gap:9px}.part-heading:after{content:"";height:1px;background:#edf0f2;flex:1}.topic-group{margin-bottom:15px}.topic-title{font-size:12px;font-weight:760;color:#2b323b;margin:0 0 6px}.check-list{display:grid;gap:2px}.checkline{display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:4px 1px;border-radius:5px;font-size:11.5px;color:#68717c;line-height:1.55}.checkline:hover{color:#242c35}.checkline input{width:15px;height:15px;border:1px solid #cbd1d8;accent-color:#1e5542;cursor:pointer;flex:0 0 auto;margin:2px 0 0}.checkline input:checked+span{color:#9ba2aa;text-decoration:line-through;text-decoration-color:#c8ced5}.labs{display:grid;gap:8px}.lab{display:flex;gap:12px;padding:12px 13px;border:1px solid #e8ece9;border-radius:9px;background:#fcfdfc;cursor:pointer}.lab:hover{border-color:#c4d8cc}.lab input{margin:3px 0 0;flex:0 0 auto;width:16px;height:16px;accent-color:#196347;cursor:pointer}.lab-main{display:grid;gap:4px}.lab-title{font-weight:750;font-size:12px;color:#334139}.lab-hint{font-size:11px;line-height:1.65;color:#78877f}.lab input:checked+.lab-main .lab-title{text-decoration:line-through;color:#879e92}.module-note{margin-top:17px;border-top:1px solid #f0f1f3;padding-top:14px}.note-label{font-size:11px;font-weight:740;color:#65707b;margin-bottom:7px;display:block}.note-textarea{width:100%;border:1px solid #e6e9ed;resize:vertical;border-radius:8px;padding:10px 12px;min-height:75px;font-size:12px;line-height:1.5;outline:0;background:#fff;color:#26303b}.note-textarea:focus{border-color:#b1bdc9}.note-textarea::placeholder{color:#abb2ba}.module-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px}.module-footer span{font-size:10px;color:#9ca4ad}.small-btn{border:1px solid #e6e9ed;background:#fff;border-radius:7px;font-size:10px;color:#66707c;font-weight:750;padding:7px 10px}.small-btn:hover{background:#f5f7f8}.hidden{display:none!important}.empty{border:1px dashed #d7dce2;background:#fff;padding:34px;text-align:center;border-radius:14px;color:#777f89;font-size:13px}
+    .capstone{margin:47px 0 0;border:1px solid #d8dfe2;border-radius:15px;background:#fff;padding:28px 30px;scroll-margin-top:20px}.capstone .overline{font-size:10px;letter-spacing:.13em;font-weight:850;color:#818b95;text-transform:uppercase}.capstone h2{font-size:27px;letter-spacing:-.05em;margin:7px 0 9px}.capstone .intro-cap{color:#78818b;font-size:12px;line-height:1.8;max-width:760px;margin-bottom:22px}.cap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.cap-card{border:1px solid #eceef1;border-radius:10px;padding:14px 15px;display:flex;gap:11px}.cap-card .cap-num{font-size:11px;font-weight:830;color:#9ba3ab}.cap-card strong{font-size:12px}.cap-card p{font-size:11px;color:#7d8590;line-height:1.7;margin:4px 0 0}.end-note{margin:24px 0 0;font-size:11px;line-height:1.75;color:#89929c}.bottom{border-top:1px solid #e7e9ed;margin-top:42px;padding-top:19px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:11px;color:#9a9fa7}.toast{position:fixed;bottom:22px;right:22px;background:#1e242c;color:#fff;padding:12px 16px;border-radius:10px;font-size:12px;box-shadow:0 13px 30px #0002;z-index:20;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s}.toast.visible{opacity:1;transform:translateY(0)}
+    @media(max-width:1150px){.content{padding:38px 36px 78px}.shell{grid-template-columns:235px minmax(0,1fr)}.sidebar{padding-inline:14px}.hero{grid-template-columns:1fr}.hero-right{display:none}}
+    @media(max-width:850px){.shell{display:block}.sidebar{height:auto;position:static;padding:16px 18px;display:block;border-right:0;border-bottom:1px solid var(--border)}.brand{padding:0}.sidebar .nav-container,.side-bottom{display:none}.content{padding:28px 20px 70px}.topline{margin-bottom:28px}.hero{margin-bottom:20px}.statgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.guide{grid-template-columns:1fr}.stage-heading{margin-top:26px}}
+    @media(max-width:520px){.content{padding-inline:15px}.topline{align-items:flex-start;flex-direction:column;gap:12px}.hero h1{font-size:39px}.stat{padding:14px}.toolbar{flex-direction:column;align-items:stretch}.search-wrap{width:100%}.filter-buttons{justify-content:space-between}.filter{flex:1;padding-inline:7px}details.module summary{padding:16px 13px;gap:10px}.mod-description{font-size:11px}.mod-index{min-width:19px}.mod-meta{gap:6px}.mini-progress{width:48px}.module-body{padding:0 13px 15px}.capstone{padding:21px 17px}.cap-grid{grid-template-columns:1fr}.btn{font-size:10px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+    @media print{body{background:#fff}.shell{display:block}.sidebar,.top-actions,.toolbar,.small-btn,.bottom,.toast{display:none!important}.content{padding:0;max-width:100%}.module-list{display:block}details.module{break-inside:avoid;margin-bottom:12px}details.module:not([open]) .module-body{display:block!important}.statgrid{gap:7px}.capstone{break-inside:avoid}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" aria-label="Навигация по дорожной карте">
+    <a href="#start" class="brand" aria-label="К началу">
+      <div class="brand-mark">S/</div><div><strong>Sales OS</strong><small>PERSONAL ROADMAP</small></div>
+    </a>
+    <div class="nav-container">
+      <div class="side-title">Навигация</div>
+      <nav class="nav-group" id="stage-nav"></nav>
+      <div style="height:16px"></div>
+      <div class="side-title">Программа</div>
+      <nav class="nav-group">
+        <a class="side-link" href="#modules"><span class="nav-num">↳</span><span class="nav-label">Все модули</span></a>
+        <a class="side-link" href="#capstone"><span class="nav-num">↳</span><span class="nav-label">Итоговый проект</span></a>
+      </nav>
+    </div>
+    <div class="side-bottom"><div class="save-indicator">Прогресс сохраняется локально</div><div class="side-small">Один файл · Без регистрации · Без серверов</div></div>
+  </aside>
+  <main class="main" id="start">
+    <div class="content">
+      <div class="topline">
+        <span class="crumb">SELF-STUDY / SALES ENGINEERING / 2026</span>
+        <div class="top-actions">
+          <button class="btn" id="export-btn" title="Сохранить прогресс и заметки в JSON"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg>Экспорт</button>
+          <button class="btn" id="import-btn" title="Восстановить сохранённый прогресс"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m-5 5 5-5 5 5M5 18v2h14v-2"/></svg>Импорт</button>
+          <input type="file" id="import-file" accept="application/json,.json" hidden>
+        </div>
+      </div>
+      <header class="hero">
+        <div>
+          <div class="eyebrow"><i></i>ТВОЙ ПЛАН РАЗВИТИЯ / v1.0</div>
+          <h1>Продажи. <span class="h1-light">От первого сообщения до сделки.</span></h1>
+          <p class="intro">Полная дорожная карта для самостоятельной продажи сайтов, IT-услуг и цифровых решений. Теория, конкретные задания, реальные клиенты и проверяемые результаты. Акцент — на <b>Telegram, WhatsApp, MAX и email</b>, без телефонных продаж.</p>
+        </div>
+        <div class="hero-right"><small>Ориентир первого прохода</small><strong>20–24 недели</strong><span>Темп адаптируй под практику. Уровень мастерства определяется результатами, а не временем.</span></div>
+      </header>
+      <section class="statgrid" aria-label="Сводка прогресса">
+        <div class="stat"><div class="stat-label">Учебных этапов</div><div class="stat-value">04</div><div class="stat-note">от фундамента до мастерства</div></div>
+        <div class="stat"><div class="stat-label">Модулей</div><div class="stat-value" id="module-count">22</div><div class="stat-note">в правильной последовательности</div></div>
+        <div class="stat"><div class="stat-label">Теория</div><div class="stat-value" id="theory-stat">0 / 0</div><div class="stat-note">освоенных тем</div></div>
+        <div class="stat"><div class="stat-label">Практика</div><div class="stat-value" id="practice-stat">0 / 0</div><div class="stat-note">выполненных заданий</div></div>
+      </section>
+      <section class="progress-section" aria-label="Общий прогресс">
+        <div class="progress-heading"><strong>Общий прогресс</strong><span id="progress-label">0% выполнено</span></div>
+        <div class="progress-track" role="progressbar" aria-label="Выполнено заданий и тем" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-foot"><span>Считается по отмеченным темам и практическим заданиям</span><span id="progress-detail">0 / 0</span></div>
+      </section>
+      <section class="guide" aria-label="Как пользоваться">
+        <div class="guide-item"><div class="guide-title">01 / Как проходить</div><p>Открывай модули по порядку. Изучай каждую тему, затем выполняй задания. Галочка означает, что можешь <b>объяснить и применить</b> навык, а не просто прочитал статью.</p><div class="legend"><span class="tag">ОБЯЗАТЕЛЬНО</span><span class="tag advanced">ПОЗЖЕ / ADV</span><span class="tag practice">ПРАКТИКА</span></div></div>
+        <div class="guide-item"><div class="guide-title">02 / На чём практиковаться</div><p>Сквозной учебный кейс — продажа <b>сайтов и IT-услуг малому бизнесу</b>, например мебельным компаниям. В каждом модуле создавай материалы, которые реально пригодятся для привлечения и ведения заказчиков.</p></div>
+      </section>
+      <section id="modules">
+        <div class="section-head"><div><h2>Программа обучения</h2><p class="section-sub">22 модуля · знания + упражнения + измеримый результат</p></div><button class="btn" id="expand-btn">Развернуть все</button></div>
+        <div class="toolbar"><div class="search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input id="search" class="search" type="search" placeholder="Поиск: SPIN, оффер, CRM, предоплата…" aria-label="Поиск по модулям"></div><div class="filter-buttons" role="group" aria-label="Фильтр модулей"><button data-filter="all" class="filter active">Все</button><button data-filter="active" class="filter">Не завершено</button><button data-filter="done" class="filter">Готово</button></div></div>
+        <div id="module-list" class="module-list"></div><div id="empty" class="empty hidden">Ничего не найдено. Измени запрос или фильтр.</div>
+      </section>
+      <section class="capstone" id="capstone">
+        <div class="overline">FINAL PROJECT / ПРОВЕРКА НАВЫКОВ</div>
+        <h2>Полный цикл одной реальной продажи</h2>
+        <p class="intro-cap">Итоговая цель — не «отправить много сообщений», а провести настоящую, полезную клиенту сделку. Конкретная ниша для практики: сайты для небольших компаний. Если заказ сразу не состоялся, оцени качество каждого шага и повтори цикл на другом подходящем клиенте.</p>
+        <div class="cap-grid">
+          <div class="cap-card"><div class="cap-num">01</div><div><strong>Выбрать сегмент и 30 релевантных компаний</strong><p>ICP, критерии отбора, проверенные источники, предварительные наблюдения.</p></div></div>
+          <div class="cap-card"><div class="cap-num">02</div><div><strong>Подготовить персональные текстовые обращения</strong><p>Уточнить разрешённые способы связи, написать аккуратный оффер без обещаний результата.</p></div></div>
+          <div class="cap-card"><div class="cap-num">03</div><div><strong>Провести диалог и диагностику</strong><p>Выяснить задачу, критерии выбора, возможности и заинтересованность. Не продавать то, что не нужно.</p></div></div>
+          <div class="cap-card"><div class="cap-num">04</div><div><strong>Составить КП и согласовать условия</strong><p>Решение, стоимость, этапы, срок, границы работ, предоплата, риски и следующие действия.</p></div></div>
+          <div class="cap-card"><div class="cap-num">05</div><div><strong>Заключить и выполнить оплачиваемый проект</strong><p>Результат засчитывается только при реальной договорённости и выполнении обязательств.</p></div></div>
+          <div class="cap-card"><div class="cap-num">06</div><div><strong>Оформить кейс и проанализировать воронку</strong><p>Получить разрешение на публикацию, собрать обратную связь, определить улучшения.</p></div></div>
+        </div>
+        <p class="end-note"><b>Важно:</b> реальная практика не подразумевает массовый спам. Перед коммерческими сообщениями проверяй требования законодательства, согласие и правила выбранной платформы; уважай отказ и конфиденциальность. Финансовые и юридические шаблоны адаптируй к своей юрисдикции.</p>
+      </section>
+      <footer class="bottom"><span>SALES OS / ROADMAP · Создано для самостоятельного обучения</span><span>Данные хранятся только в браузере · Экспортируй резервную копию</span></footer>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+const stages=[
+{id:1,title:"Фундамент",desc:"Покупатель, рынок, продукт и экономика",weeks:"Недели 1–4"},
+{id:2,title:"Практические продажи",desc:"Переписка, диагностика, оффер и сделка",weeks:"Недели 5–14"},
+{id:3,title:"Система и предпринимательство",desc:"CRM, аналитика, клиенты и развитие бизнеса",weeks:"Недели 15–20"},
+{id:4,title:"Профессиональное мастерство",desc:"Сложные сделки, этика, рост",weeks:"Недели 21–24+"}
+];
+// Теоретическая тема: '!' — обязательная; '~' — продвинутая.
+const modules=[
+{stage:1,title:"Природа и процесс продаж",desc:"Научиться продавать через пользу клиенту, а не через давление.",outcome:"Можешь объяснить полный цикл продажи и подобрать адекватный формат работы для своей услуги.",time:"2–3 дня",topics:[
+["Базовая логика",["!Обмен ценностью: клиентская задача → решение → результат","!Разница между продажами, маркетингом, рекламой и поддержкой","!Этика: польза, добровольность, прозрачность, уважение отказа","!Роли: инициатор, покупатель, пользователь, плательщик"]],
+["Модели продаж",["!B2B, B2C, B2G: чем отличаются мотивы и процессы","!Услуги, товары, подписки, проектная разработка","!Inbound, Outbound, рекомендации, партнёрские продажи","!Короткие и длинные циклы; разовые и повторные сделки"]],
+["Сквозной процесс",["!Поиск → контакт → квалификация → диагностика","!Оффер → возражения → переговоры → оплата","!Исполнение → обратная связь → рекомендации","~Роли SDR, BDR, Account Executive, Account Manager, CSM","~Sales-led, Product-led и Marketing-led Growth"]]
+],labs:[
+["Разложить свой продукт на полный цикл продажи","Артефакт: схема пути клиента от первого сообщения до завершения заказа на сайт."],
+["Создать личный кодекс этичных продаж","Артефакт: 8–10 правил, включая честность о результатах, конфиденциальность и уважение отказа."],
+["Описать 3 типа сделок","Артефакт: сравнение простого лендинга, корпоративного сайта и CRM/автоматизации по рискам, цене и циклу."]]},
+{stage:1,title:"Психология покупки и доверие",desc:"Понимать, почему люди выбирают решение или откладывают решение.",outcome:"Определяешь мотивы, барьеры, воспринимаемые риски и пути их честного снижения.",time:"3–4 дня",topics:[
+["Мотивы и задачи",["!Явные и скрытые потребности; боли, задачи, ожидания","!Рациональные и эмоциональные мотивы","!Jobs to Be Done (JTBD), функциональные и социальные задачи","!Текущий способ решения и цена сохранения статус-кво"]],
+["Путь покупателя",["!Осознание проблемы → исследование → сравнение → выбор","!Критерии выбора: риск, срок, цена, доверие, удобство","!Причины нерешительности и бездействия","!Важность опыта после покупки"]],
+["Психологические механизмы",["!Статус-кво и инерция; ограниченная рациональность","!Доверие: компетентность, предсказуемость, доказательства","!Неприятие потерь, эффект якоря и формулировки — без манипуляций","!Социальное доказательство и проверяемые кейсы","~Когнитивная нагрузка, эвристики и Choice Architecture","~Ограничения поведенческих экспериментов и переносимости выводов"]]
+],labs:[
+["Составить карту решения для покупателя сайта","Артефакт: мотивы, страхи, альтернативы и критерии выбора владельца локальной компании."],
+["Собрать 15 реальных вопросов и сомнений аудитории","Артефакт: таблица с источниками из открытых отзывов, форумов или переписки с согласия собеседников."],
+["Продумать 5 честных способов снизить риск","Артефакт: прозрачный план работ, этапная оплата, портфолио, критерии приёмки, поддержка."]]},
+{stage:1,title:"Рынок, ниша, ICP и позиционирование",desc:"Выбрать тех, кому предложение действительно может помочь.",outcome:"Имеешь описанную нишу, идеального клиента и проверяемую гипотезу о потребности.",time:"4–5 дней",topics:[
+["Рыночный анализ",["!Спрос, предложение и действующие альтернативы","!Исследование сегментов и конкурентов","!Сегментация по отрасли, размеру, региону, зрелости","!TAM, SAM, SOM — базовая логика оценки объёма рынка"]],
+["Идеальный клиент",["!Ideal Customer Profile (ICP), Buyer Persona","!Потребности, признаки соответствия и антисегменты","!Триггеры покупки: расширение, новая точка, устаревший сайт","!Платёжеспособность и приоритет без необоснованных догадок"]],
+["Предложение и позиция",["!Value Proposition и УТП: за что платят","!Функции, преимущества, польза, ограничения продукта","!Альтернативы: ничего не менять, DIY, конкурент, агентство","!Product–Market Fit как гипотеза, проверяемая клиентами","~Value Proposition Canvas и стратегический выбор ниши","~Beachhead Market, вертикальные продажи и ABM"]]
+],labs:[
+["Выбрать одну целевую нишу для продажи сайтов","Артефакт: документ с гипотезой, почему выбранному типу компаний нужен сайт."],
+["Разобрать 10 конкурентов или альтернатив","Артефакт: таблица предложения, позиционирования, сильных сторон и ограничений."],
+["Создать ICP и три портрета покупателей","Артефакт: критерии подходящей компании, роль контакта, проблема, сигнал спроса."],
+["Сформулировать оффер в одном предложении","Артефакт: кому помогаешь, с какой задачей, каким способом и чем подтверждаешь опыт."]]},
+{stage:1,title:"Экономика услуги и ценообразование",desc:"Назначать обоснованную стоимость и понимать выгоду обеих сторон.",outcome:"Можешь рассчитать себестоимость сайта, маржу и предложить несколько выгодных форматов оплаты.",time:"3–4 дня",topics:[
+["Финансы продавца",["!Выручка, себестоимость, валовая прибыль, маржа","!Постоянные и переменные расходы; налоги и комиссии","!Денежный поток и финансовый резерв","!Цена часа, трудозатраты, непредвиденные затраты"]],
+["Экономика для клиента",["!ROI, TCO и окупаемость","!Экономия времени, потенциальный доход, снижение ошибок","!Стоимость бездействия и альтернативные издержки","!Факт, допущение, прогноз: как честно разделять"]],
+["Цены и предложения",["!Fixed Price, Time & Materials, подписка, Retainer","!Cost-Plus, Competitive и Value-Based Pricing","!Пакеты «базовый / расширенный», состав услуг","!Влияние скидок на маржу; условия поэтапной оплаты","~Unit Economics, CAC, LTV, LTV/CAC, payback","~NPV и сценарный анализ"]]
+],labs:[
+["Посчитать полную стоимость типового сайта","Артефакт: таблица часов, стоимости работ, сервисов, рискового резерва, прибыли."],
+["Создать 3 тарифных пакета","Артефакт: состав, ограничения, цена и целевой тип заказчика каждого пакета."],
+["Подготовить осторожную ROI-гипотезу","Артефакт: расчёт с явно указанными допущениями, без гарантии роста заявок."]]},
+{stage:2,title:"Поиск реальных клиентов",desc:"Строить качественную базу компаний, а не собирать случайные контакты.",outcome:"Умеешь находить релевантные компании и выявлять правильный повод для обращения.",time:"4–6 дней",topics:[
+["Источники лидов",["!Карты, каталоги, отраслевые реестры, сайты компаний","!Соцсети и публичные профессиональные сообщества","!Биржи проектов, партнёры, входящие заявки, рекомендации","!Публичные сигналы развития и потребности"]],
+["Оценка и исследование",["!Lead, Prospect, Opportunity, Customer","!ICP Fit, Buying Trigger, Lead Scoring","!Проверка информации без выдуманных выводов","!ЛПР, инициатор, влияющий участник, конечный пользователь","!Понимание роли собственника малого бизнеса"]],
+["База и законность",["!Источники и даты проверки каждого контакта","!Различие между публичным контактом и согласием на рекламу","!Ограничения платформ и местного законодательства","!Контроль актуальности и отсутствие дублей","~Signal-Based и Account-Based Prospecting","~Сегментация по намерению покупки (Intent Data)"]]
+],labs:[
+["Найти 30 компаний своей ниши","Артефакт: таблица с сайтом/карточкой, городом, источником, признаком релевантности."],
+["Оценить 10 наиболее подходящих компаний","Артефакт: скоринг «потребность / соответствие / доступный разрешённый канал / приоритет»."],
+["Найти потенциальный повод для сотрудничества","Артефакт: по 1–2 конкретных наблюдения для 10 компаний, без категоричных диагнозов бизнесу."]]},
+{stage:2,title:"Первое сообщение и текстовый Outbound",desc:"Начинать деловое общение через мессенджеры и email.",outcome:"Можешь написать уместное персональное обращение и корректно вести цепочку касаний.",time:"4–5 дней",topics:[
+["Подготовка обращения",["!Проверка разрешённости коммерческой коммуникации","!Цель первого сообщения — диалог, не немедленная продажа","!Исследование бизнеса и конкретная гипотеза ценности","!Персонализация без шаблонной лести и фальшивых комплиментов"]],
+["Копирайтинг сообщений",["!Контекст → релевантное наблюдение → польза → простой CTA","!Краткость, конкретность, естественная тональность","!Один небольшой следующий шаг вместо перегрузки вопросами","!Избегание давления, ложной срочности и скрытых обещаний","!Тема, превью и структура email"]],
+["Каналы и повторные касания",["!Telegram: деловой контекст и уважение настроек приватности","!WhatsApp: соответствие правилам бизнес-коммуникации","!MAX: проверка актуальных правил коммуникации","!Email: право на отказ, доставляемость, SPF/DKIM/DMARC","!Follow-up: новый смысл вместо простого «напоминаю»","!Когда прекращать контакт и фиксировать отказ","~A/B-тесты офферов, каналов и формулировок"]]
+],labs:[
+["Написать 3 варианта первого сообщения","Артефакт: нейтральное знакомство, сообщение с наблюдением и предложение мини-аудита."],
+["Подготовить 2 уместных follow-up-сообщения","Артефакт: разные причины повторного контакта и условие остановки коммуникации."],
+["Провести небольшую разрешённую кампанию","Артефакт: журнал реальных отправок подходящим адресатам там, где это законно и допускается платформой; зафиксировать ответы и отказы."]]},
+{stage:2,title:"Профессиональная коммуникация в переписке",desc:"Общаться как консультант: внимательно, ясно и без искусственных шаблонов.",outcome:"Ведёшь письменный диалог, понимаешь смысл ответа и аккуратно фиксируешь договорённости.",time:"3–4 дня",topics:[
+["Ясность текста",["!Понятная деловая письменная речь","!Краткость без потери смысла; один вопрос за раз","!Структура длинного сообщения: контекст → смысл → действие","!Уместная тональность, обращения, пунктуация и форматирование"]],
+["Слушание через текст",["!Внимательное чтение и проверка понимания","!Открытые, закрытые, уточняющие и диагностические вопросы","!Перефразирование, резюмирование и согласование смысла","!Распознавание неопределённости без «чтения мыслей»","!Уважение пауз, асинхронности и времени ответа"]],
+["Доверие и границы",["!Прозрачная цель общения","!Профессиональная эмпатия и спокойствие при отказе","!Выполнение обещаний и соблюдение сроков","!Общение с несколькими участниками в общей переписке","~Ассертивность, NVC и сложные деловые конфликты","~Межкультурные нормы переписки"]]
+],labs:[
+["Смоделировать 10 диалогов в чат-формате","Артефакт: реальные или учебные сценарии «нет сайта», «есть подрядчик», «не готов сейчас»."],
+["Переписать 10 слабых сообщений","Артефакт: версии «до / после» с обоснованием, что стало понятнее клиенту."],
+["Подготовить шаблон фиксации договорённостей","Артефакт: 5–7 строк «обсудили / согласовали / следующий шаг / срок / ответственный»."]]},
+{stage:2,title:"Discovery и квалификация в переписке",desc:"Выявлять задачу и готовность к проекту без допроса и давления.",outcome:"Можешь оценить, нужен ли человеку сайт и соответствует ли проект возможностям и бюджету.",time:"4–6 дней",topics:[
+["Диагностика потребностей",["!Цель Discovery и согласование контекста","!Текущая ситуация и способ решения задачи","!Проблема, её влияние и масштаб","!Ожидаемый результат и критерии успеха","!Приоритеты, сроки, ресурсы и уже проверенные альтернативы"]],
+["Квалификация",["!Product Fit и Problem–Solution Fit","!Бюджет, полномочия, потребность, сроки","!Процесс выбора и согласования","!Различие между интересом и реальной возможностью покупки","!Признаки сделки, от которой стоит отказаться"]],
+["Формат письменного Discovery",["!Короткие порции вопросов, адаптация по ответу","!Переход из вопросов к выводам и вариантам решения","!Письменное резюме задачи для подтверждения","!Недопущение превращения переписки в длинную анкету","~5 Whys, Root Cause Analysis и Process Mapping","~Multi-Stakeholder Discovery"]]
+],labs:[
+["Составить библиотеку из 20 Discovery-вопросов","Артефакт: вопросы о бизнесе, клиентах, текущем сайте, заявках, процессе и ограничениях."],
+["Провести 3 содержательных письменных Discovery","Артефакт: обезличенные заметки; делать только при заинтересованности и согласии собеседников."],
+["Подготовить короткие диагностические брифы","Артефакт: по каждому диалогу: проблема, цель, критерии, бюджет/статус, следующий шаг."],
+["Отклонить неподходящую возможность корректно","Артефакт: нейтральный текст отказа или предложение альтернативы без навязывания."]]},
+{stage:2,title:"Методологии продаж и их границы",desc:"Использовать структуры разговора как инструменты, не как магические скрипты.",outcome:"Подбираешь методику под стадию и сложность сделки, применяешь её в естественной переписке.",time:"5–7 дней",topics:[
+["Основа: учить первой",["!SPIN Selling: Situation, Problem, Implication, Need-Payoff","!Consultative / Needs-Based / Solution Selling","!BANT: Budget, Authority, Need, Timeline и его ограничения","!SPICED: Situation, Pain, Impact, Critical Event, Decision","!Sandler: Up-Front Contract, Pain, Budget, Decision","!Value Selling: связь продукта с результатом"]],
+["Продвинутые структуры",["~Challenger: Teach, Tailor, Take Control — уместность и риски","~MEDDIC и MEDDPICC: сложная B2B-квалификация","~Gap Selling: текущий и желаемый мир клиента","~NEAT: Need, Economic Impact, Authority, Timeline","~SNAP, Insight, CustomerCentric, Strategic Selling","~Account-Based Sales и Enterprise Selling"]],
+["Критическая оценка",["!Не путать фреймворк с доказанной универсальной эффективностью","!Не подменять живые вопросы готовым текстом","!Оценивать качество результата и опыт клиента","~Собственный Playbook из совместимых элементов"]]
+],labs:[
+["Разобрать один проект по SPIN","Артефакт: 4 блока вопросов о необходимости корпоративного сайта."],
+["Квалифицировать учебный кейс по BANT и SPICED","Артефакт: два заполненных шаблона и вывод о различиях."],
+["Написать Discovery-диалог без названий методологий","Артефакт: естественная переписка, где применены элементы двух фреймворков."]]},
+{stage:2,title:"Асинхронная продажа: Telegram, WhatsApp, MAX, email",desc:"Адаптировать процесс продажи к письменному каналу и длинным паузам.",outcome:"Можешь провести существенную часть сделки от знакомства до условий полностью письменно.",time:"3–4 дня",topics:[
+["Продажи в чатах",["!Структура короткой цепочки сообщений","!Контекст перед ссылкой, файлом или демонстрацией","!Как задавать вопросы без перегрузки клиента","!Обсуждение цены и согласование следующего шага","!Работа с задержкой ответа и сменой собеседника"]],
+["Демонстрация без созвона",["!Скриншоты, прототипы, письменные комментарии","!Ссылка на работающий демонстрационный сайт","!Короткая текстовая инструкция по просмотру","!Фиксация замечаний и решений в одном месте"]],
+["Документы и дисциплина",["!Email как канал официального согласования","!Передача КП, счёта, ТЗ и сроков","!Хранение истории переписки и согласованных изменений","!Конфиденциальность и безопасность ссылок","~Многоканальные последовательности с учётом разрешений","~Автоматизированные шаблоны без массового спама"]]
+],labs:[
+["Смоделировать полную текстовую сделку","Артефакт: цепочка «приветствие → диагностика → решение → цена → условия → оплата»."],
+["Собрать пакет асинхронной демонстрации","Артефакт: ссылка на демо-сайт, 3 скриншота, 5 тезисов и понятный следующий шаг."],
+["Создать чек-лист передачи файлов и ссылок","Артефакт: что отправлять, когда, в каком формате, как подтверждать получение."]]},
+{stage:2,title:"Сильный оффер, КП и демонстрация ценности",desc:"Предлагать не «красивый сайт», а подходящее решение задачи бизнеса.",outcome:"Готовишь профессиональное коммерческое предложение с ясным объёмом, выгодой и ценой.",time:"4–5 дней",topics:[
+["Ценностное предложение",["!Целевая задача → решение → ценность → доказательства","!FAB: функции, преимущества и польза","!USP / CVP и дифференциация","!Позиционирование без бездоказательных гарантий","!Социальное доказательство: реальные работы, отзывы, кейсы"]],
+["Коммерческое предложение",["!Проблема и цель клиента","!Состав услуг и результат поставки","!Этапы, сроки, стоимость, ограничения","!Допущения, ответственность, критерии приёмки","!Несколько вариантов решения и простой следующий шаг"]],
+["Демонстрация и доказательства",["!Портфолио, прототип, экранные примеры","!Понятное описание пользовательского пути","!Кейсы «до / после» без подмены причинности","!Примеры и отзывы только с разрешения владельцев","~Business Case, Value Engineering и Executive Summary","~RFP Response и предложения для нескольких ЛПР"]]
+],labs:[
+["Составить одно короткое и одно подробное КП","Артефакт: адаптированные документы для локальной мебельной компании."],
+["Разработать предложение в двух бюджетах","Артефакт: базовый сайт и расширенная версия с разным составом работ."],
+["Подготовить доказательства компетенции","Артефакт: 3 собственные работы/демо и описание фактического результата без выдуманных метрик."],
+["Отправить КП заинтересованному клиенту","Артефакт: зафиксированный факт отправки, его вопросы и договорённость о следующем шаге."]]},
+{stage:2,title:"Возражения и сомнения в переписке",desc:"Выяснять причину колебаний, а не искать «фразу, которая закроет всех».",outcome:"Спокойно разбираешь возражения о цене, доверии и целесообразности покупки.",time:"4–5 дней",topics:[
+["Процесс",["!Отличие отказа, возражения и вопроса","!Выслушать → уточнить → признать смысл → ответить","!Выявление первопричины и проверка понимания","!LAER: Listen, Acknowledge, Explore, Respond"]],
+["Типовые возражения",["!«Дорого» / «Нет бюджета» / «Сделайте скидку»","!«У конкурента дешевле» / «Сделаем сами»","!«Подумаю» / «Позже» / «Сейчас не время»","!«Не нужен сайт» / «Есть подрядчик»","!«Нет доверия» / «Нет кейсов» / «Какие гарантии?»","!«Нужно согласовать» / «Пришлите информацию»"]],
+["Сложные ситуации",["!Реальный отказ: корректно прекратить коммуникацию","!Недовольство прошлым подрядчиком","!Нереалистичные сроки и требования","!Утверждения о конкурентах без подтверждения","~Рефрейминг на фактах, Cost of Inaction","~Feel-Felt-Found: изучить как шаблон с ограничениями"]]
+],labs:[
+["Собрать библиотеку 20 возражений","Артефакт: для каждого — диагностический вопрос, короткий ответ и критерий прекращения диалога."],
+["Разыграть 8 диалогов с «трудным» клиентом","Артефакт: переписка в формате ролей без давления и чрезмерных сообщений."],
+["Разобрать 3 настоящих возражения","Артефакт: анонимизированные ситуации, что клиент имел в виду и как корректнее ответить."]]},
+{stage:2,title:"Письменные переговоры и защита цены",desc:"Договариваться о сроках, составе и бюджете на взаимоприемлемых условиях.",outcome:"Умеешь защищать цену, объяснять компромиссы и фиксировать уступки письменно.",time:"4–5 дней",topics:[
+["Основы переговоров",["!Позиции и интересы; совместное создание ценности","!BATNA, WATNA, ZOPA, Reservation Price","!Подготовка границ и желаемого результата","!Объективные критерии сравнения условий"]],
+["Цена и уступки",["!Обоснование цены через состав, качество и риски","!Сокращение объёма вместо слепой скидки","!Give-Get: уступка в обмен на встречное условие","!Срок, объём, сопровождение, этапы оплаты","!Несколько эквивалентных вариантов предложения"]],
+["Текстовое согласование",["!Фиксация всех изменённых условий","!Как задавать уточняющие вопросы о торге","!Работа с ультиматумом и нереалистичным запросом","!Когда нужно отказаться от сделки","~Principled Negotiation (Harvard)","~MESO, корпоративный procurement и многосторонние переговоры"]]
+],labs:[
+["Составить собственную переговорную карточку","Артефакт: целевая цена, минимально допустимый результат, BATNA и причины отказаться."],
+["Написать 5 ответов на просьбу о скидке","Артефакт: варианты с изменением объёма, сроков, поддержки или этапов оплаты."],
+["Провести учебный торг текстом","Артефакт: 2 сценария: ограниченный бюджет и дополнительные требования после согласования цены."]]},
+{stage:2,title:"Заключение сделки, предоплата и документы",desc:"Закреплять договорённости и получать оплату профессионально.",outcome:"Умеешь согласовать формат оплаты, оформить обязательства и передать проект в исполнение.",time:"4–5 дней",topics:[
+["Переход к сделке",["!Подтверждение решения, цены, сроков и объёма","!Прямой и спокойный запрос решения","!Проверка вопросов и готовности сторон","!Переход от согласия к документам и оплате"]],
+["Документы проекта",["!Договор, счёт, техническое задание, спецификация","!Scope of Work / SOW и критерии приёмки","!Интеллектуальные права на дизайн, код и материалы","!Передача домена, хостинга и доступов","!Подтверждение изменений в письменной форме"]],
+["Условия оплаты",["!Предоплата, постоплата, поэтапные платежи","!Пример 50% перед исполнением / 50% по согласованному этапу","!Возвраты, задержки и порядок изменений","!Проверка реквизитов и факта поступления средств","!Юридические требования конкретной страны","~NDA, SLA, ответственность, расторжение","~Procurement и Legal Review"]]
+],labs:[
+["Подготовить пакет документов для сайта","Артефакт: образцы ТЗ, состава работ, условий оплаты и приёмки для проверки специалистом."],
+["Написать 3 варианта сообщения о предоплате","Артефакт: спокойная формулировка для начала проекта, изменения объёма и нового этапа."],
+["Составить процесс «согласовал → оплатил → старт»","Артефакт: пошаговый чек-лист с условиями переходов, сроками и ответственными."],
+["Отработать сценарий изменения требований","Артефакт: допсоглашение или согласованный change request с новой ценой и сроком."]]},
+{stage:3,title:"CRM и личная система продаж",desc:"Перестать терять сообщения, обещания и потенциальных клиентов.",outcome:"Имеешь рабочую CRM-воронку, ежедневные задачи и прозрачную историю контактов.",time:"3–4 дня",topics:[
+["Основы CRM",["!Лид, компания, контакт, сделка, активность","!История переписки, договорённости и следующий шаг","!Статусы, ответственные, напоминания и причины отказов","!Дедупликация, корректность и минимизация данных"]],
+["Pipeline",["!Новый → релевантный → контакт → ответ → Discovery","!КП → согласование → оплата → исполнение → завершено","!Критерии перехода между этапами","!Зависшие сделки, Lost Reasons, актуальные сроки"]],
+["Практические инструменты",["!Табличная CRM, Kanban, базовые фильтры","!HubSpot, amoCRM, Битрикс24 — обзор возможностей","!Регулярный разбор следующих действий","~Workflow Automation, Lead Routing, CRM API","~Sales Playbook и управление шаблонами"]]
+],labs:[
+["Создать CRM под продажу собственных сайтов","Артефакт: таблица или CRM с воронкой, полями, правилами и задачами."],
+["Перенести реальных потенциальных клиентов","Артефакт: минимум 20 релевантных записей, только допустимые персональные данные."],
+["Сделать шаблон карточки сделки","Артефакт: проблема, контакт, история, бюджет, следующий шаг, срок, причина результата."]]},
+{stage:3,title:"Метрики, воронка и эксперименты",desc:"Улучшать продажи на основе наблюдений и чисел.",outcome:"Можешь измерить собственную воронку, найти слабое место и проверить гипотезу улучшения.",time:"3–4 дня",topics:[
+["Метрики переписки",["!Количество релевантных разрешённых контактов","!Доставляемость, ответы, положительные ответы","!Ответы → Discovery → КП → сделки","!Конверсия по каждому этапу и сегменту"]],
+["Экономика и эффективность",["!Win Rate, Average Deal Size, Sales Cycle Length","!Валовая прибыль по проектам, Cost per Lead, CAC","!Повторные покупки, рекомендации, LTV","!Время ответа, качество контактов и потери"]],
+["Анализ и прогноз",["!Leading / Lagging Indicators и KPI","!Причины потерь: оффер, ниша, качество лидов, доверие","!Еженедельный обзор и цели на следующий цикл","!Разница между фактом, корреляцией и причиной","~Sales Velocity, Weighted Pipeline, Forecasting","~A/B-тесты, смещение выборки, статистическая неопределённость"]]
+],labs:[
+["Собрать отчёт по своей воронке","Артефакт: сколько релевантных контактов → ответов → диагностик → КП → сделок."],
+["Разобрать 5 причин потери интереса","Артефакт: гипотезы и примеры из собственной переписки; без догадок о мотивах клиента как о фактах."],
+["Проверить одну измеримую гипотезу","Артефакт: небольшой этичный тест разных офферов или сегментов, сравнение результатов с учётом объёма данных."]]},
+{stage:3,title:"Сопровождение, повторные продажи и рекомендации",desc:"Построить долгосрочное сотрудничество после получения первой оплаты.",outcome:"Можешь качественно вести проект, получать обратную связь и уместно предлагать продолжение.",time:"3–4 дня",topics:[
+["Исполнение обещаний",["!Customer Onboarding, ожидания, сроки, статусы","!Письменная отчётность по этапам","!Приёмка, обучение, передача доступов","!Работа с замечаниями и рекламациями"]],
+["Развитие отношений",["!Follow-up после сдачи проекта","!Сбор обратной связи и разрешение на публикацию кейса","!Рекомендации и Referral Sales","!Cross-Sell, Up-Sell и подписная поддержка","!Работа с неудовлетворёнными клиентами"]],
+["Продвинутые метрики",["~CSAT, NPS и ограничения интерпретации","~Churn, Retention, NRR и GRR","~Customer Success и QBR"]]
+],labs:[
+["Создать план сопровождения после запуска сайта","Артефакт: письмо/сообщение о сдаче, инструкция, чек-лист проверки, контакт поддержки."],
+["Создать этичный запрос отзыва и рекомендации","Артефакт: два коротких сообщения без давления, скидки за позитивный отзыв или подмены фактов."],
+["Придумать 3 обоснованных допуслуги","Артефакт: варианты поддержки, обновлений и автоматизации с ясным результатом и условиями."]]},
+{stage:3,title:"Предпринимательские продажи сайтов и IT-решений",desc:"Объединить знания в собственную работающую коммерческую практику.",outcome:"Способен самостоятельно найти заказчика сайта, оценить запрос и довести подходящий проект до оплаты и исполнения.",time:"6–8 дней + параллельная практика",topics:[
+["Линейка услуг",["!Лендинг, сайт компании, каталог, интернет-магазин","!CRM, боты, интеграции, автоматизация, AI-решения","!Productized Services: понятная упаковка и границы","!MVP, пилот, прототип и поддержка","!Доказательства опыта без выдуманных проектов"]],
+["Продажа и пресейл IT",["!Диагностика бизнес-задачи до выбора технологии","!Функциональные / нефункциональные требования","!Бриф, пользовательские сценарии, User Stories","!Оценка сложности, трудозатрат и рисков","!Архитектурные ограничения и внешние зависимости","!Демонстрация прототипа в переписке"]],
+["Сделка и исполнение",["!Fixed Price, T&M, Retainer и Milestones","!Scope, Change Request и защита от Scope Creep","!Предоплата, этапы, критерии приёмки","!Домены, хостинг, лицензии, сторонние сервисы","!Права на контент, дизайн и исходный код","!Передача проекта и платное сопровождение"]],
+["Развитие своего дела",["!Продажа без бренда и крупного портфолио","!Минимальный платный пилот вместо большой рискованной сделки","!Работа с рекомендациями и агентствами","~White Label, специализация, пакетные услуги","~Переход от заказной разработки к SaaS / продукту"]]
+],labs:[
+["Создать собственный коммерческий комплект","Артефакт: ICP, оффер, прайс-пакеты, примеры работ, вопросы, КП и шаблоны условий."],
+["Провести полный цикл с подходящим заказчиком","Артефакт: законный контакт → текстовый Discovery → КП → согласование → реальная оплата, если сделка состоится."],
+["Реализовать и сдать оплаченный сайт","Артефакт: согласованный результат, приёмка, передача материалов, финансовое закрытие."],
+["Описать кейс (только с разрешения)","Артефакт: задача, ограничения, реальное решение, фактический результат, выводы и отзыв при наличии."]]},
+{stage:3,title:"Входящий поток и личное позиционирование",desc:"Сделать так, чтобы потенциальные клиенты могли найти тебя сами.",outcome:"Имеешь прозрачное профессиональное присутствие и несколько каналов получения заявок.",time:"4–5 дней",topics:[
+["Маркетинг для продаж",["!Awareness → Consideration → Decision","!Demand Gen, Lead Gen, Inbound и Outbound","!Отстройка от конкурентов и маркетинговые обещания","!Соответствие страницы услуги потребностям ICP"]],
+["Собственные каналы",["!Портфолио, кейсы, сайт специалиста","!Страница услуги и понятный CTA","!SEO и локальное присутствие на базовом уровне","!Контент: экспертные разборы, демонстрации, FAQ","!Рекомендации и партнёры"]],
+["Конверсия",["!Путь клиента от интереса до текстового обращения","!Конверсия формы, отклик, скорость реакции","!Работа с входящим запросом и его квалификация","!Анализ причин незавершённого обращения","~Performance Marketing, CRO и Lifecycle Marketing","~Community-Led, Partner-Led и Product-Led Growth"]]
+],labs:[
+["Опубликовать или обновить страницу своих услуг","Артефакт: позиционирование, услуги, процесс, реальные работы, цены/формат и контакт."],
+["Подготовить 2 полезных экспертных материала","Артефакт: например, «как оценить сайт компании» и «из чего складывается цена разработки»."],
+["Настроить понятный путь входящей заявки","Артефакт: CTA в мессенджер/почту, вежливый первый ответ, фиксация лида в CRM."]]},
+{stage:4,title:"Сложные B2B-сделки и несколько ЛПР",desc:"Подготовиться к длинным продажам с формальными согласованиями.",outcome:"Понимаешь, как продавать компаниям с несколькими участниками, процедурами и рисками.",time:"4–6 дней",topics:[
+["Сложная покупка",["!Buying Committee и роли внутри клиента","!Инициатор, пользователь, владелец бюджета, согласующий","!Критерии выбора и процесс принятия решения","!Согласование ценности с разными ролями"]],
+["Системы управления",["~Stakeholder Mapping, Multi-Threading","~Account Planning и Executive Selling","~MEDDPICC: Metrics, Economic Buyer, Decision Criteria/Process, Pain, Champion, Competition, Paper Process","~Mutual Action Plan и риск срыва сделки"]],
+["Корпоративные процедуры",["~RFI, RFP, RFQ, тендер","~Vendor Qualification, Procurement, Due Diligence","~Security Review, NDA, Legal Review","~Proof of Concept и Pilot Project","~Конкурентные Battlecards и Win/Loss Analysis"]]
+],labs:[
+["Создать карту заинтересованных сторон","Артефакт: сценарий разработки сайта/сервиса для компании с директором, маркетологом и IT-специалистом."],
+["Составить письменное предложение для разных ролей","Артефакт: для собственника — экономика, для маркетолога — путь клиента, для IT — интеграции."],
+["Проработать учебный запрос RFP","Артефакт: структура ответа, требования, вопросы, риски, критерии соответствия."]]},
+{stage:4,title:"Этика, право, безопасность и AI",desc:"Соблюдать границы допустимого и использовать инструменты без риска для доверия.",outcome:"Умеешь проверить допустимость коммуникации, защитить данные и применять AI с проверкой результатов.",time:"4–5 дней · основы права изучить раньше",topics:[
+["Коммерческая этика",["!Разница между убеждением, аргументацией и манипуляцией","!Запрет ложных кейсов, результатов и искусственного дефицита","!Уважение отказа, конфиденциальности и уязвимости клиентов","!Отсутствие обещаний дохода или конверсии без оснований"]],
+["Правовые основы",["!Применимость законодательства по стране, адресату и каналу","!Рекламные сообщения, согласие и право отказа","!Персональные данные: сбор, хранение, удаление","!Правила Telegram, WhatsApp, MAX и email","!Законодательство о защите потребителей и договорах","!Налоги, реквизиты, конфиденциальность, авторские права"]],
+["AI и автоматизация",["!AI для исследования компаний и подготовки черновиков","!Проверка фактов, источников и галлюцинаций","!Не вводить конфиденциальные данные в неподходящие сервисы","!Контроль качества автосообщений человеком","~CRM API, интеграции и Workflow Automation","~AI Lead Scoring и Conversation Intelligence"]],
+["Доказательность",["!Факт, гипотеза, результат эксперимента","!Корреляция против причинности","!Confirmation Bias и Survivorship Bias","!Почему методологии продаж не гарантируют результат","~Рандомизация и сравнительные эксперименты"]]
+],labs:[
+["Сделать комплаенс-чек-лист для каналов","Артефакт: отдельные требования для нужной страны, Telegram, WhatsApp, MAX и email; сверить с официальными правилами."],
+["Проверить собственные тексты на манипуляции","Артефакт: удалить из офферов ложную срочность, непроверенные цифры и преувеличения."],
+["Создать безопасный AI-процесс для продаж","Артефакт: инструкция «AI предлагает → человек проверяет факты/права/тон → отправка»."],
+["Пройти упражнение на проверку источников","Артефакт: 5 маркетинговых тезисов с пометками «подтверждено / предположение / удалить»."]]},
+{stage:4,title:"Самоорганизация, карьера и масштабирование",desc:"Перейти от эпизодических попыток к воспроизводимой профессиональной работе.",outcome:"Имеешь личную систему улучшения навыков, рабочие стандарты и следующий план развития.",time:"4–5 дней + постоянно",topics:[
+["Личная эффективность",["!Планирование недели, Time Blocking, приоритеты","!Работа с отказами и стрессом без давления на клиента","!Ведение заметок и самоанализ","!Deliberate Practice: изучить → применить → получить обратную связь","!Еженедельный Pipeline Review"]],
+["Развитие как специалиста",["!Sales Competency Framework и личные пробелы","!Портфолио реальных коммерческих достижений","!Работа с KPI и планом продаж","!Систематизация хороших сообщений, КП и кейсов","~Sales Coaching и наставничество"]],
+["Продвинутая система",["~Sales Playbook и стандарты качества","~Sales Enablement и Revenue Operations","~Партнёрские и повторные каналы","~Делегирование части задач, контроль качества","~Sales Forecast, квоты и руководство командой"]]
+],labs:[
+["Создать личный Sales Playbook","Артефакт: ICP, источники, правила контакта, этапы, бриф, оффер, ответы, КП, закрытие и сопровождение."],
+["Провести 4 недельных обзора продаж","Артефакт: цели, факт, конверсии, ошибки, выводы, 1 улучшение на следующую неделю."],
+["Составить план на следующие 90 дней","Артефакт: целевая ниша, каналы, количество качественных контактов, критерии успеха, развитие навыков."]]}
+];
+const KEY="sales-os-roadmap-v1";
+let state={checks:{},notes:{}};
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&typeof s==="object"){state.checks=(s.checks&&typeof s.checks==="object")?s.checks:{};state.notes=(s.notes&&typeof s.notes==="object")?s.notes:{}}}catch(e){}
+const $=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
+const escapeHTML=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const idFor=(mi,ti,ii)=>`t-${mi}-${ti}-${ii}`;const idLab=(mi,li)=>`p-${mi}-${li}`;
+const topicCount=m=>m.topics.reduce((n,t)=>n+t[1].length,0);
+const moduleKeys=(m,i)=>[...m.topics.flatMap((t,ti)=>t[1].map((_,ii)=>idFor(i,ti,ii))),...m.labs.map((_,li)=>idLab(i,li))];
+const totalTheory=modules.reduce((s,m)=>s+topicCount(m),0),totalPractice=modules.reduce((s,m)=>s+m.labs.length,0);
+const moduleStatus=(m,i)=>{const keys=moduleKeys(m,i),done=keys.filter(k=>state.checks[k]).length;return{done,total:keys.length,pct:Math.round(100*done/keys.length)}};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast("Хранилище недоступно. Сохрани прогресс через экспорт.")}}
+function renderNav(){
+ $("#stage-nav").innerHTML=stages.map(s=>`<a class="side-link" href="#stage-${s.id}"><span class="nav-num">0${s.id}</span><span class="nav-label">${escapeHTML(s.title)}</span><span class="nav-count" id="nav-count-${s.id}">0/0</span></a>`).join("");
+}
+function renderModules(){
+ let html="";
+ stages.forEach(st=>{
+  const inStage=modules.map((m,i)=>({m,i})).filter(({m})=>m.stage===st.id);
+  html+=`<div class="stage-heading" id="stage-${st.id}" data-stage="${st.id}"><span class="stage-number">0${st.id}</span><div class="stage-copy"><h3>${escapeHTML(st.title)}</h3><p>${escapeHTML(st.desc)}</p></div><span class="stage-label">${escapeHTML(st.weeks)}</span></div>`;
+  inStage.forEach(({m,i})=>{
+   const stt=moduleStatus(m,i);
+   html+=`<details class="module${stt.pct===100?' done':''}" data-index="${i}" id="module-${i+1}"><summary><span class="mod-index">${String(i+1).padStart(2,"0")}</span><div class="mod-main"><div class="mod-kicker">Модуль ${String(i+1).padStart(2,"0")} · Уровень ${st.id}</div><h3 class="mod-title">${escapeHTML(m.title)}</h3><div class="mod-description">${escapeHTML(m.desc)}</div><div class="mod-meta"><span class="tag time">${escapeHTML(m.time)}</span><span class="tag practice">${m.labs.length} практики</span><span class="mini-progress"><i style="width:${stt.pct}%"></i></span><span class="pct">${stt.pct}%</span></div></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="module-body"><div class="outcome"><span><strong>После модуля:</strong> ${escapeHTML(m.outcome)}</span></div><div class="part-heading">Что изучить <span class="tag">ТЕОРИЯ</span></div>`;
+   m.topics.forEach(([heading,items],ti)=>{
+    html+=`<div class="topic-group"><div class="topic-title">${escapeHTML(heading)}</div><div class="check-list">`;
+    items.forEach((raw,ii)=>{const k=idFor(i,ti,ii),adv=raw.startsWith("~"),name=raw.slice(1);html+=`<label class="checkline"><input type="checkbox" data-key="${k}" ${state.checks[k]?"checked":""}><span>${escapeHTML(name)} ${adv?'<span class="tag advanced">ADV</span>':''}</span></label>`});
+    html+=`</div></div>`;
+   });
+   html+=`<div class="part-heading">Что попрактиковать <span class="tag practice">НА РЕАЛЬНЫХ ПРОЕКТАХ</span></div><div class="labs">`;
+   m.labs.forEach(([title,desc],li)=>{const k=idLab(i,li);html+=`<label class="lab"><input type="checkbox" data-key="${k}" ${state.checks[k]?"checked":""}><span class="lab-main"><span class="lab-title">${escapeHTML(title)}</span><span class="lab-hint">${escapeHTML(desc)}</span></span></label>`});
+   html+=`</div><div class="module-note"><label class="note-label" for="note-${i}">Мои выводы, ссылки на материалы и результаты практики</label><textarea class="note-textarea" id="note-${i}" data-note="${i}" placeholder="Добавь ссылки на Google Docs, проект, таблицу лидов или короткие выводы…">${escapeHTML(state.notes[i]||"")}</textarea></div><div class="module-footer"><span>Прогресс сохраняется на этом устройстве автоматически</span><button class="small-btn" data-action="complete" data-module="${i}">Отметить модуль целиком</button></div></div></details>`;
+  });
+ });
+ $("#module-list").innerHTML=html;
+ updateProgress();
+}
+function updateProgress(){
+ const theoryKeys=modules.flatMap((m,i)=>m.topics.flatMap((t,ti)=>t[1].map((_,ii)=>idFor(i,ti,ii))));
+ const practiceKeys=modules.flatMap((m,i)=>m.labs.map((_,li)=>idLab(i,li)));
+ const t=theoryKeys.filter(k=>state.checks[k]).length,p=practiceKeys.filter(k=>state.checks[k]).length,percent=Math.round(100*(t+p)/(totalTheory+totalPractice));
+ $("#module-count").textContent=String(modules.length).padStart(2,"0");
+ $("#theory-stat").textContent=`${t} / ${totalTheory}`;
+ $("#practice-stat").textContent=`${p} / ${totalPractice}`;
+ $("#progress-label").textContent=`${percent}% выполнено`;
+ $("#progress-fill").style.width=percent+"%";
+ $("#progress-bar").setAttribute("aria-valuenow",percent);
+ $("#progress-detail").textContent=`${t+p} / ${totalTheory+totalPractice}`;
+ stages.forEach(s=>{const ind=modules.map((m,i)=>({m,i})).filter(o=>o.m.stage===s.id),d=ind.filter(({m,i})=>moduleStatus(m,i).pct===100).length;const n=$(`#nav-count-${s.id}`);if(n)n.textContent=`${d}/${ind.length}`});
+ $$("details.module").forEach(el=>{const i=+el.dataset.index,st=moduleStatus(modules[i],i);el.classList.toggle("done",st.pct===100);el.querySelector(".mini-progress i").style.width=st.pct+"%";el.querySelector(".pct").textContent=st.pct+"%";el.querySelector('[data-action="complete"]').textContent=st.pct===100?"Снять все отметки":"Отметить модуль целиком"});
+}
+let filter="all";
+function updateFilter(){const query=$("#search").value.trim().toLocaleLowerCase("ru");let shown=0;
+ $$("details.module").forEach(el=>{const i=+el.dataset.index,m=modules[i],s=moduleStatus(m,i);const haystack=[m.title,m.desc,m.outcome,...m.topics.flatMap(t=>[t[0],...t[1]]),...m.labs.flat()].join(" ").toLocaleLowerCase("ru");const okText=!query||haystack.includes(query),okFilter=filter==="all"||(filter==="done"?s.pct===100:s.pct<100);const show=okText&&okFilter;el.classList.toggle("hidden",!show);if(show)shown++});
+ stages.forEach(s=>{const heading=$(`#stage-${s.id}`),count=$$("details.module").filter(e=>!e.classList.contains("hidden")&&modules[+e.dataset.index].stage===s.id).length;heading.classList.toggle("hidden",count===0)});$("#empty").classList.toggle("hidden",shown>0);
+}
+let toastTimer;function toast(message){const node=$("#toast");node.textContent=message;node.classList.add("visible");clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.classList.remove("visible"),2600)}
+renderNav();renderModules();
+$("#module-list").addEventListener("change",e=>{const box=e.target.closest("input[data-key]");if(box){state.checks[box.dataset.key]=box.checked;save();updateProgress();updateFilter()}});
+$("#module-list").addEventListener("input",e=>{const field=e.target.closest("textarea[data-note]");if(field){state.notes[field.dataset.note]=field.value;save()}});
+$("#module-list").addEventListener("click",e=>{const button=e.target.closest('[data-action="complete"]');if(!button)return;const i=+button.dataset.module,keys=moduleKeys(modules[i],i),allDone=keys.every(k=>state.checks[k]);keys.forEach(k=>state.checks[k]=!allDone);const details=button.closest("details");details.querySelectorAll("input[data-key]").forEach(x=>x.checked=!allDone);save();updateProgress();updateFilter();toast(allDone?"Отметки модуля сняты":"Модуль отмечен выполненным")});
+$("#search").addEventListener("input",updateFilter);
+$$(".filter").forEach(button=>button.addEventListener("click",()=>{filter=button.dataset.filter;$$(".filter").forEach(b=>b.classList.toggle("active",b===button));updateFilter()}));
+$("#expand-btn").addEventListener("click",()=>{const visible=$$("details.module").filter(e=>!e.classList.contains("hidden"));const opening=visible.some(e=>!e.open);visible.forEach(el=>el.open=opening);$("#expand-btn").textContent=opening?"Свернуть все":"Развернуть все"});
+$("#export-btn").addEventListener("click",()=>{const payload={format:"sales-os-roadmap-v1",exportedAt:new Date().toISOString(),...state};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="sales-os-progress.json";document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast("Резервная копия сохранена")});
+$("#import-btn").addEventListener("click",()=>$("#import-file").click());
+$("#import-file").addEventListener("change",async e=>{const file=e.target.files?.[0];if(!file)return;try{const obj=JSON.parse(await file.text());if(obj.format!=="sales-os-roadmap-v1"||!obj.checks||typeof obj.checks!=="object"||!obj.notes||typeof obj.notes!=="object"||Array.isArray(obj.checks)||Array.isArray(obj.notes))throw Error("invalid");if(!confirm("Заменить текущий прогресс и заметки данными из файла?"))return;state={checks:obj.checks,notes:obj.notes};save();renderModules();updateFilter();toast("Прогресс восстановлен")}catch(err){toast("Не удалось импортировать: неверный формат файла")}finally{e.target.value=""}});
+</script>
+</body>
+</html>

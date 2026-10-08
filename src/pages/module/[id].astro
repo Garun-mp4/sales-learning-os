@@ -1,0 +1,21 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import PageHeading from '../../components/PageHeading.astro';
+import EntryRow from '../../components/EntryRow.astro';
+import { modules, ofModule, stages } from '../../lib/course';
+export async function getStaticPaths(){return modules.map(entry=>({params:{id:entry.id},props:{entry}}));}
+const {entry}=Astro.props;
+const docs=ofModule(entry.module);const theory=docs.filter(x=>x.kind==='theory');const practice=docs.filter(x=>x.kind==='practice');
+const groups=[...new Set(theory.map(x=>x.group))];const stage=stages.find(x=>x.id===entry.stage);
+---
+<Shell title={entry.title} module={entry.module}>
+  <div class="breadcrumb"><a href="/roadmap/">Roadmap</a> › <a href={`/level/${entry.stage}/`}>{stage?.title}</a> › <span>{entry.title}</span></div>
+  <PageHeading eyebrow={`МОДУЛЬ ${entry.module} · УРОВЕНЬ ${entry.stage}`} title={entry.title} description={entry.description}>
+    <div class="row wrap"><span class="badge warning">Редакционный черновик</span><span class="badge">{theory.length} тем</span><span class="badge">{practice.length} практик</span><span class="badge">{entry.time}</span></div>
+  </PageHeading>
+  <div class="module-summary"><strong>Результат изучения</strong><p>{entry.outcome}</p><div class="progress" style="margin-top:14px"><span data-module-fill={entry.module}></span></div><p data-module-pct={entry.module}>0%</p></div>
+  <div class="section-head"><h2 class="h2">Теория</h2><span class="small muted">По порядку, от основ к практике</span></div>
+  {groups.map(group=><section class="module-section"><h2>{group} <span class="badge">{theory.filter(x=>x.group===group).length}</span></h2><div class="stack">{theory.filter(x=>x.group===group).map(x=><EntryRow entry={x}/>)}</div></section>)}
+  <div class="section-head"><h2 class="h2">Практика</h2></div><div class="stack">{practice.map(x=><EntryRow entry={x}/>)}</div>
+  <div class="editbox"><strong>Заметки по модулю</strong><textarea data-note={`${entry.module}-MODULE`} aria-label="Заметки к модулю" placeholder="Ваши выводы по модулю..."></textarea><div class="hint" data-save-hint>Локальное сохранение</div></div>
+</Shell>

@@ -1,0 +1,12 @@
+---
+import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';
+---
+<Shell title="Настройки" active="settings"><div class="breadcrumb"><a href="/">Обзор</a> › <span>Настройки</span></div>
+<PageHeading eyebrow="ПРИЛОЖЕНИЕ" title="Настройки и данные" description="Данные сохраняются локально: без регистрации и сервера."/>
+<div class="settings-row"><div><strong>Цветовая тема</strong><p>Системная, светлая или тёмная</p></div><select class="theme-switch" data-theme-select aria-label="Цветовая тема"><option value="system">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></div>
+<div class="settings-row"><div><strong>Резервная копия</strong><p>Экспорт всех статусов, заметок и закладок</p></div><button class="btn" data-export>Экспортировать JSON</button></div>
+<div class="settings-row"><div><strong>Импорт данных</strong><p>Поддерживается экспорт прежнего Sales OS v1 и новой версии</p></div><label class="btn">Выбрать JSON<input data-import type="file" accept=".json,application/json" style="width:1px;position:absolute;opacity:0"/></label></div>
+<div class="notice">Миграция: чтобы перенести отметки из старого index.html, сначала экспортируйте JSON из него, затем импортируйте на этой странице. Импорт не даёт автоматического подтверждения мастерства.</div>
+<div class="settings-row"><div><strong>Сохранить материалы офлайн</strong><p>Для HTTPS или localhost; загружает страницы и поиск в кэш</p><p data-offline-status>Пакет ещё не установлен</p></div><button class="btn primary" data-offline-install>Загрузить офлайн-пакет</button></div>
+<div class="settings-row"><div><strong>Очистить офлайн-кэш</strong><p>Заметки, статусы и закладки не удаляются</p></div><button class="btn" data-offline-clear>Удалить кэш</button></div>
+</Shell>

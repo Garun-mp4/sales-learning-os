@@ -1,0 +1,13 @@
+---
+import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';import EntryRow from '../../components/EntryRow.astro';import {sources,lessons} from '../../lib/course';
+export function getStaticPaths(){return sources.map(source=>({params:{id:source.id},props:{source}}));}
+const {source}=Astro.props;const linked=lessons.filter(e=>e.sources.includes(source.id));
+const isValidLink=(()=>{try{return ['https:','http:'].includes(new URL(source.url).protocol)}catch{return false}})();
+---
+<Shell title={source.title} active="sources"><div class="breadcrumb"><a href="/sources/">Источники</a> › <span>{source.id}</span></div>
+<PageHeading eyebrow={`ИСТОЧНИК · ${source.id}`} title={source.title} description={source.author}/>
+<div class="notice">Описание и ссылка перенесены из исходного каталога Markdown. Независимое ознакомление с полным содержанием источника не заявляется.</div><p class="intro">{source.description}</p>
+{isValidLink&&<p><a class="btn primary" href={source.url} target="_blank" rel="noopener noreferrer">Открыть первоисточник ↗</a></p>}
+<div class="section-head"><h2 class="h2">Связанные уроки</h2><span class="badge">{linked.length}</span></div><div class="stack">{linked.slice(0,80).map(e=><EntryRow entry={e}/>)}</div>
+{linked.length>80&&<p class="pill-note">Показаны первые 80 уроков.</p>}
+</Shell>

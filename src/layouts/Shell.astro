@@ -1,0 +1,63 @@
+---
+import '../styles/tailwind.css';
+import { modules, stages } from '../lib/course';
+import Icon from '../components/Icon.astro';
+interface Props { title: string; active?: string; module?: string; documentId?: string; documentKind?: string; reading?: boolean }
+const {title, active='home', module, documentId, documentKind, reading=false}=Astro.props;
+---
+<!DOCTYPE html>
+<html lang="ru" data-root="/">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="description" content="Sales OS — изучение продаж через проверяемую теорию, практику и собственные проекты."/>
+  <meta name="theme-color" content="#ffffff"/>
+  <title>{title} · Sales OS</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg"/>
+  <link rel="manifest" href="/manifest.webmanifest"/>
+  <link rel="stylesheet" href="/assets/app.css"/>
+  <script is:inline>
+    try {const s=localStorage.getItem('sales-os-theme')||'system';const dark=s==='dark'||s==='system'&&matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.dataset.theme=dark?'dark':'light'} catch {}
+  </script>
+</head>
+<body data-doc-id={documentId} data-doc-kind={documentKind}>
+  <a class="skip" href="#main">К основному содержимому</a>
+  <div class="mobile-shade" aria-hidden="true"></div>
+  <div class="app">
+    <aside class="side" id="side-navigation" aria-label="Разделы курса">
+      <div class="side-top"><span class="brand-mark">S/</span><span class="brand">Sales OS</span><span class="version">2.0</span><button class="iconbtn side-close" type="button" data-menu-close aria-label="Закрыть меню">×</button></div>
+      <nav class="side-body" aria-label="Главное меню">
+        <div class="nav-caption">Рабочая область</div>
+        <a class:list={['nav-item',active==='home'&&'active']} href="/"><Icon name="home"/><span>Обзор</span></a>
+        <a class:list={['nav-item',active==='roadmap'&&'active']} href="/roadmap/"><Icon name="map"/><span>Roadmap</span></a>
+        <a class:list={['nav-item',active==='practice'&&'active']} href="/practice/"><Icon name="practice"/><span>Практика</span></a>
+        <a class:list={['nav-item',active==='search'&&'active']} href="/search/"><Icon name="search"/><span>Поиск</span></a>
+        <a class:list={['nav-item',active==='sources'&&'active']} href="/sources/"><Icon name="library"/><span>Источники</span></a>
+        <a class:list={['nav-item',active==='bookmarks'&&'active']} href="/bookmarks/"><Icon name="star"/><span>Закладки</span></a>
+        <div class="nav-caption">Программа · 4 уровня</div>
+        {stages.map(s=><details class="nav-group" open={modules.some(m=>m.module===module&&m.stage===s.id)||s.id===1}>
+          <summary><span class="num">{String(s.id).padStart(2,'0')}</span><span>{s.title}</span><span class="arr">›</span></summary>
+          <div class="nav-sub">{modules.filter(m=>m.stage===s.id).map(m=><a class:list={['nav-item',m.module===module&&'active']} href={`/module/${m.id}/`} title={m.title}><span class="label-number">{m.module}</span><span>{m.title}</span></a>)}</div>
+        </details>)}
+      </nav>
+      <div class="side-foot">Общий прогресс <span data-global-pct>0%</span><div class="progress tiny-track"><span data-global-fill></span></div></div>
+    </aside>
+    <div class="main-wrap">
+      <header class="topbar">
+        <button class="iconbtn menu-toggle" type="button" data-menu-toggle aria-controls="side-navigation" aria-expanded="false" aria-label="Открыть меню"><Icon name="menu"/></button>
+        <div class="row"><span style="font-size:12px;font-weight:600">Sales OS</span><span class="badge" style="font-size:10px">Knowledge</span></div>
+        <span class="spacer"></span>
+        <a class="toplink" href="/search/" aria-label="Поиск"><Icon name="search"/><span>Поиск</span><span class="search-shortcut">/</span></a>
+        <select class="theme-switch" data-theme-select aria-label="Цветовая тема"><option value="system">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select>
+        <a class="iconbtn" href="/settings/" title="Настройки" aria-label="Настройки"><Icon name="settings"/></a>
+      </header>
+      <main id="main" class:list={['container',reading&&'reading-layout']}>
+        <slot />
+        <footer class="footer"><span>SALES OS / KNOWLEDGE BASE · 2026</span><span>Прогресс остаётся на устройстве · Материалы: редакционный черновик</span></footer>
+      </main>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/assets/app.js" defer is:inline></script>
+</body>
+</html>
