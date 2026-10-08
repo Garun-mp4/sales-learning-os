@@ -1,0 +1,209 @@
+- generic [active] [ref=e1]:
+  - link "К основному содержимому" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e3]:
+    - complementary "Разделы курса" [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: S/
+        - generic [ref=e7]: Sales OS
+        - generic [ref=e8]: "2.0"
+      - navigation "Главное меню" [ref=e9]:
+        - generic [ref=e10]: Рабочая область
+        - link "Обзор" [ref=e11] [cursor=pointer]:
+          - /url: /
+        - link "Roadmap" [ref=e18] [cursor=pointer]:
+          - /url: /roadmap/
+        - link "Практика" [ref=e23] [cursor=pointer]:
+          - /url: /practice/
+        - link "Поиск" [ref=e28] [cursor=pointer]:
+          - /url: /search/
+        - link "Источники" [ref=e33] [cursor=pointer]:
+          - /url: /sources/
+        - link "Закладки" [ref=e39] [cursor=pointer]:
+          - /url: /bookmarks/
+        - generic [ref=e43]: Программа · 4 уровня
+        - group [ref=e44]:
+          - generic "01 Фундамент ›" [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]: "01"
+            - generic [ref=e47]: Фундамент
+            - generic [ref=e48]: ›
+          - generic [ref=e49]:
+            - link "01 Природа и процесс продаж" [ref=e50] [cursor=pointer]:
+              - /url: /module/01-MODULE/
+              - generic [ref=e51]: "01"
+              - generic [ref=e52]: Природа и процесс продаж
+            - link "02 Психология покупки и доверие" [ref=e53] [cursor=pointer]:
+              - /url: /module/02-MODULE/
+              - generic [ref=e54]: "02"
+              - generic [ref=e55]: Психология покупки и доверие
+            - link "03 Рынок, ниша, ICP и позиционирование" [ref=e56] [cursor=pointer]:
+              - /url: /module/03-MODULE/
+              - generic [ref=e57]: "03"
+              - generic [ref=e58]: Рынок, ниша, ICP и позиционирование
+            - link "04 Экономика услуги и ценообразование" [ref=e59] [cursor=pointer]:
+              - /url: /module/04-MODULE/
+              - generic [ref=e60]: "04"
+              - generic [ref=e61]: Экономика услуги и ценообразование
+        - group [ref=e62]:
+          - generic "02 Практические продажи ›" [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]: "02"
+            - generic [ref=e65]: Практические продажи
+            - generic [ref=e66]: ›
+        - group [ref=e67]:
+          - generic "03 Система и предпринимательство ›" [ref=e68] [cursor=pointer]:
+            - generic [ref=e69]: "03"
+            - generic [ref=e70]: Система и предпринимательство
+            - generic [ref=e71]: ›
+        - group [ref=e72]:
+          - generic "04 Профессиональное мастерство ›" [ref=e73] [cursor=pointer]:
+            - generic [ref=e74]: "04"
+            - generic [ref=e75]: Профессиональное мастерство
+            - generic [ref=e76]: ›
+      - generic [ref=e77]: Общий прогресс 0%
+    - generic [ref=e79]:
+      - banner [ref=e80]:
+        - generic [ref=e81]:
+          - generic [ref=e82]: Sales OS
+          - generic [ref=e83]: Knowledge
+        - link "Поиск" [ref=e84] [cursor=pointer]:
+          - /url: /search/
+          - generic [ref=e89]: /
+        - combobox "Цветовая тема" [ref=e90]:
+          - option "Системная" [selected]
+          - option "Светлая"
+          - option "Тёмная"
+        - link "Настройки" [ref=e91] [cursor=pointer]:
+          - /url: /settings/
+      - main [ref=e95]:
+        - generic [ref=e96]: ПЕРСОНАЛЬНАЯ СИСТЕМА ОБУЧЕНИЯ
+        - heading "Продажи. От понимания — к практике." [level=1] [ref=e97]
+        - paragraph [ref=e98]: "Структурированная база знаний для работы с клиентами через переписку: 22 модуля, теория, упражнения и реальные проекты."
+        - generic "Прогресс обучения" [ref=e100]:
+          - generic [ref=e101]:
+            - generic [ref=e102]: Пройдено теории
+            - generic [ref=e103]: 0 / 336
+            - generic [ref=e104]: 336 уроков
+          - generic [ref=e105]:
+            - generic [ref=e106]: Практика
+            - generic [ref=e107]: 0 / 72
+            - generic [ref=e108]: 72 задания
+          - generic [ref=e109]:
+            - generic [ref=e110]: Общий прогресс
+            - generic [ref=e111]: 0%
+        - generic [ref=e113]:
+          - generic [ref=e114]: ВАШ СЛЕДУЮЩИЙ ШАГ
+          - heading "Обмен ценностью" [level=2] [ref=e115]
+          - paragraph [ref=e116]: Откройте последнюю тему или начните изучение с основ продаж.
+          - link "Продолжить изучение →" [ref=e117] [cursor=pointer]:
+            - /url: /lesson/01-001/
+        - generic [ref=e118]:
+          - heading "Ваш путь обучения" [level=2] [ref=e119]
+          - link "Все 22 модуля →" [ref=e120] [cursor=pointer]:
+            - /url: /roadmap/
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - heading "01. Фундамент" [level=2] [ref=e123]
+            - link "Перейти к уровню →" [ref=e124] [cursor=pointer]:
+              - /url: /level/1/
+          - generic [ref=e125]:
+            - link "МОДУЛЬ 01 Природа и процесс продаж Научиться продавать через пользу клиенту, а не через давление. 13 тем · 3 практики 0%" [ref=e126] [cursor=pointer]:
+              - /url: /module/01-MODULE/
+              - generic [ref=e127]: МОДУЛЬ 01
+              - heading "Природа и процесс продаж" [level=3] [ref=e128]
+              - paragraph [ref=e129]: Научиться продавать через пользу клиенту, а не через давление.
+              - generic [ref=e131]:
+                - generic [ref=e132]: 13 тем
+                - generic [ref=e133]: ·
+                - generic [ref=e134]: 3 практики
+                - strong [ref=e135]: 0%
+            - link "МОДУЛЬ 02 Психология покупки и доверие Понимать, почему люди выбирают решение или откладывают решение. 14 тем · 3 практики 0%" [ref=e136] [cursor=pointer]:
+              - /url: /module/02-MODULE/
+              - generic [ref=e137]: МОДУЛЬ 02
+              - heading "Психология покупки и доверие" [level=3] [ref=e138]
+              - paragraph [ref=e139]: Понимать, почему люди выбирают решение или откладывают решение.
+              - generic [ref=e141]:
+                - generic [ref=e142]: 14 тем
+                - generic [ref=e143]: ·
+                - generic [ref=e144]: 3 практики
+                - strong [ref=e145]: 0%
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - heading "02. Практические продажи" [level=2] [ref=e148]
+            - link "Перейти к уровню →" [ref=e149] [cursor=pointer]:
+              - /url: /level/2/
+          - generic [ref=e150]:
+            - link "МОДУЛЬ 05 Поиск реальных клиентов Строить качественную базу компаний, а не собирать случайные контакты. 15 тем · 3 практики 0%" [ref=e151] [cursor=pointer]:
+              - /url: /module/05-MODULE/
+              - generic [ref=e152]: МОДУЛЬ 05
+              - heading "Поиск реальных клиентов" [level=3] [ref=e153]
+              - paragraph [ref=e154]: Строить качественную базу компаний, а не собирать случайные контакты.
+              - generic [ref=e156]:
+                - generic [ref=e157]: 15 тем
+                - generic [ref=e158]: ·
+                - generic [ref=e159]: 3 практики
+                - strong [ref=e160]: 0%
+            - link "МОДУЛЬ 06 Первое сообщение и текстовый Outbound Начинать деловое общение через мессенджеры и email. 16 тем · 3 практики 0%" [ref=e161] [cursor=pointer]:
+              - /url: /module/06-MODULE/
+              - generic [ref=e162]: МОДУЛЬ 06
+              - heading "Первое сообщение и текстовый Outbound" [level=3] [ref=e163]
+              - paragraph [ref=e164]: Начинать деловое общение через мессенджеры и email.
+              - generic [ref=e166]:
+                - generic [ref=e167]: 16 тем
+                - generic [ref=e168]: ·
+                - generic [ref=e169]: 3 практики
+                - strong [ref=e170]: 0%
+        - generic [ref=e171]:
+          - generic [ref=e172]:
+            - heading "03. Система и предпринимательство" [level=2] [ref=e173]
+            - link "Перейти к уровню →" [ref=e174] [cursor=pointer]:
+              - /url: /level/3/
+          - generic [ref=e175]:
+            - link "МОДУЛЬ 15 CRM и личная система продаж Перестать терять сообщения, обещания и потенциальных клиентов. 13 тем · 3 практики 0%" [ref=e176] [cursor=pointer]:
+              - /url: /module/15-MODULE/
+              - generic [ref=e177]: МОДУЛЬ 15
+              - heading "CRM и личная система продаж" [level=3] [ref=e178]
+              - paragraph [ref=e179]: Перестать терять сообщения, обещания и потенциальных клиентов.
+              - generic [ref=e181]:
+                - generic [ref=e182]: 13 тем
+                - generic [ref=e183]: ·
+                - generic [ref=e184]: 3 практики
+                - strong [ref=e185]: 0%
+            - link "МОДУЛЬ 16 Метрики, воронка и эксперименты Улучшать продажи на основе наблюдений и чисел. 14 тем · 3 практики 0%" [ref=e186] [cursor=pointer]:
+              - /url: /module/16-MODULE/
+              - generic [ref=e187]: МОДУЛЬ 16
+              - heading "Метрики, воронка и эксперименты" [level=3] [ref=e188]
+              - paragraph [ref=e189]: Улучшать продажи на основе наблюдений и чисел.
+              - generic [ref=e191]:
+                - generic [ref=e192]: 14 тем
+                - generic [ref=e193]: ·
+                - generic [ref=e194]: 3 практики
+                - strong [ref=e195]: 0%
+        - generic [ref=e196]:
+          - generic [ref=e197]:
+            - heading "04. Профессиональное мастерство" [level=2] [ref=e198]
+            - link "Перейти к уровню →" [ref=e199] [cursor=pointer]:
+              - /url: /level/4/
+          - generic [ref=e200]:
+            - link "МОДУЛЬ 20 Сложные B2B-сделки и несколько ЛПР Подготовиться к длинным продажам с формальными согласованиями. 13 тем · 3 практики 0%" [ref=e201] [cursor=pointer]:
+              - /url: /module/20-MODULE/
+              - generic [ref=e202]: МОДУЛЬ 20
+              - heading "Сложные B2B-сделки и несколько ЛПР" [level=3] [ref=e203]
+              - paragraph [ref=e204]: Подготовиться к длинным продажам с формальными согласованиями.
+              - generic [ref=e206]:
+                - generic [ref=e207]: 13 тем
+                - generic [ref=e208]: ·
+                - generic [ref=e209]: 3 практики
+                - strong [ref=e210]: 0%
+            - link "МОДУЛЬ 21 Этика, право, безопасность и AI Соблюдать границы допустимого и использовать инструменты без риска для доверия. 21 тем · 4 практики 0%" [ref=e211] [cursor=pointer]:
+              - /url: /module/21-MODULE/
+              - generic [ref=e212]: МОДУЛЬ 21
+              - heading "Этика, право, безопасность и AI" [level=3] [ref=e213]
+              - paragraph [ref=e214]: Соблюдать границы допустимого и использовать инструменты без риска для доверия.
+              - generic [ref=e216]:
+                - generic [ref=e217]: 21 тем
+                - generic [ref=e218]: ·
+                - generic [ref=e219]: 4 практики
+                - strong [ref=e220]: 0%
+        - generic [ref=e221]:
+          - generic [ref=e222]: SALES OS / KNOWLEDGE BASE · 2026
+          - generic [ref=e223]: "Прогресс остаётся на устройстве · Материалы: редакционный черновик"
