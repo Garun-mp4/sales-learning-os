@@ -46,7 +46,7 @@ py -m http.server 8000 --directory dist-fallback
 
 ## Размещение
 
-Vercel устанавливает npm-зависимости из `package-lock.json`, устанавливает Python-зависимости из `requirements.txt`, запускает `npm run build` и публикует `dist/`. Для preview или другого статического хостинга используйте готовый `dist/`. Сайту не требуется backend.
+Vercel устанавливает npm-зависимости из `package-lock.json`, создаёт изолированное Python-окружение `.venv` для `requirements.txt`, запускает `npm run build` с этим окружением в `PATH` и публикует `dist/`. Так сборка не пытается менять системный Python. Для preview или другого статического хостинга используйте готовый `dist/`. Сайту не требуется backend.
 
 ## Архитектура
 

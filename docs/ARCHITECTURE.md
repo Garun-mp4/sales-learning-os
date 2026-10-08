@@ -9,7 +9,7 @@ Sales OS — статическая русскоязычная обучающа�
 - `scripts/prepare_astro.py` создаёт поисковый индекс, runtime-ассеты и очищенный снимок итогового проекта из исходников. Он не строит второй сайт перед Astro.
 - Astro 7 собирает production-сайт из `src/pages/`, `src/layouts/`, компонентов, стилей и исходной коллекции. `scripts/after-build.mjs` добавляет Pagefind-independent offline URL manifest и service worker в `dist/`.
 - `dist/` — одноразовый, игнорируемый результат Astro. Python fallback запускается явно через `python scripts/build.py --out-dir dist-fallback`; он не очищает и не подменяет Astro output.
-- Vercel использует `npm ci`, `requirements.txt`, `npm run build` и `dist/`. В репозитории нет сохранённых сборочных HTML-страниц.
+- Vercel выполняет `npm ci`, создаёт `.venv` для `requirements.txt`, запускает `npm run build` с `.venv/bin` в `PATH` и публикует `dist/`. Изолированное окружение обходится без установки пакетов в управляемый системный Python. В репозитории нет сохранённых сборочных HTML-страниц.
 
 ## Runtime и границы данных
 
