@@ -1,0 +1,50 @@
+23:43:25 [content] Syncing content
+23:43:26 [content] Synced content
+23:43:26 [types] Generated 1.43s
+23:43:26 [check] Getting diagnostics for Astro files in C:\dev\projects\web\My-projects\sales-learning-os...
+[96mplaywright.config.ts[0m:[93m7[0m:[93m105[0m - [91merror[0m[90m ts(2580): [0mCannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+
+[7m7[0m   webServer:{command:'npm run dev -- --host 127.0.0.1',url:'http://127.0.0.1:4321',reuseExistingServer:!process.env.CI,timeout:180000}
+[7m [0m [91m                                                                                                        ~~~~~~~[0m
+
+[96mpublic/sw.js[0m:[93m1[0m:[93m77[0m - [93mwarning[0m[90m ts(6133): [0m'e' is declared but its value is never read.
+
+[7m1[0m const CACHE='sales-os-offline-7b57a5637fac';self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{const req=e.request;if(req.method!=='GET'||new URL(req.url).origin!==self.location.origin)return;e.respondWith((async()=>{try{return await fetch(req)}catch{const names=(await caches.keys()).filter(k=>k.startsWith('sales-os-offline-')).reverse();for(const name of names){const c=await caches.open(name);const hit=await c.match(req);if(hit)return hit;}return Response.error()}})());});
+[7m [0m [93m                                                                            ~[0m
+
+[96mscripts/after-build.mjs[0m:[93m1[0m:[93m36[0m - [93mwarning[0m[90m ts(6133): [0m'stat' is declared but its value is never read.
+
+[7m1[0m import {readdir,readFile,writeFile,stat} from 'node:fs/promises';
+[7m [0m [93m                                   ~~~~[0m
+
+[96msrc/pages/final-project/index.astro[0m:[93m4[0m:[93m18[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'node:path' or its corresponding type declarations.
+
+[7m4[0m import path from 'node:path';
+[7m [0m [91m                 ~~~~~~~~~~~[0m
+[96msrc/pages/final-project/index.astro[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'node:fs/promises' or its corresponding type declarations.
+
+[7m3[0m import {readFile} from 'node:fs/promises';
+[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m
+
+[96mtests/test_offline_worker.mjs[0m:[93m62[0m:[93m21[0m - [93mwarning[0m[90m ts(80007): [0m'await' has no effect on the type of this expression.
+
+[7m62[0m const missingResp = await respond('http://test.local/lesson/02-001/');
+[7m  [0m [93m                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/test_offline_worker.mjs[0m:[93m60[0m:[93m17[0m - [93mwarning[0m[90m ts(80007): [0m'await' has no effect on the type of this expression.
+
+[7m60[0m const oldResp = await respond('http://test.local/lesson/01-001/');
+[7m  [0m [93m                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/test_offline_worker.mjs[0m:[93m57[0m:[93m21[0m - [93mwarning[0m[90m ts(80007): [0m'await' has no effect on the type of this expression.
+
+[7m57[0m const offlineResp = await respond('http://test.local/lesson/01-001/');
+[7m  [0m [93m                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/test_offline_worker.mjs[0m:[93m54[0m:[93m20[0m - [93mwarning[0m[90m ts(80007): [0m'await' has no effect on the type of this expression.
+
+[7m54[0m const onlineResp = await respond('http://test.local/lesson/01-001/');
+[7m  [0m [93m                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+Result (38 files): 
+- 3 errors
+- 0 warnings
+- 6 hints
+
