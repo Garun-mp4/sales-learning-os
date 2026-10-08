@@ -1,7 +1,7 @@
 ---
 import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';
 ---
-<Shell title="Настройки" active="settings"><div class="breadcrumb"><a href="/">Обзор</a> › <span>Настройки</span></div>
+<Shell title="Настройки" active="settings"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <span aria-current="page">Настройки</span></nav>
 <PageHeading eyebrow="ПРИЛОЖЕНИЕ" title="Настройки и данные" description="Данные сохраняются локально: без регистрации и сервера."/>
 <div class="settings-row"><div><strong>Цветовая тема</strong><p>Системная, светлая или тёмная</p></div><select class="theme-switch" data-theme-select aria-label="Цветовая тема"><option value="system">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></div>
 <div class="settings-row"><div><strong>Резервная копия</strong><p>Экспорт всех статусов, заметок и закладок</p></div><button class="btn" data-export>Экспортировать JSON</button></div>

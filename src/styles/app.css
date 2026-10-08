@@ -328,6 +328,23 @@ summary:focus-visible {
   width: 12px;
   height: 12px;
 }
+.project-callout {
+  margin: 26px 0;
+}
+.project-callout h2 {
+  margin: 0 0 6px;
+  color: var(--fg);
+  font-size: 15px;
+  font-weight: 600;
+}
+.project-callout p {
+  max-width: 76ch;
+  margin: 0 0 12px;
+}
+.project-callout .btn {
+  display: inline-flex;
+  align-items: center;
+}
 .h1 {
   font-size: clamp(28px, 3.2vw, 44px);
   font-weight: 650;
@@ -453,10 +470,12 @@ summary:focus-visible {
 .progress > span {
   display: block;
   height: 100%;
-  width: 0;
+  width: 100%;
   background: var(--fg);
   border-radius: 4px;
-  transition: width 0.2s;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.2s;
 }
 .stat-grid {
   display: grid;
@@ -997,6 +1016,9 @@ summary:focus-visible {
   :root {
     --sidebar: 64px;
   }
+  .side {
+    overflow: visible;
+  }
   .side .side-top {
     padding: 19px 14px;
   }
@@ -1017,6 +1039,34 @@ summary:focus-visible {
     justify-content: center;
     padding: 9px 0;
   }
+  .side .nav-item::after {
+    content: attr(aria-label);
+    position: absolute;
+    z-index: 80;
+    top: 50%;
+    left: calc(100% + 8px);
+    padding: 6px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--fg);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-3px, -50%);
+    transition:
+      opacity 120ms ease-out,
+      transform 120ms ease-out;
+  }
+  .side .nav-item:hover::after,
+  .side .nav-item:focus-visible::after {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
   .side-top .brand-mark {
     width: 34px;
     height: 34px;
@@ -1034,8 +1084,12 @@ summary:focus-visible {
     width: min(280px, 86vw);
     height: 100dvh;
     transform: translateX(-105%);
-    transition: transform 0.2s;
+    transition: transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
     box-shadow: 0 0 0 transparent;
+    overscroll-behavior: contain;
+  }
+  .side[inert] {
+    visibility: hidden;
   }
   .menu-open .side {
     transform: none;
@@ -1046,9 +1100,12 @@ summary:focus-visible {
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 55;
+    opacity: 0;
+    transition: opacity 160ms ease-out;
   }
   .menu-open .mobile-shade {
     display: block;
+    opacity: 1;
   }
   .menu-toggle {
     display: grid;
@@ -1114,8 +1171,8 @@ summary:focus-visible {
   *,
   *:before,
   *:after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+    transition: none !important;
+    animation: none !important;
     scroll-behavior: auto !important;
   }
 }

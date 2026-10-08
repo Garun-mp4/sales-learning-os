@@ -10,6 +10,7 @@ const statusLabels = {
   completed: "Выполнено",
 };
 let contentIndex = null;
+let contentIndexPromise = null;
 let state = userStore.initialState;
 const noteEditors = new Map();
 function defaultState() {
@@ -116,25 +117,91 @@ document.querySelectorAll("[data-theme-select]").forEach((el) =>
     toast("Тема изменена");
   }),
 );
-const toggleMenu = (on) => {
-  document.body.classList.toggle("menu-open", on);
-  document
-    .querySelector("[data-menu-toggle]")
-    ?.setAttribute("aria-expanded", String(on));
-};
-document
-  .querySelector("[data-menu-toggle]")
-  ?.addEventListener("click", () =>
-    toggleMenu(!document.body.classList.contains("menu-open")),
-  );
+const sideNavigation = document.querySelector("#side-navigation");
+const menuToggle = document.querySelector("[data-menu-toggle]");
+const drawerBackground = document.querySelector("[data-drawer-background]");
+const mobileNavigation = window.matchMedia("(max-width: 768px)");
+let previousBodyOverflow = "";
+function toggleMenu(on, restoreFocus = true) {
+  if (!sideNavigation) return;
+  const mobile = mobileNavigation.matches;
+  const open = Boolean(on && mobile);
+  const wasOpen = document.body.classList.contains("menu-open");
+  document.body.classList.toggle("menu-open", open);
+  menuToggle?.setAttribute("aria-expanded", String(open));
+
+  if (open) {
+    sideNavigation.inert = false;
+    sideNavigation.setAttribute("aria-hidden", "false");
+    sideNavigation.setAttribute("role", "dialog");
+    sideNavigation.setAttribute("aria-modal", "true");
+    if (!wasOpen) {
+      previousBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
+    sideNavigation.querySelector("[data-menu-close]")?.focus({
+      preventScroll: true,
+    });
+    if (drawerBackground) {
+      drawerBackground.inert = true;
+      drawerBackground.setAttribute("aria-hidden", "true");
+    }
+    return;
+  }
+
+  if (drawerBackground) {
+    drawerBackground.inert = false;
+    drawerBackground.removeAttribute("aria-hidden");
+  }
+  sideNavigation.inert = mobile;
+  sideNavigation.setAttribute("aria-hidden", String(mobile));
+  sideNavigation.removeAttribute("role");
+  sideNavigation.removeAttribute("aria-modal");
+  if (wasOpen) document.body.style.overflow = previousBodyOverflow;
+  if (wasOpen && restoreFocus && mobile) menuToggle?.focus();
+}
+menuToggle?.addEventListener("click", () =>
+  toggleMenu(!document.body.classList.contains("menu-open")),
+);
 document
   .querySelector(".mobile-shade")
   ?.addEventListener("click", () => toggleMenu(false));
 document
   .querySelector("[data-menu-close]")
   ?.addEventListener("click", () => toggleMenu(false));
+mobileNavigation.addEventListener("change", () => toggleMenu(false, false));
+toggleMenu(false, false);
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") toggleMenu(false);
+  if (document.body.classList.contains("menu-open")) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      toggleMenu(false);
+      return;
+    }
+    if (e.key === "Tab" && sideNavigation) {
+      const items = [
+        ...sideNavigation.querySelectorAll(
+          'a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter(
+        (item) =>
+          item.getClientRects().length > 0 &&
+          !item.closest("[hidden], [inert]") &&
+          item.getAttribute("aria-hidden") !== "true",
+      );
+      const currentIndex = items.indexOf(document.activeElement);
+      const nextIndex = e.shiftKey
+        ? currentIndex <= 0
+          ? items.length - 1
+          : currentIndex - 1
+        : currentIndex < 0 || currentIndex >= items.length - 1
+          ? 0
+          : currentIndex + 1;
+      e.preventDefault();
+      (items[nextIndex] || sideNavigation).focus();
+      return;
+    }
+  }
   if (
     (e.key === "/" &&
       !(e.target instanceof HTMLInputElement) &&
@@ -147,10 +214,20 @@ document.addEventListener("keydown", (e) => {
 });
 async function getIndex() {
   if (contentIndex) return contentIndex;
-  const r = await fetch(root + "assets/client-index.json");
-  if (!r.ok) throw new Error("index unavailable");
-  contentIndex = await r.json();
-  return contentIndex;
+  if (!contentIndexPromise) {
+    contentIndexPromise = (async () => {
+      const response = await fetch(root + "assets/client-index.json");
+      if (!response.ok) throw new Error("index unavailable");
+      contentIndex = await response.json();
+      return contentIndex;
+    })();
+  }
+  try {
+    return await contentIndexPromise;
+  } catch (error) {
+    contentIndexPromise = null;
+    throw error;
+  }
 }
 function isDone(e) {
   let value =
@@ -174,6 +251,10 @@ function statIndex(idx) {
 }
 function updateProgress(idx) {
   const st = statIndex(idx);
+  const total = st.theory + st.practice;
+  const globalPct = Math.round(
+    ((st.theoryDone + st.practiceDone) / total) * 100,
+  );
   document
     .querySelectorAll("[data-global-theory]")
     .forEach((el) => (el.textContent = st.theoryDone + " / " + st.theory));
@@ -182,38 +263,39 @@ function updateProgress(idx) {
     .forEach((el) => (el.textContent = st.practiceDone + " / " + st.practice));
   document
     .querySelectorAll("[data-global-pct]")
-    .forEach(
-      (el) =>
-        (el.textContent =
-          Math.round(
-            ((st.theoryDone + st.practiceDone) / (st.theory + st.practice)) *
-              100,
-          ) + "%"),
-    );
+    .forEach((el) => (el.textContent = globalPct + "%"));
   document
     .querySelectorAll("[data-global-fill]")
-    .forEach(
-      (el) =>
-        (el.style.width =
-          Math.round(
-            ((st.theoryDone + st.practiceDone) / (st.theory + st.practice)) *
-              100,
-          ) + "%"),
-    );
+    .forEach((el) => (el.style.transform = `scaleX(${globalPct / 100})`));
+  document.querySelectorAll("[data-global-progress]").forEach((el) => {
+    el.setAttribute("aria-valuenow", String(globalPct));
+    el.setAttribute("aria-valuetext", `${globalPct}%`);
+  });
   for (const el of document.querySelectorAll("[data-module-pct]")) {
     const mod = el.dataset.modulePct;
     let arr = Object.values(idx.entries).filter(
       (e) => e.module === mod && e.kind !== "module",
     );
     let done = arr.filter(isDone).length;
-    el.textContent = `${Math.round((done / arr.length) * 100)}%`;
+    let pct = Math.round((done / arr.length) * 100);
+    el.textContent = `${pct}%`;
+  }
+  for (const el of document.querySelectorAll("[data-module-progress]")) {
+    const mod = el.dataset.moduleProgress;
+    const arr = Object.values(idx.entries).filter(
+      (e) => e.module === mod && e.kind !== "module",
+    );
+    const pct = Math.round((arr.filter(isDone).length / arr.length) * 100);
+    el.setAttribute("aria-valuenow", String(pct));
+    el.setAttribute("aria-valuetext", `${pct}%`);
   }
   for (const el of document.querySelectorAll("[data-module-fill]")) {
     const mod = el.dataset.moduleFill;
     let arr = Object.values(idx.entries).filter(
       (e) => e.module === mod && e.kind !== "module",
     );
-    el.style.width = `${Math.round((arr.filter(isDone).length / arr.length) * 100)}%`;
+    const pct = Math.round((arr.filter(isDone).length / arr.length) * 100);
+    el.style.transform = `scaleX(${pct / 100})`;
   }
   for (const el of document.querySelectorAll("[data-topic-status]")) {
     const e = idx.entries[el.dataset.topicStatus];
@@ -830,8 +912,11 @@ if (searchInput) {
   const params = new URLSearchParams(location.search);
   searchInput.value = params.get("q") || "";
   const resultRoot = document.querySelector("[data-search-results]");
+  const searchStatus = document.querySelector("[data-search-status]");
   let pagefind = null,
     searchIndex = [],
+    fallbackLoaded = false,
+    searchReady = false,
     serial = 0,
     lastTimer;
   const normalized = (s) =>
@@ -840,30 +925,59 @@ if (searchInput) {
       .replace(/ё/g, "е")
       .replace(/[^\p{L}\p{N}]+/gu, " ")
       .trim();
-  (async () => {
-    // Prefer the incremental Pagefind index after an Astro build; the JSON index
-    // is the offline-compatible fallback for the precompiled Python version.
+  async function loadFallbackIndex() {
+    if (fallbackLoaded) return;
+    const response = await fetch(root + "assets/search-index.json");
+    if (!response.ok) throw new Error("Search index request failed");
+    const items = await response.json();
+    if (!Array.isArray(items)) throw new Error("Invalid search index");
+    searchIndex = items.map((item) => ({
+      ...item,
+      _title: normalized(item.title),
+      _body: normalized(item.text),
+    }));
+    fallbackLoaded = true;
+  }
+  function showSearchError() {
+    searchReady = false;
+    searchStatus.textContent = "";
+    resultRoot.innerHTML =
+      '<div class="notice" role="alert">Не удалось загрузить индекс поиска. Проверьте соединение и повторите попытку. <button class="btn smallbtn" type="button" data-search-retry>Повторить</button></div>';
+    resultRoot.setAttribute("aria-busy", "false");
+    searchStatus.setAttribute("aria-busy", "false");
+    resultRoot
+      .querySelector("[data-search-retry]")
+      ?.addEventListener("click", () => void initializeSearch(), {
+        once: true,
+      });
+  }
+  async function initializeSearch() {
+    searchReady = false;
+    resultRoot.setAttribute("aria-busy", "true");
+    searchStatus.textContent = "Загрузка поиска…";
+    searchStatus.setAttribute("aria-busy", "true");
     try {
-      pagefind = await import(root + "pagefind/pagefind.js");
-      await pagefind.init();
-    } catch {
+      pagefind = null;
+      searchIndex = [];
+      fallbackLoaded = false;
       try {
-        const r = await fetch(root + "assets/search-index.json");
-        searchIndex = (await r.json()).map((item) => ({
-          ...item,
-          _title: normalized(item.title),
-          _body: normalized(item.text),
-        }));
+        pagefind = await import(root + "pagefind/pagefind.js");
+        await pagefind.init();
       } catch {
-        resultRoot.innerHTML =
-          '<div class="notice">Поисковый индекс недоступен.</div>';
-        return;
+        pagefind = null;
       }
+      if (!pagefind) await loadFallbackIndex();
+      searchReady = true;
+      await search();
+    } catch {
+      showSearchError();
     }
-    await search();
-  })();
+  }
   async function search() {
+    if (!searchReady) return;
     const mine = ++serial;
+    resultRoot.setAttribute("aria-busy", "true");
+    searchStatus.setAttribute("aria-busy", "true");
     const query = searchInput.value.trim(),
       text = normalized(query);
     history.replaceState(
@@ -872,8 +986,11 @@ if (searchInput) {
       location.pathname + (text ? "?q=" + encodeURIComponent(query) : ""),
     );
     if (!text) {
-      resultRoot.innerHTML =
-        '<div class="notice">Введите слово или фразу для поиска по материалам.</div>';
+      searchStatus.textContent =
+        "Введите слово или фразу для поиска по материалам.";
+      resultRoot.innerHTML = "";
+      resultRoot.setAttribute("aria-busy", "false");
+      searchStatus.setAttribute("aria-busy", "false");
       return;
     }
     if (pagefind) {
@@ -890,12 +1007,23 @@ if (searchInput) {
               `<a class="item" href="${escapeHtml(d.url)}"><div class="itext"><div class="ititle">${escapeHtml(d.meta?.title || d.url)}</div><div class="isub">${escapeHtml(d.excerpt?.replace(/<[^>]*>/g, "").slice(0, 180) || "Материал курса")}</div></div><span class="ic-right">→</span></a>`,
           )
           .join("");
-        resultRoot.innerHTML =
-          `<div class="pill-note">Найдено: ${match.results.length}</div>` +
-          (html || '<div class="notice">Совпадений не найдено.</div>');
+        searchStatus.textContent = match.results.length
+          ? `Найдено: ${match.results.length}${match.results.length > 60 ? " (показаны первые 60)" : ""}`
+          : "Найдено: 0. Совпадений не найдено.";
+        resultRoot.innerHTML = html;
+        resultRoot.setAttribute("aria-busy", "false");
+        searchStatus.setAttribute("aria-busy", "false");
         return;
       } catch {
         pagefind = null;
+        try {
+          await loadFallbackIndex();
+          if (mine === serial) return search();
+          return;
+        } catch {
+          if (mine === serial) showSearchError();
+          return;
+        }
       }
     }
     const terms = text.split(" ");
@@ -916,51 +1044,84 @@ if (searchInput) {
       .sort((a, b) => b.score - a.score)
       .slice(0, 60);
     if (mine !== serial) return;
-    resultRoot.innerHTML =
-      `<div class="pill-note">Найдено: ${matches.length}${matches.length === 60 ? " (первые 60)" : ""}</div>` +
-        matches
-          .map(
-            (item) =>
-              `<a class="item" href="${root}${item.kind === "theory" ? "lesson" : item.kind === "practice" ? "practice" : "module"}/${encodeURIComponent(item.id)}/"><span class="number">${escapeHtml(item.id)}</span><div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${item.kind === "theory" ? "Теория" : item.kind === "practice" ? "Практика" : "Модуль"} · ${escapeHtml(item.module)}</div></div><span class="ic-right">→</span></a>`,
-          )
-          .join("") || '<div class="notice">Совпадений не найдено.</div>';
+    const html = matches
+      .map(
+        (item) =>
+          `<a class="item" href="${root}${item.kind === "theory" ? "lesson" : item.kind === "practice" ? "practice" : "module"}/${encodeURIComponent(item.id)}/"><span class="number">${escapeHtml(item.id)}</span><div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${item.kind === "theory" ? "Теория" : item.kind === "practice" ? "Практика" : "Модуль"} · ${escapeHtml(item.module)}</div></div><span class="ic-right">→</span></a>`,
+      )
+      .join("");
+    searchStatus.textContent = matches.length
+      ? `Найдено: ${matches.length}${matches.length === 60 ? " (показаны первые 60)" : ""}`
+      : "Найдено: 0. Совпадений не найдено.";
+    resultRoot.innerHTML = html;
+    resultRoot.setAttribute("aria-busy", "false");
+    searchStatus.setAttribute("aria-busy", "false");
   }
   searchInput.addEventListener("input", () => {
     clearTimeout(lastTimer);
     lastTimer = setTimeout(search, 180);
   });
+  void initializeSearch();
 }
 const bookRoot = document.querySelector("[data-bookmark-results]");
 if (bookRoot) {
-  getIndex().then((idx) => {
-    const es = state.bookmarks.map((id) => idx.entries[id]).filter(Boolean);
-    bookRoot.innerHTML = es.length
-      ? es
-          .map(
-            (e) =>
-              `<a class="item" href="${root}${e.kind === "practice" ? "practice" : "lesson"}/${e.id}/"><span class="number">${e.id}</span><div class="itext"><div class="ititle">${escapeHtml(e.title)}</div></div><span class="ic-right">→</span></a>`,
-          )
-          .join("")
-      : '<div class="notice">Пока нет закладок. На странице урока нажмите «В закладки».</div>';
+  const bookStatus = bookRoot.querySelector("[data-bookmark-status]");
+  const bookList = bookRoot.querySelector("[data-bookmark-list]");
+  async function renderBookmarks() {
+    bookRoot.setAttribute("aria-busy", "true");
+    bookStatus.textContent = "Загрузка закладок…";
+    try {
+      const idx = await getIndex();
+      const es = state.bookmarks.map((id) => idx.entries[id]).filter(Boolean);
+      bookStatus.textContent = es.length
+        ? `Сохранено закладок: ${es.length}.`
+        : "Пока нет закладок.";
+      bookList.innerHTML = es.length
+        ? es
+            .map(
+              (e) =>
+                `<a class="item" href="${root}${e.kind === "practice" ? "practice" : "lesson"}/${e.id}/"><span class="number">${e.id}</span><div class="itext"><div class="ititle">${escapeHtml(e.title)}</div></div><span class="ic-right">→</span></a>`,
+            )
+            .join("")
+        : `<div class="notice">Откройте <a href="${root}roadmap/">урок</a> или <a href="${root}practice/">задание</a> и сохраните его в закладки.</div>`;
+    } catch {
+      bookStatus.textContent = "";
+      bookList.innerHTML =
+        '<div class="notice" role="alert">Не удалось загрузить закладки. Попробуйте ещё раз. <button class="btn smallbtn" type="button" data-bookmarks-retry>Повторить</button></div>';
+    } finally {
+      bookRoot.setAttribute("aria-busy", "false");
+    }
+  }
+  bookRoot.addEventListener("click", (event) => {
+    if (event.target.closest("[data-bookmarks-retry]")) void renderBookmarks();
   });
+  void renderBookmarks();
 }
 // Optional filters on the all-practice directory.
-document.querySelectorAll("[data-filter]").forEach((el) =>
-  el.addEventListener("change", () => {
-    const mod = document.querySelector('[data-filter="module"]')?.value || "",
-      level = document.querySelector('[data-filter="level"]')?.value || "";
-    let visible = 0;
-    document.querySelectorAll("[data-filter-item]").forEach((e) => {
-      let show =
-        (!mod || e.dataset.mod === mod) &&
-        (!level || e.dataset.level === level);
-      e.hidden = !show;
-      if (show) visible++;
-    });
-    const count = document.querySelector("[data-filter-count]");
-    if (count) count.textContent = String(visible);
-  }),
+const practiceFilters = [...document.querySelectorAll("[data-filter]")];
+const filterEmpty = document.querySelector("[data-filter-empty]");
+function applyPracticeFilters() {
+  const mod = document.querySelector('[data-filter="module"]')?.value || "",
+    level = document.querySelector('[data-filter="level"]')?.value || "";
+  let visible = 0;
+  document.querySelectorAll("[data-filter-item]").forEach((e) => {
+    let show =
+      (!mod || e.dataset.mod === mod) && (!level || e.dataset.level === level);
+    e.hidden = !show;
+    if (show) visible++;
+  });
+  const count = document.querySelector("[data-filter-count]");
+  if (count) count.textContent = String(visible);
+  if (filterEmpty) filterEmpty.hidden = visible !== 0;
+}
+practiceFilters.forEach((el) =>
+  el.addEventListener("change", applyPracticeFilters),
 );
+document.querySelector("[data-filter-reset]")?.addEventListener("click", () => {
+  practiceFilters.forEach((filter) => (filter.value = ""));
+  applyPracticeFilters();
+  practiceFilters[0]?.focus();
+});
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   window.addEventListener("load", () =>
     navigator.serviceWorker

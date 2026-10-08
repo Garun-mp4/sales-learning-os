@@ -13,7 +13,7 @@ const {previous,next}=neighbor(e);
 const isPractice=d.kind==='practice';
 ---
 <Shell title={d.title} module={d.module} documentId={d.id} documentKind={d.kind} reading>
-  <div class="breadcrumb"><a href="/roadmap/">Roadmap</a> › <a href={`/module/${d.module}-MODULE/`}>Модуль {d.module}</a> › <span>{d.id}</span></div>
+  <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/roadmap/">Roadmap</a> › <a href={`/module/${d.module}-MODULE/`}>Модуль {d.module}</a> › <span aria-current="page">{d.id}</span></nav>
   <PageHeading eyebrow={`${isPractice?'ПРАКТИЧЕСКОЕ ЗАДАНИЕ':'УЧЕБНЫЙ МАТЕРИАЛ'} · ${d.id}`} title={d.title}>
     <div class="row wrap"><span class="badge warning">Редакционный черновик</span><span class="badge">{d.group}</span><span class="badge">{d.level==='required'?'Обязательный':'Продвинутый'} материал</span></div>
   </PageHeading>

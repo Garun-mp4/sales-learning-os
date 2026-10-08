@@ -47,9 +47,284 @@ test("Mobile has no horizontal overflow", async ({ page }) => {
   await page.locator("[data-menu-toggle]").click();
   await expect(page.locator("body")).toHaveClass(/menu-open/);
 });
+test("Mobile navigation behaves as a focus-managed drawer", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/practice/");
+  const toggle = page.locator("[data-menu-toggle]");
+  const drawer = page.locator("#side-navigation");
+  const background = page.locator("[data-drawer-background]");
+
+  await expect(drawer).toHaveAttribute("aria-hidden", "true");
+  expect(
+    await drawer.evaluate((element) => (element as HTMLElement).inert),
+  ).toBe(true);
+  await toggle.click();
+  await expect(drawer).toHaveAttribute("role", "dialog");
+  await expect(drawer).toHaveAttribute("aria-modal", "true");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(drawer).toHaveAttribute("aria-hidden", "false");
+  expect(
+    await page
+      .locator("body")
+      .evaluate((element) => (element as HTMLElement).style.overflow),
+  ).toBe("hidden");
+  expect(
+    await background.evaluate((element) => (element as HTMLElement).inert),
+  ).toBe(true);
+  expect(
+    await drawer.evaluate((element) =>
+      element.contains(document.activeElement),
+    ),
+  ).toBe(true);
+
+  for (let i = 0; i < 35; i++) {
+    await page.keyboard.press("Tab");
+    expect(
+      await drawer.evaluate((element) =>
+        element.contains(document.activeElement),
+      ),
+    ).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(page.locator("body")).not.toHaveClass(/menu-open/);
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(
+    await background.evaluate((element) => (element as HTMLElement).inert),
+  ).toBe(false);
+  expect(
+    await page
+      .locator("body")
+      .evaluate((element) => (element as HTMLElement).style.overflow),
+  ).not.toBe("hidden");
+  expect(
+    await page.evaluate(
+      () =>
+        document.activeElement === document.querySelector("[data-menu-toggle]"),
+    ),
+  ).toBe(true);
+
+  await toggle.click();
+  await page.locator(".mobile-shade").click({ position: { x: 350, y: 120 } });
+  await expect(page.locator("body")).not.toHaveClass(/menu-open/);
+  expect(
+    await page.evaluate(
+      () =>
+        document.activeElement === document.querySelector("[data-menu-toggle]"),
+    ),
+  ).toBe(true);
+});
+test("Desktop navigation stays keyboard reachable in route order", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/practice/");
+  const skip = page.locator(".skip");
+  const overview = page.locator('#side-navigation a[href="/"]');
+  const roadmap = page.locator('#side-navigation a[href="/roadmap/"]');
+  const practice = page.locator('#side-navigation a[href="/practice/"]');
+
+  await page.keyboard.press("Tab");
+  await expect(skip).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(overview).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(roadmap).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(practice).toBeFocused();
+  await expect(practice).toHaveAttribute("aria-current", "page");
+});
+test("Route context, breadcrumbs and final project links are clear", async ({
+  page,
+}) => {
+  await page.goto("/lesson/01-001/");
+  await expect(
+    page.locator('#side-navigation a[aria-current="page"]'),
+  ).toHaveAttribute("href", "/roadmap/");
+  await expect(
+    page.locator('#side-navigation a[href="/"][aria-current]'),
+  ).toHaveCount(0);
+  await expect(page.locator(".breadcrumb")).toHaveAttribute(
+    "aria-label",
+    "Хлебные крошки",
+  );
+  await expect(page.locator('.breadcrumb [aria-current="page"]')).toHaveText(
+    "01-001",
+  );
+  await expect(
+    page.locator('#side-navigation .nav-sub a[aria-current="location"]'),
+  ).toHaveCount(1);
+
+  await page.goto("/practice/");
+  await expect(
+    page.locator('#side-navigation a[aria-current="page"]'),
+  ).toHaveAttribute("href", "/practice/");
+  await expect(
+    page.locator('.project-callout a[href="/final-project/"]'),
+  ).toBeVisible();
+  await page.goto("/roadmap/");
+  await expect(
+    page.locator('.project-callout a[href="/final-project/"]'),
+  ).toBeVisible();
+  await page.goto("/final-project/");
+  await expect(page.locator('.breadcrumb a[href="/practice/"]')).toHaveText(
+    "Практика",
+  );
+});
+test("Tablet icon navigation exposes an accessible visible label", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 900 });
+  await page.goto("/practice/");
+  const practiceLink = page.locator('#side-navigation a[href="/practice/"]');
+  await expect(practiceLink).toHaveAttribute("aria-label", "Практика");
+  await expect(practiceLink).toHaveAttribute("aria-current", "page");
+  await practiceLink.hover();
+  const tooltipContent = await practiceLink.evaluate(
+    (element) => getComputedStyle(element, "::after").content,
+  );
+  expect(tooltipContent).toBe('"Практика"');
+  await expect
+    .poll(() =>
+      practiceLink.evaluate(
+        (element) => getComputedStyle(element, "::after").opacity,
+      ),
+    )
+    .toBe("1");
+});
+test("Progress is exposed with current progressbar values", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const progress = page.locator('.stat-grid [role="progressbar"]');
+  await expect(progress).toHaveAttribute("aria-valuenow", "0");
+  await page.evaluate(async () => {
+    const index = (await fetch("/assets/client-index.json").then((r) =>
+      r.json(),
+    )) as { entries: Record<string, { kind: string }> };
+    const ids = Object.entries(index.entries)
+      .filter(([, entry]) => entry.kind === "theory")
+      .slice(0, 41)
+      .map(([id]) => id);
+    const state = await window.SalesOSUserStore.getState();
+    await window.SalesOSUserStore.replaceAll(
+      {
+        ...state,
+        lessonStatuses: Object.fromEntries(
+          ids.map((id) => [id, "theory_completed"]),
+        ),
+      },
+      {},
+    );
+  });
+  await expect(progress).toHaveAttribute("aria-valuenow", "10");
+  await expect(progress).toHaveAttribute("aria-valuetext", "10%");
+});
+test("Practice filters explain and recover from an empty result", async ({
+  page,
+}) => {
+  await page.goto("/practice/");
+  const emptyPair = await page
+    .locator("[data-filter-item]")
+    .first()
+    .evaluate(() => {
+      const rows = [
+        ...document.querySelectorAll<HTMLElement>("[data-filter-item]"),
+      ];
+      const modules = [
+        ...document.querySelectorAll<HTMLSelectElement>(
+          '[data-filter="module"] option',
+        ),
+      ]
+        .map((option) => option.value)
+        .filter(Boolean);
+      for (const module of modules) {
+        for (const level of ["required", "advanced"]) {
+          if (
+            !rows.some(
+              (row) =>
+                row.dataset.mod === module && row.dataset.level === level,
+            )
+          )
+            return { module, level };
+        }
+      }
+      return null;
+    });
+  expect(emptyPair).not.toBeNull();
+  await page.locator('[data-filter="module"]').selectOption(emptyPair!.module);
+  await page.locator('[data-filter="level"]').selectOption(emptyPair!.level);
+  await expect(page.locator("[data-filter-count]")).toHaveText("0");
+  await expect(page.locator("[data-filter-empty]")).toBeVisible();
+  await page.locator("[data-filter-reset]").click();
+  await expect(page.locator("[data-filter-count]")).toHaveText("72");
+  await expect(page.locator("[data-filter-empty]")).toBeHidden();
+});
+test("Search distinguishes no results from a recoverable load error", async ({
+  page,
+}) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  let searchIndexRequests = 0;
+  let failFirstRequest = true;
+  await page.route("**/*", (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith("/pagefind/pagefind.js")) return route.abort();
+    if (pathname.endsWith("/assets/search-index.json")) {
+      searchIndexRequests++;
+      if (failFirstRequest) {
+        failFirstRequest = false;
+        return route.fulfill({ status: 503, body: "unavailable" });
+      }
+    }
+    return route.continue();
+  });
+  await page.goto("/search/");
+  const results = page.locator("[data-search-results]");
+  await expect(results.locator('[role="alert"]')).toContainText(
+    "Не удалось загрузить индекс поиска",
+  );
+  expect(searchIndexRequests).toBe(1);
+  await results.locator("[data-search-retry]").click();
+  await expect(results.locator('[role="alert"]')).toHaveCount(0);
+  await expect(page.locator("[data-search-status]")).toContainText(
+    "Введите слово или фразу для поиска",
+  );
+  expect(pageErrors).toEqual([]);
+  await page.locator("[data-search-input]").fill("zzzz-sales-os-no-match");
+  await expect(page.locator("[data-search-status]")).toContainText(
+    "Совпадений не найдено.",
+  );
+  await expect(results.locator('[role="alert"]')).toHaveCount(0);
+});
 test("Search shows real documents", async ({ page }) => {
   await page.goto("/search/?q=возражения");
   await expect(page.locator("[data-search-results] a").first()).toBeVisible();
+});
+test("Bookmarks distinguish a recoverable index error from an empty list", async ({
+  page,
+}) => {
+  let indexRequests = 0;
+  await page.route("**/assets/client-index.json", (route) => {
+    indexRequests++;
+    if (indexRequests === 1)
+      return route.fulfill({ status: 503, body: "unavailable" });
+    return route.continue();
+  });
+  await page.goto("/bookmarks/");
+  const bookmarks = page.locator("[data-bookmark-results]");
+  const alert = bookmarks.locator('[role="alert"]');
+  await expect(alert).toContainText("Не удалось загрузить закладки");
+  expect(indexRequests).toBe(1);
+  await alert.getByRole("button", { name: "Повторить" }).click();
+  await expect(alert).toHaveCount(0);
+  await expect(bookmarks.locator("[data-bookmark-status]")).toHaveText(
+    "Пока нет закладок.",
+  );
+  await expect(bookmarks.locator("[data-bookmark-list] a.item")).toHaveCount(
+    0,
+  );
 });
 
 test("Two tabs merge independent progress and bookmark updates", async ({

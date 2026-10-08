@@ -84,7 +84,9 @@
 | M0 — baseline и архитектурное решение | **PASS** | 2026-10-09; результаты выше |
 | M1 | **PASS** | 2026-10-09; локальные gates, GitHub CI Windows/Linux и Vercel Preview прошли |
 | M2 — local-first хранилище | **PASS** | 2026-10-09; локальные gates и GitHub CI Windows/Linux прошли; preview READY |
-| M3–M8 | **NOT STARTED** | Реализовывать по одному этапу после приёмки предыдущего |
+| M3 — навигация и доступность | **PASS** | 2026-10-09; 21 URL E2E, quality, Astro build/check и Python fallback прошли |
+| M4 — визуальная система и бренд | **IN PROGRESS** | Начинается после приёмки M3 |
+| M5–M8 | **NOT STARTED** | Следовать зависимостям roadmap и закрывать по одному этапу |
 
 ### M1 — воспроизводимая сборка и доставка (PASS, 2026-10-09)
 
@@ -108,3 +110,14 @@
 - GitHub Actions run `37850003700` для `756f433` и run `37850409541` для финального M2 commit `17ca14d82f73f3babb882556616ee4f807a2baeb` завершились PASS на Ubuntu и Windows. Второй run содержит полный `test:quality`, URL E2E с регрессией закрытия вкладки и Python fallback.
 - Vercel Preview для `17ca14d` достиг `READY` (`sales-learning-25bhofrzs-garun-s-projects.vercel.app`). Защищённый HTTP-smoke для этого deployment не удалось получить: Vercel-интеграция вернула 403 на шаге авторизации к проекту; доступной в окружении команды Vercel CLI нет. Доступ или настройки защиты не менялись. Этот внешний smoke остаётся непроверенным и не маскируется локальными тестами.
 - M2 закрыт как инженерный milestone: функциональная матрица выполнена локально и в удалённом CI. Контент остаётся `editorial_draft`; приложение не создаёт облачную синхронизацию и не отправляет пользовательские данные на сервер.
+
+### M3 — навигация, обратная связь и доступность (PASS, 2026-10-09)
+
+- Мобильная навигация реализована как управляемый drawer: закрытое состояние inert/aria-hidden, переход фокуса внутрь, ручной Tab-cycle, Escape, кнопка закрытия, возврат фокуса, блокировка фона и прокрутки. Для desktop проверен последовательный клавиатурный обход skip link и разделов меню; для планшета добавлена видимая tooltip-подпись к иконкам.
+- Маршрут определяет верхний активный раздел; урок отмечает родительский пункт модуля, вложенные ссылки используют `aria-current=location`, страницы получили навигационный landmark breadcrumbs. Практика и roadmap показывают вход в итоговый проект с пояснением симуляции.
+- Поиск и закладки разделяют live status и область результатов, различают загрузку, ошибку и пустое состояние, предлагают восстановление при сбое; каталог практик объявляет число результатов и позволяет сбросить фильтры после пустой выборки. Общий/модульный прогресс представлен семантическим progressbar. Общая загрузка `client-index.json` дедуплицируется, а ошибка очищает in-flight promise для следующей попытки.
+- Полоса прогресса использует transform вместо анимации layout-свойства `width`; реактивный dashboard виджет гидратируется при загрузке и подписан на изменения user store.
+- Приёмочные артефакты Playwright CLI: `docs/screenshots/m3-practice-light.png`, `docs/screenshots/m3-drawer-mobile-light.png`, `docs/screenshots/m3-drawer-mobile-dark.png`. Проверен построенный Astro сайт по HTTP, без панели dev-toolbar. 150 embedded responsive views подтвердили отсутствие document-level overflow на пяти ширинах.
+- Локально пройдены `npm run lint`, `npm run check` (0 errors, 0 warnings, 3 существующих deprecated hints `BeforeUnloadEvent.returnValue`), `npm run build` (476 страниц, Pagefind 408, offline manifest 938 URL), `npm run test:quality`, `npm run test:fallback` и `npx playwright test` (21/21 Chromium URL E2E).
+- Impeccable detector оставил один warning на `border-left` в существующем `.article blockquote`; это стиль цитат учебного текста по текущему visual contract, не side-tab интерфейсной карточки. Других detector findings на затронутых UI-файлах нет.
+- Структурная/DOM и keyboard проверка семантики прошла. NVDA walkthrough в Windows, как предусмотрено roadmap, переносится на финальную ручную приёмку M8; поэтому здесь не заявляется проверка реального screen-reader произношения. Учебные документы остаются `editorial_draft` до отдельного M5-CONTENT review.

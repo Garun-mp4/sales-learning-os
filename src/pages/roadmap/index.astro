@@ -1,7 +1,8 @@
 ---
 import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';import ModuleCard from '../../components/ModuleCard.astro';import {stages,modules} from '../../lib/course';
 ---
-<Shell title="Roadmap" active="roadmap"><div class="breadcrumb"><a href="/">Обзор</a> › <span>Roadmap</span></div>
+<Shell title="Roadmap" active="roadmap"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <span aria-current="page">Roadmap</span></nav>
 <PageHeading eyebrow="ОБУЧЕНИЕ · 4 УРОВНЯ" title="Дорожная карта продаж" description="Выберите модуль. На странице откроются только материалы, относящиеся к нему."/>
+<section class="notice project-callout" aria-labelledby="roadmap-project-title"><h2 id="roadmap-project-title">Примените навыки в итоговом проекте</h2><p>Соберите учебный маршрут в один результат: от выбора ниши до плана выполнения и ретроспективы. Начать можно с симуляции, не дожидаясь реальной сделки.</p><a class="btn smallbtn" href="/final-project/">Открыть итоговый проект →</a></section>
 {stages.map(s=><section><div class="level-head"><div><span class="eyebrow">УРОВЕНЬ 0{s.id} · {s.weeks}</span><h2>{s.title}</h2><p class="small muted">{s.desc}</p></div><a class="btn smallbtn" href={`/level/${s.id}/`}>Обзор уровня →</a></div><div class="grid">{modules.filter(m=>m.stage===s.id).map(e=><ModuleCard entry={e}/>)}</div></section>)}
 </Shell>

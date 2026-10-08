@@ -7,7 +7,7 @@ import ProgressWidget from '../components/react/ProgressWidget';
 <Shell title="Обзор" active="home">
   <div class="eyebrow">ПЕРСОНАЛЬНАЯ СИСТЕМА ОБУЧЕНИЯ</div><h1 class="h1">Продажи. От понимания — к практике.</h1>
   <p class="intro">Структурированная база знаний для работы с клиентами через переписку: 22 модуля, теория, упражнения и реальные проекты.</p>
-  <ProgressWidget client:idle />
+  <ProgressWidget client:load />
   <div class="dash-hero"><div class="eyebrow">ВАШ СЛЕДУЮЩИЙ ШАГ</div><h2 data-continue-title>Обмен ценностью</h2><p>Откройте последнюю тему или начните изучение с основ продаж.</p><a data-continue class="btn primary" href="/lesson/01-001/">Продолжить изучение →</a></div>
   <div class="section-head"><h2 class="h2">Ваш путь обучения</h2><a class="small muted" href="/roadmap/">Все 22 модуля →</a></div>
   {stages.map(stage=><section><div class="level-head"><h2>0{stage.id}. {stage.title}</h2><a class="small muted" href={`/level/${stage.id}/`}>Перейти к уровню →</a></div><div class="grid">{modules.filter(x=>x.stage===stage.id).slice(0,2).map(entry=><ModuleCard entry={entry}/>)}</div></section>)}

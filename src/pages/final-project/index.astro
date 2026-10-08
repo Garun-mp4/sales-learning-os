@@ -7,7 +7,7 @@ import path from 'node:path';
 const rendered=await readFile(path.resolve('src/generated/final-project.html'),'utf8');
 if(!rendered.trim())throw Error('Final project renderer missing after prepare:content');
 ---
-<Shell title="Итоговый проект" active="practice"><div class="breadcrumb"><a href="/">Обзор</a> › <span>Итоговый проект</span></div>
+<Shell title="Итоговый проект" active="practice"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/practice/">Практика</a> › <span aria-current="page">Итоговый проект</span></nav>
 <PageHeading eyebrow="СКВОЗНАЯ ПРАКТИКА" title="От первого клиента до сделки" description="Практический маршрут для применения знаний на собственных проектах."/>
 <article class="article" set:html={rendered}></article>
 <div class="editbox"><strong>Мой итоговый проект</strong><textarea data-note="FINAL_PROJECT" aria-label="Заметки итогового проекта" placeholder="Цели, результаты, ссылки на документы и выводы..."></textarea><p class="hint" data-save-hint>Данные остаются в браузере</p></div>

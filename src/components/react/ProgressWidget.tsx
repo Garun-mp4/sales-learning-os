@@ -21,6 +21,7 @@ type SavedNote = {
 type UserDataStore = {
   ready: Promise<{ state: ProgressState; mode: string }>;
   getState: () => Promise<ProgressState>;
+  subscribe: (listener: (message: unknown) => void) => () => void;
   getNote: (id: string) => Promise<{
     record: SavedNote;
     draft: {
@@ -44,6 +45,7 @@ declare global {
 export default function ProgressWidget() {
   const [t, setT] = useState(0),
     [p, setP] = useState(0);
+  const overall = Math.round(((t + p) / 408) * 100);
   useEffect(() => {
     let latestRefresh = 0;
     async function refresh() {
@@ -63,12 +65,18 @@ export default function ProgressWidget() {
         ).length,
       );
     }
+    const unsubscribe = window.SalesOSUserStore?.subscribe(() => {
+      void refresh();
+    });
     void refresh();
     window.addEventListener("salesstatechange", refresh);
-    return () => window.removeEventListener("salesstatechange", refresh);
+    return () => {
+      unsubscribe?.();
+      window.removeEventListener("salesstatechange", refresh);
+    };
   }, []);
   return (
-    <div className="stat-grid" aria-label="Прогресс обучения">
+    <div className="stat-grid" role="group" aria-label="Прогресс обучения">
       <div className="stat">
         <div className="label">Пройдено теории</div>
         <div className="value">{t} / 336</div>
@@ -82,8 +90,16 @@ export default function ProgressWidget() {
       <div className="stat">
         <div className="label">Общий прогресс</div>
         <div className="value">{Math.round(((t + p) / 408) * 100)}%</div>
-        <div className="progress">
-          <span style={{ width: Math.round(((t + p) / 408) * 100) + "%" }} />
+        <div
+          className="progress"
+          role="progressbar"
+          aria-label="Общий прогресс обучения"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={overall}
+          aria-valuetext={`${overall}%`}
+        >
+          <span style={{ transform: `scaleX(${overall / 100})` }} />
         </div>
       </div>
     </div>

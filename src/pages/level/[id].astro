@@ -3,6 +3,6 @@ import Shell from '../../layouts/Shell.astro';import PageHeading from '../../com
 export function getStaticPaths(){return stages.map(stage=>({params:{id:String(stage.id)},props:{stage}}));}
 const {stage}=Astro.props;
 ---
-<Shell title={stage.title} active="roadmap"><div class="breadcrumb"><a href="/roadmap/">Roadmap</a> › <span>{stage.title}</span></div>
+<Shell title={stage.title} active="roadmap"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/roadmap/">Roadmap</a> › <span aria-current="page">{stage.title}</span></nav>
 <PageHeading eyebrow={`УРОВЕНЬ 0${stage.id}`} title={stage.title} description={`${stage.desc} · ${stage.weeks}`}/>
 <div class="grid">{modules.filter(m=>m.stage===stage.id).map(e=><ModuleCard entry={e}/>)}</div></Shell>
