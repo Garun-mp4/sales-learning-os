@@ -1,3 +1,17 @@
+@font-face {
+  font-family: Geist;
+  src: url("/assets/fonts/Geist-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/assets/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
 :root {
   color-scheme: light;
   --bg: #fff;
@@ -5,19 +19,30 @@
   --bg3: #f5f5f5;
   --fg: #000;
   --muted: #666;
-  --subtle: #888;
+  --subtle: #666;
   --border: #e8e8e8;
   --border2: #ededed;
   --strong: #d8d8d8;
   --accent: #0761d1;
   --blue: #0070f3;
   --focus: #0070f3;
-  --success: #12a150;
-  --warn: #ac7315;
+  --success: #0a7d3d;
+  --warn: #805b0a;
   --inverted: #fff;
-  --ui:
-    "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ui: "Geist", Inter, system-ui, sans-serif;
   --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-panel: 12px;
+  --motion-fast: 120ms;
+  --motion-standard: 150ms;
+  --ease-standard: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --sidebar: 240px;
   --header: 64px;
 }
@@ -28,7 +53,7 @@
   --bg3: #111;
   --fg: #fafafa;
   --muted: #aaa;
-  --subtle: #888;
+  --subtle: #a3a3a3;
   --border: #2e2e2e;
   --border2: #1a1a1a;
   --strong: #454545;
@@ -36,7 +61,7 @@
   --blue: #3291ff;
   --focus: #3291ff;
   --success: #3dd68c;
-  --warn: #f5a623;
+  --warn: #f5b943;
   --inverted: #000;
 }
 * {
@@ -75,7 +100,8 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
-summary:focus-visible {
+summary:focus-visible,
+.article .table-wrap:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
@@ -111,28 +137,55 @@ summary:focus-visible {
   z-index: 60;
 }
 .side-top {
-  padding: 27px 19px 18px;
+  padding: 19px 16px 16px;
   border-bottom: 1px solid var(--border2);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2);
 }
-.brand-mark {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 6px;
-  background: var(--fg);
-  color: var(--inverted);
-  font-size: 13px;
-  font-weight: 750;
-  letter-spacing: -0.9px;
+.brand-lockup {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
 }
-.brand {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+.brand-logo {
+  display: block;
+  width: min(100%, 150px);
+  height: auto;
+}
+.brand-symbol {
+  display: none;
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.brand-logo-dark,
+.brand-symbol-dark {
+  display: none;
+}
+:root[data-theme="dark"] .brand-logo-light,
+:root[data-theme="dark"] .brand-symbol-light {
+  display: none;
+}
+:root[data-theme="dark"] .brand-logo-dark {
+  display: block;
+}
+:root[data-theme="dark"] .brand-symbol-dark {
+  display: block;
+}
+.brand-compact {
+  display: none;
+  align-items: center;
+  min-height: 44px;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 .version {
   font: 10px var(--mono);
@@ -154,7 +207,7 @@ summary:focus-visible {
   display: flex;
   align-items: center;
   gap: 11px;
-  min-height: 38px;
+  min-height: 40px;
   border-radius: 6px;
   padding: 8px 10px;
   font-size: 13px;
@@ -269,8 +322,8 @@ summary:focus-visible {
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  min-width: 38px;
-  height: 38px;
+  min-width: 40px;
+  min-height: 40px;
   display: grid;
   place-items: center;
   transition: background 0.15s;
@@ -285,7 +338,8 @@ summary:focus-visible {
   color: var(--fg);
   border-radius: 6px;
   padding: 8px 11px;
-  max-width: 125px;
+  max-width: 150px;
+  min-height: 40px;
   font-size: 12px;
 }
 .search-shortcut {
@@ -427,8 +481,8 @@ summary:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 9px;
-  border-radius: 6px;
-  min-height: 38px;
+  border-radius: var(--radius-control);
+  min-height: 40px;
   padding: 9px 15px;
   border: 1px solid var(--border);
   background: var(--bg);
@@ -452,7 +506,7 @@ summary:focus-visible {
   opacity: 0.86;
 }
 .btn.smallbtn {
-  min-height: 32px;
+  min-height: 36px;
   padding: 6px 11px;
   font-size: 12px;
 }
@@ -625,6 +679,28 @@ summary:focus-visible {
   width: 16px;
   height: 16px;
 }
+.entry-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto 16px;
+  grid-template-areas: "number title status arrow";
+  gap: 12px;
+}
+.entry-row .number {
+  grid-area: number;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.entry-row .itext {
+  grid-area: title;
+}
+.entry-row [data-topic-status] {
+  grid-area: status;
+  justify-self: end;
+}
+.entry-row .ic-right {
+  grid-area: arrow;
+  justify-self: end;
+}
 .module-heading {
   display: flex;
   justify-content: space-between;
@@ -673,6 +749,9 @@ summary:focus-visible {
   overflow: auto;
   border-left: 1px solid var(--border2);
   padding-left: 18px;
+}
+.toc-disclosure {
+  display: none;
 }
 .reader-aside h3 {
   font-size: 11px;
@@ -793,8 +872,15 @@ summary:focus-visible {
 }
 .article .table-wrap {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
   margin: 16px 0 24px;
+}
+.article .table-wrap:focus-visible {
+  outline-offset: 2px;
 }
 .article hr {
   border: none;
@@ -927,14 +1013,21 @@ summary:focus-visible {
   margin: 19px 0;
 }
 .footer {
-  border-top: 1px solid var(--border2);
-  margin-top: 70px;
-  padding-top: 17px;
-  color: var(--subtle);
-  font-size: 11px;
+  background: #000;
+  border: 1px solid #1a1a1a;
+  border-radius: var(--radius-card);
+  margin-top: 64px;
+  padding: 16px 18px;
+  color: #fafafa;
+  font-size: 12px;
   display: flex;
   justify-content: space-between;
   gap: 15px;
+  line-height: 1.5;
+}
+.footer > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .settings-row {
   border-bottom: 1px solid var(--border2);
@@ -948,6 +1041,10 @@ summary:focus-visible {
   margin: 5px 0 0;
   font-size: 12px;
   color: var(--muted);
+}
+.settings-row > :first-child {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .toast {
   position: fixed;
@@ -1011,6 +1108,41 @@ summary:focus-visible {
   .reader-aside {
     display: none;
   }
+  .toc-disclosure {
+    display: block;
+    margin: 0 0 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--bg2);
+    overflow: hidden;
+  }
+  .toc-disclosure summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .toc-disclosure summary::marker {
+    content: "";
+  }
+  .toc-disclosure summary span {
+    color: var(--muted);
+    transition: transform var(--motion-fast) var(--ease-standard);
+  }
+  .toc-disclosure[open] summary span {
+    transform: rotate(180deg);
+  }
+  .toc-disclosure .toc {
+    border-top: 1px solid var(--border2);
+    padding: 13px 14px;
+    max-height: min(45vh, 320px);
+    overflow: auto;
+  }
 }
 @media (min-width: 769px) and (max-width: 1050px) {
   :root {
@@ -1020,9 +1152,13 @@ summary:focus-visible {
     overflow: visible;
   }
   .side .side-top {
-    padding: 19px 14px;
+    padding: 14px;
   }
-  .side .brand,
+  .side .brand-lockup {
+    flex: 0 0 34px;
+    justify-content: center;
+  }
+  .side .brand-logo,
   .side .version,
   .side .nav-caption,
   .side .side-foot,
@@ -1067,9 +1203,21 @@ summary:focus-visible {
     opacity: 1;
     transform: translate(0, -50%);
   }
-  .side-top .brand-mark {
-    width: 34px;
-    height: 34px;
+  .side .brand-symbol-light {
+    display: block;
+    width: 32px;
+    height: 32px;
+  }
+  .side .brand-symbol-dark {
+    display: none;
+    width: 32px;
+    height: 32px;
+  }
+  :root[data-theme="dark"] .side .brand-symbol-light {
+    display: none;
+  }
+  :root[data-theme="dark"] .side .brand-symbol-dark {
+    display: block;
   }
 }
 @media (max-width: 768px) {
@@ -1113,6 +1261,28 @@ summary:focus-visible {
   .topbar {
     padding: 0 17px;
   }
+  .brand-compact {
+    display: flex;
+  }
+  .brand-compact .brand-symbol {
+    display: block;
+    width: 26px;
+    height: 26px;
+  }
+  .nav-item {
+    min-height: 44px;
+  }
+  .btn,
+  .btn.smallbtn,
+  .iconbtn,
+  .theme-switch,
+  .status-select,
+  .filter-row select {
+    min-height: 44px;
+  }
+  .iconbtn {
+    min-width: 44px;
+  }
   .container {
     padding: 28px 18px 70px;
   }
@@ -1127,12 +1297,48 @@ summary:focus-visible {
   }
   .footer {
     flex-direction: column;
+    gap: 7px;
+  }
+  .settings-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 12px;
+  }
+  .settings-row > button,
+  .settings-row > label,
+  .settings-row > select {
+    width: 100%;
+    justify-self: stretch;
   }
   .toplink .search-shortcut {
     display: none;
   }
 }
 @media (max-width: 480px) {
+  .topbar {
+    gap: 6px;
+    padding-inline: 12px;
+  }
+  .brand-compact {
+    gap: 5px;
+    font-size: 12px;
+  }
+  .brand-compact .brand-symbol {
+    width: 22px;
+    height: 22px;
+  }
+  .topbar .theme-switch {
+    width: 88px;
+    max-width: 88px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+  .topbar .toplink {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
   .stat-grid {
     grid-template-columns: 1fr;
   }
@@ -1159,12 +1365,34 @@ summary:focus-visible {
   .item .number {
     flex-basis: 37px;
   }
+  .entry-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title arrow"
+      "number status";
+    gap: 9px 10px;
+    align-items: start;
+  }
+  .entry-row .number {
+    align-self: center;
+    font-size: 10px;
+  }
+  .entry-row [data-topic-status] {
+    max-width: 100%;
+    white-space: normal;
+    text-align: right;
+  }
   .navprevnext {
     flex-direction: column;
   }
   .module-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+@media (max-width: 360px) {
+  .topbar .toplink {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

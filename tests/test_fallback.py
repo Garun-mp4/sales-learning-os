@@ -33,6 +33,7 @@ with tempfile.TemporaryDirectory(prefix="build-output-guard-", dir=test_results)
 print("PASS: fallback builder refuses an arbitrary output directory without deleting its files")
 
 commands = [
+    [*strict_python, "tests/test_brand_assets.py", "--site", "dist-fallback"],
     [*strict_python, "tests/test_static.py", "--site", "dist-fallback"],
     [*strict_python, "tests/test_browser_embedded.py"],
     [*strict_python, "tests/test_user_data_embedded.py"],

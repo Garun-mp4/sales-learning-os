@@ -85,8 +85,9 @@
 | M1 | **PASS** | 2026-10-09; локальные gates, GitHub CI Windows/Linux и Vercel Preview прошли |
 | M2 — local-first хранилище | **PASS** | 2026-10-09; локальные gates и GitHub CI Windows/Linux прошли; preview READY |
 | M3 — навигация и доступность | **PASS** | 2026-10-09; 21 URL E2E, quality, Astro build/check и Python fallback прошли |
-| M4 — визуальная система и бренд | **IN PROGRESS** | Начинается после приёмки M3 |
-| M5–M8 | **NOT STARTED** | Следовать зависимостям roadmap и закрывать по одному этапу |
+| M4 — визуальная система и бренд | **PASS** | 2026-10-09; build, quality, fallback, 22 E2E, 50 screenshot views и 72 mobile practice routes |
+| M5 — учебный путь и редакционная модель | **IN PROGRESS** | Начат после приёмки M4; инженерная часть отделяется от внешней редакторской рецензии |
+| M6–M8 | **NOT STARTED** | Следовать зависимостям roadmap и закрывать по одному этапу |
 
 ### M1 — воспроизводимая сборка и доставка (PASS, 2026-10-09)
 
@@ -121,3 +122,14 @@
 - Локально пройдены `npm run lint`, `npm run check` (0 errors, 0 warnings, 3 существующих deprecated hints `BeforeUnloadEvent.returnValue`), `npm run build` (476 страниц, Pagefind 408, offline manifest 938 URL), `npm run test:quality`, `npm run test:fallback` и `npx playwright test` (21/21 Chromium URL E2E).
 - Impeccable detector оставил один warning на `border-left` в существующем `.article blockquote`; это стиль цитат учебного текста по текущему visual contract, не side-tab интерфейсной карточки. Других detector findings на затронутых UI-файлах нет.
 - Структурная/DOM и keyboard проверка семантики прошла. NVDA walkthrough в Windows, как предусмотрено roadmap, переносится на финальную ручную приёмку M8; поэтому здесь не заявляется проверка реального screen-reader произношения. Учебные документы остаются `editorial_draft` до отдельного M5-CONTENT review.
+
+### M4 — адаптивная Vercel-система и бренд (PASS, 2026-10-09)
+
+- Добавлен воспроизводимый `scripts/prepare_brand_assets.py`: он сохраняет прозрачность и пропорции, обрезает только внешние прозрачные поля полного логотипа, готовит светлые/тёмные варианты, 32px favicons и три PWA-размера. Корневые файлы `Sales OS Stepped Logo.png` и `faviicon.png` включены как неизменённые исходники пользователя. Проверки сравнивают alpha/full assets, разрешения, локальные URL и манифесты.
+- Новый знак используется в Astro Shell, компактной навигации, Python fallback и сохранённом legacy source; `legacy-index.html` исключён из обоих production outputs. Chromium поочерёдно переключал `prefers-color-scheme`, разрешал соответствующую favicon-ссылку в документе вкладки и декодировал 32×32 light/dark PNG. Производные brand/font-файлы включены в offline manifest. Geist и Geist Mono Vercel bundling локальны, содержат нужные кириллические glyphs и имеют SIL OFL notice.
+- В Astro rehype table renderer добавлены `role=group`, `tabindex=0`, русское accessible name; Python/final-project paths получили те же атрибуты. В обычных build и dev включён `--force` для Astro content cache: проверка выявила, что старый cache иначе отдавал HTML без обновлённых атрибутов после правки плагина.
+- Приведены к одной шкале typography/surface/border/focus/motion tokens и проверены контрасты в light/dark; мобильные EntryRow, настройки, header/sidebar, TOC и footer выровнены по контракту. Desktop focus E2E теперь явно проверяет фокусируемую бренд-ссылку между skip link и пунктами меню.
+- Снимки реального собранного `astro preview` сохранены в `docs/screenshots/m4-responsive/`: 5 представительных templates × 5 ширин (320/390/768/1024/1440) × 2 темы = 50 скриншотов. Дополнительно embedded Chromium прошёл 150 представительных responsive views и 144 маршрута упражнений на 320/390px без document-level overflow; практика с таблицей сохраняет локальный клавиатурный горизонтальный scroll.
+- `npm run lint` PASS. `npm run check` PASS: 45 файлов, 0 errors/warnings, 3 существующих deprecated hints `BeforeUnloadEvent.returnValue` (source и два сгенерированных копирования). `npm run build` PASS: 476 HTML routes, 408 Pagefind documents, 949 offline resources. `npm run test:quality` PASS (brand, static, worker, Markdown, storage, responsive, final-project). `npm run test:e2e` PASS: 22/22 Chromium URL tests. `npm run test:fallback` PASS: отдельная Python-сборка прошла все static, browser, data, responsive, brand и worker проверки.
+- Визуально проверены главный экран 320px light, главная 1440px dark, практика 390px light, настройки 390px dark, урок 390px light и практика 1024px dark; полная 50-кадровая матрица доступна в папке выше. Свежая production-like сборка проверена без Astro dev toolbar. Все статические preview routes ответили 200; брендовые ресурсы локальные. NVDA/zoom и deployment по Vercel остаются финальными M8 gates; никакие Production deployment settings не менялись.
+- Встроенный Chromium сообщал в dev-server log непадающую ошибку его audit match callback `TypeError: Failed to fetch`; браузерных `pageerror` не было, URL E2E прошёл. Этот внешний fetch связан с dev-проверкой доступности ссылок и не блокирует сборку; проверка соответствующей Vercel Preview остаётся M8.

@@ -45,7 +45,17 @@ final_markdown = (CONTENT / "FINAL_PROJECT.md").read_text(encoding="utf-8")
 final_html = MarkdownIt("default", {"html": False}).enable("table").render(final_markdown)
 final_soup = BeautifulSoup(final_html, "html.parser")
 for table in final_soup.select("table"):
-    table.wrap(final_soup.new_tag("div", attrs={"class": "table-wrap"}))
+    table.wrap(
+        final_soup.new_tag(
+            "div",
+            attrs={
+                "class": "table-wrap",
+                "role": "group",
+                "tabindex": "0",
+                "aria-label": "Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.",
+            },
+        )
+    )
 write_if_changed(
     ROOT / "src/generated/final-project.html",
     str(final_soup).encode("utf-8"),
@@ -82,9 +92,19 @@ urls = {
     "assets/client-index.json",
     "assets/search-index.json",
     "assets/offline-files.json",
-    "assets/favicon.svg",
     "manifest.webmanifest",
 }
+for asset_root in (ASSETS / "brand", ASSETS / "fonts"):
+    if asset_root.is_dir():
+        urls.update(
+            path.relative_to(ROOT / "public").as_posix()
+            for path in asset_root.rglob("*")
+            if path.is_file()
+        )
+legacy_favicon = ASSETS / "favicon.svg"
+old_favicon = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="8" y="45" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white">S/</text></svg>'
+if legacy_favicon.is_file() and legacy_favicon.read_bytes() == old_favicon:
+    legacy_favicon.unlink()
 urls.update(f"level/{stage['id']}/" for stage in manifest["stages"])
 urls.update(f"source/{source['id']}/" for source in manifest["sources"])
 urls.update(
@@ -97,8 +117,6 @@ write_if_changed(
     json.dumps({"version": version, "urls": sorted(urls)}, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
 )
 
-favicon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="8" y="45" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white">S/</text></svg>'
-write_if_changed(ASSETS / "favicon.svg", favicon.encode("utf-8"))
 app_manifest = {
     "name": "Sales OS — база знаний по продажам",
     "short_name": "Sales OS",
@@ -109,11 +127,23 @@ app_manifest = {
     "theme_color": "#000000",
     "icons": [
         {
-            "src": "assets/favicon.svg",
-            "sizes": "any",
-            "type": "image/svg+xml",
+            "src": "assets/brand/app-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
             "purpose": "any",
-        }
+        },
+        {
+            "src": "assets/brand/app-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any",
+        },
+        {
+            "src": "assets/brand/app-icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable",
+        },
     ],
 }
 write_if_changed(

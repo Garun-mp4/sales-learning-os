@@ -4,8 +4,8 @@ import Icon from './Icon.astro';
 interface Props {entry:Entry}
 const {entry:e}=Astro.props;
 ---
-<a class="item" href={href(e)}>
-  <span class="number">{e.id}</span>
+<a class="item entry-row" href={href(e)}>
   <div class="itext"><div class="ititle">{e.title}</div><div class="isub">{e.group} · {e.level==='required'?'Обязательное':'Продвинутое'} {e.kind==='practice'?'задание':'изучение'}</div></div>
+  <span class="number">{e.id}</span>
   <span class="badge" data-topic-status={e.id}>Не начато</span><span class="ic-right"><Icon name="chevron"/></span>
 </a>

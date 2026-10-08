@@ -25,7 +25,7 @@ npm ci
 npm run dev
 ```
 
-`dev`, `check`, `lint` и `build` атомарно готовят небольшие производные входы; они не запускают Python site renderer и не генерируют в `dist/`. Content Collection загружает один и тот же исходник напрямую, а обе сборки используют разные outputs. Канонические проверки:
+`dev`, `check`, `lint` и `build` готовят небольшие производные входы; они не запускают Python site renderer и не создают промежуточный сайт в `dist/`. `dev` и `build` сбрасывают Astro content cache перед запуском: изменившийся Markdown renderer/plugin не должен незаметно оставить старый HTML в существующей рабочей копии. Content Collection загружает один и тот же исходник напрямую, а Astro и fallback используют разные outputs. Канонические проверки:
 
 ```powershell
 npm run lint

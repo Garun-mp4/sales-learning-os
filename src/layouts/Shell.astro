@@ -20,14 +20,17 @@ const currentSection = active ?? (
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="description" content="Sales OS — изучение продаж через проверяемую теорию, практику и собственные проекты."/>
-  <meta name="theme-color" content="#ffffff"/>
+  <meta name="theme-color" content="#ffffff" data-theme-color/>
   <title>{title} · Sales OS</title>
-  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg"/>
+  <link rel="icon" type="image/png" href="/assets/brand/favicon-light.png" sizes="32x32" media="(prefers-color-scheme: light)"/>
+  <link rel="icon" type="image/png" href="/assets/brand/favicon-dark.png" sizes="32x32" media="(prefers-color-scheme: dark)"/>
+  <link rel="apple-touch-icon" href="/assets/brand/app-icon-192.png"/>
   <link rel="manifest" href="/manifest.webmanifest"/>
+  <link rel="preload" href="/assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin/>
   <link rel="stylesheet" href="/assets/app.css"/>
   <noscript><style>@media(max-width:768px){.app{display:block}.side{position:static;top:auto;width:auto;height:auto;transform:none;overflow:visible;visibility:visible}.side-close,.menu-toggle,.mobile-shade{display:none!important}}</style></noscript>
   <script is:inline>
-    try {const s=localStorage.getItem('sales-os-theme')||'system';const dark=s==='dark'||s==='system'&&matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.dataset.theme=dark?'dark':'light'} catch {}
+    try {const s=localStorage.getItem('sales-os-theme')||'system';const dark=s==='dark'||s==='system'&&matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('[data-theme-color]').content=dark?'#000000':'#ffffff'} catch {}
   </script>
 </head>
 <body data-doc-id={documentId} data-doc-kind={documentKind}>
@@ -35,7 +38,7 @@ const currentSection = active ?? (
   <div class="mobile-shade" aria-hidden="true"></div>
   <div class="app">
     <aside class="side" id="side-navigation" aria-label="Навигация по Sales OS" tabindex="-1">
-      <div class="side-top"><span class="brand-mark">S/</span><span class="brand">Sales OS</span><span class="version">2.0</span><button class="iconbtn side-close" type="button" data-menu-close aria-label="Закрыть меню">×</button></div>
+      <div class="side-top"><a class="brand-lockup" href="/" aria-label="Sales OS — на главную"><img class="brand-logo brand-logo-light" src="/assets/brand/logo-light.png" alt="" width="1361" height="754"/><img class="brand-logo brand-logo-dark" src="/assets/brand/logo-dark.png" alt="" width="1361" height="754"/><img class="brand-symbol brand-symbol-light" src="/assets/brand/mark-light.png" alt="" width="512" height="512"/><img class="brand-symbol brand-symbol-dark" src="/assets/brand/mark-dark.png" alt="" width="512" height="512"/></a><span class="version">2.0</span><button class="iconbtn side-close" type="button" data-menu-close aria-label="Закрыть меню">×</button></div>
       <nav class="side-body" aria-label="Главное меню">
         <div class="nav-caption">Рабочая область</div>
         <a class:list={['nav-item',currentSection==='home'&&'active']} href="/" aria-label="Обзор" aria-current={currentSection==='home'?'page':undefined} title="Обзор"><Icon name="home"/><span>Обзор</span></a>
@@ -55,7 +58,7 @@ const currentSection = active ?? (
     <div class="main-wrap" data-drawer-background>
       <header class="topbar">
         <button class="iconbtn menu-toggle" type="button" data-menu-toggle aria-controls="side-navigation" aria-expanded="false" aria-label="Открыть меню"><Icon name="menu"/></button>
-        <div class="row"><span style="font-size:12px;font-weight:600">Sales OS</span><span class="badge" style="font-size:10px">Knowledge</span></div>
+        <a class="brand-compact" href="/" aria-label="На главную Sales OS"><img class="brand-symbol brand-symbol-light" src="/assets/brand/mark-light.png" alt="" width="512" height="512"/><img class="brand-symbol brand-symbol-dark" src="/assets/brand/mark-dark.png" alt="" width="512" height="512"/><span>Sales OS</span></a>
         <span class="spacer"></span>
         <a class="toplink" href="/search/" aria-label="Поиск"><Icon name="search"/><span>Поиск</span><span class="search-shortcut">/</span></a>
         <select class="theme-switch" data-theme-select aria-label="Цветовая тема"><option value="system">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select>

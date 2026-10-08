@@ -12,7 +12,13 @@ function wrapTables(parent) {
         {
           type: "element",
           tagName: "div",
-          properties: { className: ["table-wrap"] },
+          properties: {
+            className: ["table-wrap"],
+            role: "group",
+            tabIndex: 0,
+            "aria-label":
+              "Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.",
+          },
           children: [child],
         },
       ];

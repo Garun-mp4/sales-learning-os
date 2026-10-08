@@ -100,6 +100,9 @@ function showTheme(pref) {
   document.documentElement.dataset.theme = dark ? "dark" : "light";
   document.documentElement.style.colorScheme = dark ? "dark" : "light";
   document
+    .querySelector("[data-theme-color]")
+    ?.setAttribute("content", dark ? "#000000" : "#ffffff");
+  document
     .querySelectorAll("[data-theme-select]")
     .forEach((e) => (e.value = pref));
 }

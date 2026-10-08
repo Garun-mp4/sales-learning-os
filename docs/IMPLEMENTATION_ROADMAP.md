@@ -2,7 +2,7 @@
 
 **Основание:** полный аудит от 8 октября 2026 года, `docs/AUDIT_2026-10-08.md`, и действующий визуальный контракт `DESIGN-vercel.md`.
 **Назначение:** актуальный план исправлений и развития уже существующего проекта; статусы и подтверждения исполнения фиксируются ниже и в `docs/MILESTONE_LOG.md`.
-**Текущий статус на 2026-10-09:** M0–M3 — PASS; M1 подтверждён CI Windows/Linux и Vercel Preview, M2 — локальными проверками и CI Windows/Linux, M3 — локальными браузерными и fallback-проверками. M4 — следующий; M5–M8 — не начаты.
+**Текущий статус на 2026-10-09:** M0–M4 — PASS. M1 подтверждён CI Windows/Linux и Vercel Preview, M2 — локальными проверками и CI Windows/Linux, M3 — браузерными и fallback-проверками, M4 — локальными quality/build/fallback/E2E gates и 50 статическими Preview-снимками. Следующий этап — M5; M6–M8 ещё не начаты.
 
 ## Целевой результат
 
@@ -132,6 +132,10 @@ Sales OS остаётся статическим, privacy-first учебным �
 - Не менять и не перезаписывать оригиналы в корне проекта. Не заменять ими только Astro-версию, забывая fallback и офлайн-выход.
 
 **Приёмка:** скриншоты 320/390/768/1024/1440 px в light/dark для основных шаблонов; все практики не вызывают page-level overflow. Логотип нигде не искажён, читаем, а favicon виден в реальной вкладке. Повторно проверить Contrast, keyboard focus, длинные тексты и крупный текст браузера.
+
+**Статус исполнения: PASS, 2026-10-09.** Добавлены исходные `Sales OS Stepped Logo.png` и `faviicon.png` без изменения байтов, генератор размерных light/dark вариантов, favicon/PWA-иконки и локальные Geist/Geist Mono с лицензией. Astro и Python fallback используют брендовые файлы; прототип `legacy-index.html` обновлён, но исключён из обоих опубликованных сайтов. Обновлены общие визуальные роли и мобильные шаблоны, Astro-таблицы получили локальную доступную прокрутку, а `build`/`dev` принудительно обновляют content cache, чтобы renderer plugins не оставляли старый HTML. Реальные страницы в Chromium проверены на 320/390/768/1024/1440 px и в обеих темах; сохранено 50 preview-снимков в `docs/screenshots/m4-responsive/`. На всех 72 практиках отдельно проверены 320/390 px, без page-level overflow.
+
+Проверки: `npm run lint` PASS; `npm run check` PASS (45 файлов, 0 errors/warnings, 3 имеющихся `BeforeUnloadEvent.returnValue` hints); `npm run build` PASS (476 HTML-страниц, 408 Pagefind-документов, 949 offline-ресурсов); `npm run test:quality` PASS; `npm run test:e2e` PASS (22/22 Chromium URL tests); `npm run test:fallback` PASS. Подробности находятся в `docs/MILESTONE_LOG.md`. Реальная NVDA-проверка, браузерный zoom и финальный Vercel Preview остаются в M8; редакторская верификация курса — отдельный gate M5-CONTENT.
 
 ## M5 — Полнота обучения и качество содержания
 

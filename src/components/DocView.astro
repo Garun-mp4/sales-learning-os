@@ -11,6 +11,7 @@ const {Content,headings}=await render(doc);
 const related=d.related_practice.map(id=>entries[id]).filter(Boolean);
 const {previous,next}=neighbor(e);
 const isPractice=d.kind==='practice';
+const tocHeadings=headings.filter(h=>h.depth===2||h.depth===3);
 ---
 <Shell title={d.title} module={d.module} documentId={d.id} documentKind={d.kind} reading>
   <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/roadmap/">Roadmap</a> › <a href={`/module/${d.module}-MODULE/`}>Модуль {d.module}</a> › <span aria-current="page">{d.id}</span></nav>
@@ -26,6 +27,7 @@ const isPractice=d.kind==='practice';
     <button type="button" class="btn smallbtn" data-bookmark={d.id} aria-pressed="false">☆ В закладки</button>
     <a class="btn smallbtn" href={`/module/${d.module}-MODULE/`}>К модулю</a>
   </div>
+  {tocHeadings.length>0&&<details class="toc-disclosure"><summary>Содержание материала<span aria-hidden="true">⌄</span></summary><nav class="toc" aria-label="Содержание материала">{tocHeadings.map(h=><a class={h.depth===3?'depth3':'depth2'} href={`#${h.slug}`}>{h.text}</a>)}</nav></details>}
   <div class="reader-grid"><div class="reader">
     <article class="article" data-pagefind-body><Content /></article>
     <div class="source-chips">{d.sources.filter(id=>sources.some(s=>s.id===id)).map(id=><a class="badge" href={`/source/${id}/`}>{id} · источник</a>)}</div>
@@ -36,5 +38,5 @@ const isPractice=d.kind==='practice';
       {previous&&<a href={href(previous)}>← Предыдущий материал<strong>{previous.title}</strong></a>}
       {next&&<a href={href(next)}>Следующий материал →<strong>{next.title}</strong></a>}
     </nav>
-  </div><aside class="reader-aside"><h3>В этом материале</h3><nav class="toc">{headings.filter(h=>h.depth===2||h.depth===3).map(h=><a class={h.depth===3?'depth3':'depth2'} href={`#${h.slug}`}>{h.text}</a>)}</nav></aside></div>
+  </div><aside class="reader-aside"><h3>В этом материале</h3><nav class="toc">{tocHeadings.map(h=><a class={h.depth===3?'depth3':'depth2'} href={`#${h.slug}`}>{h.text}</a>)}</nav></aside></div>
 </Shell>

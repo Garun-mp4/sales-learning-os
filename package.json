@@ -8,10 +8,11 @@
   },
   "scripts": {
     "prepare:content": "python -X warn_default_encoding -W error::EncodingWarning scripts/audit.py && python -X warn_default_encoding -W error::EncodingWarning scripts/prepare_astro.py",
-    "predev": "npm run prepare:content",
+    "prepare:brand": "python -X warn_default_encoding -W error::EncodingWarning scripts/prepare_brand_assets.py",
+    "predev": "npm run prepare:content && astro sync --force",
     "dev": "astro dev",
     "prebuild": "npm run prepare:content",
-    "build": "astro build && pagefind --site dist --output-subdir pagefind && node scripts/after-build.mjs",
+    "build": "astro build --force && pagefind --site dist --output-subdir pagefind && node scripts/after-build.mjs",
     "preview": "astro preview",
     "check": "astro check",
     "lint": "npm run prepare:content && node --check astro.config.mjs && node --check src/scripts/user-store.js && node --check src/scripts/app.js && node --check src/lib/remark-course-links.mjs && node --check src/lib/rehype-wrap-tables.mjs && node --check scripts/after-build.mjs && node tests/test_astro_source_integrity.mjs && prettier --check astro.config.mjs \"src/**/*.{css,js,ts,tsx}\" \"scripts/**/*.{js,mjs}\" \"tests/**/*.{js,mjs}\"",
@@ -26,7 +27,7 @@
     "test:links": "node tests/test_remark_links.mjs",
     "test:embedded": "python tests/test_browser_embedded.py && python tests/test_user_data_embedded.py && python tests/test_responsive_embedded.py && python tests/test_final_project_embedded.py",
     "test:fallback": "npm run build:fallback && python tests/test_fallback.py",
-    "test:quality": "python -X warn_default_encoding -W error::EncodingWarning tests/test_static.py && node tests/test_offline_worker.mjs && node tests/test_remark_links.mjs && node tests/test_markdown_tables.mjs && python -X warn_default_encoding -W error::EncodingWarning tests/test_browser_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_user_data_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_responsive_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_final_project_embedded.py && node tests/test_astro_source_integrity.mjs"
+    "test:quality": "npm run prepare:brand && python -X warn_default_encoding -W error::EncodingWarning tests/test_brand_assets.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_static.py && node tests/test_offline_worker.mjs && node tests/test_remark_links.mjs && node tests/test_markdown_tables.mjs && python -X warn_default_encoding -W error::EncodingWarning tests/test_browser_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_user_data_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_responsive_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_final_project_embedded.py && node tests/test_astro_source_integrity.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.3.2",

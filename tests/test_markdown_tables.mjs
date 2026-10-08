@@ -26,6 +26,9 @@ rehypeWrapTables()(root);
 const wrapper = root.children[0].children[0];
 assert.equal(wrapper.tagName, "div");
 assert.deepEqual(wrapper.properties.className, ["table-wrap"]);
+assert.equal(wrapper.properties.role, "group");
+assert.equal(wrapper.properties.tabIndex, 0);
+assert.match(wrapper.properties["aria-label"], /горизонтальную прокрутку/);
 assert.equal(wrapper.children[0], table);
 assert.equal(
   root.children[1],

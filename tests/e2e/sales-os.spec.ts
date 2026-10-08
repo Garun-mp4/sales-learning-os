@@ -121,12 +121,15 @@ test("Desktop navigation stays keyboard reachable in route order", async ({
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/practice/");
   const skip = page.locator(".skip");
-  const overview = page.locator('#side-navigation a[href="/"]');
+  const brand = page.locator("#side-navigation .brand-lockup");
+  const overview = page.locator('#side-navigation a.nav-item[href="/"]');
   const roadmap = page.locator('#side-navigation a[href="/roadmap/"]');
   const practice = page.locator('#side-navigation a[href="/practice/"]');
 
   await page.keyboard.press("Tab");
   await expect(skip).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(brand).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(overview).toBeFocused();
   await page.keyboard.press("Tab");
@@ -322,9 +325,7 @@ test("Bookmarks distinguish a recoverable index error from an empty list", async
   await expect(bookmarks.locator("[data-bookmark-status]")).toHaveText(
     "Пока нет закладок.",
   );
-  await expect(bookmarks.locator("[data-bookmark-list] a.item")).toHaveCount(
-    0,
-  );
+  await expect(bookmarks.locator("[data-bookmark-list] a.item")).toHaveCount(0);
 });
 
 test("Two tabs merge independent progress and bookmark updates", async ({
@@ -471,7 +472,7 @@ test("A stale localStorage note cannot replace the newer IndexedDB record", asyn
 test("An IndexedDB v1 text note is upgraded without losing its content", async ({
   page,
 }) => {
-  await page.goto("/assets/favicon.svg");
+  await page.goto("/assets/brand/favicon-light.png");
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {
@@ -501,6 +502,76 @@ test("An IndexedDB v1 text note is upgraded without losing its content", async (
   );
   expect(note.record.text).toBe("Старая заметка IDB");
   expect(note.record.revision).toBe(0);
+});
+
+test("The new brand assets and bundled Cyrillic fonts are served locally", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  const assets = await page.evaluate(async () => {
+    const urls = [
+      "/assets/brand/logo-light.png",
+      "/assets/brand/logo-dark.png",
+      "/assets/brand/favicon-light.png",
+      "/assets/brand/favicon-dark.png",
+      "/assets/fonts/Geist-Variable.woff2",
+      "/assets/fonts/GeistMono-Variable.woff2",
+    ];
+    return Promise.all(
+      urls.map(async (url) => {
+        const response = await fetch(url);
+        return { url, ok: response.ok };
+      }),
+    );
+  });
+  expect(assets.filter((asset) => !asset.ok)).toEqual([]);
+  const favicon = async () =>
+    page.evaluate(async () => {
+      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      const media = dark
+        ? "(prefers-color-scheme: dark)"
+        : "(prefers-color-scheme: light)";
+      const link = document.querySelector<HTMLLinkElement>(
+        `link[rel="icon"][media="${media}"]`,
+      );
+      if (!link) throw new Error(`Missing ${media} favicon`);
+      const image = new Image();
+      image.src = link.href;
+      await image.decode();
+      return { href: link.getAttribute("href"), width: image.naturalWidth };
+    });
+  expect(await favicon()).toEqual({
+    href: "/assets/brand/favicon-light.png",
+    width: 32,
+  });
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await favicon()).toEqual({
+    href: "/assets/brand/favicon-dark.png",
+    width: 32,
+  });
+  await page.evaluate(async () => {
+    await document.fonts.load('400 16px "Geist"', "Продажи, Ёж");
+    await document.fonts.load('400 16px "Geist Mono"', "Сделка, Ёж");
+  });
+  expect(
+    await page.evaluate(() =>
+      document.fonts.check('400 16px "Geist"', "Продажи, Ёж"),
+    ),
+  ).toBe(true);
+  expect(
+    await page
+      .locator(".side-top .brand-logo-light")
+      .evaluate((image) => (image as HTMLImageElement).naturalWidth > 0),
+  ).toBe(true);
+  await page.locator("[data-theme-select]").selectOption("dark");
+  await expect(page.locator("[data-theme-color]")).toHaveAttribute(
+    "content",
+    "#000000",
+  );
+  await expect(
+    page.locator(":root[data-theme='dark'] .side-top .brand-logo-dark"),
+  ).toBeVisible();
 });
 
 test("Blocked storage remains readable and makes the temporary-save limitation explicit", async ({

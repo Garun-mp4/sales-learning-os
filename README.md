@@ -14,7 +14,7 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` проверяет manifest и генерирует только необходимые runtime-индексы и HTML итогового проекта. Astro Content Collection читает исходные Markdown напрямую из `sales-knowledge-base/`; полная резервная Python-версия не запускается как побочный этап разработки или production-сборки.
+`npm run dev` проверяет manifest, генерирует необходимые runtime-индексы и принудительно обновляет Astro Content Collection. `npm run build` также пересобирает content cache без использования старого обработанного Markdown. Astro читает исходники напрямую из `sales-knowledge-base/`; резервный Python site renderer не запускается как побочный этап разработки или основной production-сборки.
 
 ## Сборка и проверки
 
