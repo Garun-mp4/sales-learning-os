@@ -1,4 +1,16 @@
-# QA report — 2026-10-08
+# QA report
+
+## Текущая проверка (2026-10-09)
+
+Milestone M1 находится в статусе **IN PROGRESS** до чистого GitHub CI на Windows/Linux и подтверждения Vercel preview. На этой Windows-машине полный `verify-windows.ps1` завершился exit 0: чистый `npm ci`, lint, Astro check (42 файла, 0 diagnostics), production build (476 маршрутов, 408 страниц в Pagefind, 937 offline URLs), quality suite, URL Playwright E2E (5/5) и Python fallback suite. Параллельный dev сервер ответил HTTP 200 во время production build. `npm audit` обнаружил 0 уязвимостей.
+
+Выполненные M1 изменения и открытые внешние проверки описаны в `docs/MILESTONE_LOG.md`. Технические тесты не являются фактологической рецензией учебного корпуса; все материалы пока остаются `editorial_draft`.
+
+Следующие результаты ниже — архивная запись предыдущей проверки от 2026-10-08. Их статусы не описывают текущее состояние после M1.
+
+---
+
+# Архивный QA report — 2026-10-08
 
 ## Verified
 

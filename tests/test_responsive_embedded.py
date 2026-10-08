@@ -3,16 +3,16 @@
 Uses page.set_content, not live-URL navigation (which this host blocks).
 """
 from browser_helpers import launch_chromium
+from site_helpers import ROOT, SITE
 from pathlib import Path
 import re
 from playwright.sync_api import sync_playwright
-ROOT=Path(__file__).resolve().parents[1]
 CSS=(ROOT/'src/styles/app.css').read_text()
 ROUTES=['','roadmap','sources','search','settings','practice','lesson/01-001','practice/01-P01'] + [f'module/{n:02d}-MODULE' for n in range(1,23)]
 WIDTHS=(320,390,768,1024,1440)
 
 def render(page,route):
-    html=(ROOT/'dist'/route/'index.html').read_text()
+    html=(SITE/route/'index.html').read_text()
     html=re.sub(r'<link rel="stylesheet"[^>]*>','<style>'+CSS+'</style>',html)
     html=re.sub(r'<script[^>]*\bsrc="[^"]+"[^>]*></script>','',html)
     page.set_content(html,wait_until='domcontentloaded')
@@ -49,6 +49,10 @@ def main():
       assert colors['background']=='rgb(255, 255, 255)',colors
       assert colors['foreground']=='#000',colors
       assert colors['link']=='#0761d1',colors
+      page.set_viewport_size({'width':320,'height':900})
+      render(page,'practice/01-P01')
+      table=page.evaluate('''()=>{const table=document.querySelector('.article table');const wrapper=table?.parentElement;return {table:!!table,wrapped:wrapper?.classList.contains('table-wrap')||false,client:wrapper?.clientWidth||0,scroll:wrapper?.scrollWidth||0,overflow:getComputedStyle(wrapper||document.body).overflowX}}''')
+      assert table['table'] and table['wrapped'] and table['overflow']=='auto' and table['scroll']>table['client'],table
       if failures:
         print('\n'.join(failures[:30]));raise AssertionError(f'{len(failures)} responsive failures')
       print(f'PASS: {count} responsive views (30 routes × 5 widths), zero document-level overflow')

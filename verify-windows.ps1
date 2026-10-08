@@ -10,10 +10,15 @@ function RunChecked([string]$tool, [string[]]$arguments) {
 }
 
 try {
-    $nodeVersion = & node -p "parseInt(process.versions.node.split('.')[0], 10)"
-    if ($LASTEXITCODE -ne 0 -or [int]$nodeVersion -lt 22) { throw 'Node.js 22+ required.' }
-    $pythonExe = (& py -3 -c 'import sys; print(sys.executable)' 2>$null).Trim()
-    if (-not $pythonExe) { throw 'Python 3.12+ with py launcher required.' }
+    $nodeVersion = & node -p "process.versions.node"
+    if ($LASTEXITCODE -ne 0 -or [version]$nodeVersion -lt [version]'22.12.0') { throw 'Node.js 22.12+ required.' }
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonCommand) {
+        $pythonExe = $pythonCommand.Source
+    } else {
+        $pythonExe = (& py -3.12 -c 'import sys; print(sys.executable)' 2>$null).Trim()
+    }
+    if (-not $pythonExe) { throw 'Python 3.12+ required (python on PATH or py -3.12 launcher).' }
     RunChecked $pythonExe @('-c', 'import sys; assert sys.version_info >= (3,12), "Python 3.12+ required"')
 } catch {
     Write-Error "Environment check failed: $_"
@@ -24,19 +29,15 @@ $log = Join-Path $PSScriptRoot 'docs\LOCAL_QA_LOG.txt'
 Start-Transcript -Path $log -Force | Out-Null
 try {
     RunChecked $pythonExe @('-m','pip','install','-r','requirements-dev.txt')
-    if (Test-Path 'package-lock.json') {
-        RunChecked 'npm' @('ci')
-    } else {
-        RunChecked 'npm' @('install')
-        Write-Host 'Please preserve the new package-lock.json in the repository.' -ForegroundColor Yellow
-    }
+    if (-not (Test-Path 'package-lock.json')) { throw 'package-lock.json is required for a reproducible npm ci install.' }
+    RunChecked 'npm' @('ci')
     RunChecked 'npm' @('run','lint')
     RunChecked 'npm' @('run','check')
     RunChecked 'npm' @('run','build')
     RunChecked 'npx' @('playwright','install','chromium')
-    RunChecked $pythonExe @('-m','playwright','install','chromium')
     RunChecked 'npm' @('run','test:quality')
     RunChecked 'npm' @('run','test:e2e')
+    RunChecked 'npm' @('run','test:fallback')
     Write-Host "`nALL SALES OS QUALITY GATES PASSED in this environment." -ForegroundColor Green
     Write-Host "Report: $log" -ForegroundColor Green
 } catch {

@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from jinja2 import Environment, BaseLoader, select_autoescape
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-OUT=ROOT/'dist';CONTENT=ROOT/'sales-knowledge-base';SOURCE=json.loads((ROOT/'src/generated/content-manifest.json').read_text(encoding='utf-8'))
+DEFAULT_OUT=ROOT/'dist-fallback';CONTENT=ROOT/'sales-knowledge-base';SOURCE=json.loads((ROOT/'src/generated/content-manifest.json').read_text(encoding='utf-8'))
 ENTRIES=SOURCE['entries']; STAGES=SOURCE['stages']; SOURCES=SOURCE['sources']
 STAGE_GROUPS={s['id']:[] for s in STAGES}
 for k,e in ENTRIES.items():
@@ -149,13 +149,17 @@ def render_document(e):
  text+='</nav></aside></div>'
  return page_shell(text,e['title'],depth,'',e)
 
-def build_pages():
- if OUT.exists():shutil.rmtree(OUT)
- (OUT/'assets').mkdir(parents=True)
- for file,dest in [('src/styles/app.css','assets/app.css'),('src/scripts/app.js','assets/app.js')]:shutil.copy2(ROOT/file,OUT/dest)
- shutil.copy2(ROOT/'src/generated/client-index.json',OUT/'assets/client-index.json')
+def build_pages(output_dir=DEFAULT_OUT):
+ out=pathlib.Path(output_dir)
+ if not out.is_absolute():out=ROOT/out
+ out=out.resolve()
+ if out!=DEFAULT_OUT.resolve():raise ValueError(f'Output directory must be the dedicated fallback path {DEFAULT_OUT}: {out}')
+ if out.exists():shutil.rmtree(out)
+ (out/'assets').mkdir(parents=True)
+ for file,dest in [('src/styles/app.css','assets/app.css'),('src/scripts/app.js','assets/app.js')]:shutil.copy2(ROOT/file,out/dest)
+ shutil.copy2(ROOT/'src/generated/client-index.json',out/'assets/client-index.json')
  def save(path,markup):
-  full=OUT/path;full.parent.mkdir(parents=True,exist_ok=True);full.write_text(markup,encoding='utf-8')
+  full=out/path;full.parent.mkdir(parents=True,exist_ok=True);full.write_text(markup,encoding='utf-8')
  # Home
  st=f'<div class="eyebrow">ПЕРСОНАЛЬНАЯ СИСТЕМА ОБУЧЕНИЯ</div><h1 class="h1">Продажи. От понимания — к практике.</h1><p class="intro">Структурированная база знаний для работы с клиентами через переписку: 22 модуля, теория, упражнения и реальные проекты. Изучайте по порядку и сохраняйте свой прогресс.</p>'
  st+='<div class="stat-grid"><div class="stat"><div class="label">Пройдено теории</div><div class="value" data-global-theory>0 / 336</div><div class="label">336 уроков</div></div><div class="stat"><div class="label">Практика</div><div class="value" data-global-practice>0 / 72</div><div class="label">72 задания</div></div><div class="stat"><div class="label">Общий прогресс</div><div class="value" data-global-pct>0%</div><div class="progress"><span data-global-fill></span></div></div></div>'
@@ -239,14 +243,19 @@ def build_pages():
  save('assets/favicon.svg','<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#000"/><text x="8" y="45" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="white">S/</text></svg>')
  save('manifest.webmanifest',json.dumps({'name':'Sales OS — база знаний по продажам','short_name':'Sales OS','lang':'ru','start_url':'./','display':'standalone','background_color':'#ffffff','theme_color':'#000000','icons':[{'src':'assets/favicon.svg','sizes':'any','type':'image/svg+xml','purpose':'any'}]},ensure_ascii=False))
  srcs=['index.html','roadmap/index.html','settings/index.html','sources/index.html','search/index.html','bookmarks/index.html','practice/index.html','final-project/index.html','assets/app.js','assets/app.css','assets/favicon.svg','assets/client-index.json','assets/search-index.json','assets/offline-files.json','manifest.webmanifest']
- urls=sorted(set((u[:-len('index.html')] if u.endswith('index.html') else u) for u in srcs+[str(p.relative_to(OUT)) for p in OUT.rglob('*.html')]))
+ urls=sorted(set((u[:-len('index.html')] if u.endswith('index.html') else u) for u in srcs+[p.relative_to(out).as_posix() for p in out.rglob('*.html')]))
  version=hashlib.sha256((ROOT/'src/styles/app.css').read_bytes()+(ROOT/'src/scripts/app.js').read_bytes()+b''.join((CONTENT/e['path']).read_bytes() for e in sorted(ENTRIES.values(),key=lambda e:e['id']))).hexdigest()[:12]
  save('assets/offline-files.json',json.dumps({'version':version,'urls':urls},ensure_ascii=False))
  # Worker standard network-first; cache all on explicit command from settings. Same-origin only.
- save('sw.js',f'''const CACHE='sales-os-offline-{version}';self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{{const req=e.request;if(req.method!=='GET'||new URL(req.url).origin!==self.location.origin)return;e.respondWith((async()=>{{try{{return await fetch(req)}}catch{{const names=(await caches.keys()).filter(k=>k.startsWith('sales-os-offline-')).reverse();for(const name of names){{const c=await caches.open(name);const hit=await c.match(req);if(hit)return hit;}}return Response.error()}}}})());}});''')
+ save('sw.js',f'''self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{{const req=e.request;if(req.method!=='GET'||new URL(req.url).origin!==self.location.origin)return;e.respondWith((async()=>{{try{{return await fetch(req)}}catch{{const names=(await caches.keys()).filter(k=>k.startsWith('sales-os-offline-')).reverse();for(const name of names){{const c=await caches.open(name);const hit=await c.match(req);if(hit)return hit;}}return Response.error()}}}})());}});''')
  # sitemap useful for generated static hosting
- urls_count=len(list(OUT.rglob('index.html')))
+ urls_count=len(list(out.rglob('index.html')))
  print('PASS: rendered',urls_count,'HTML documents; search records',len(index),'offline resources',len(urls),'build hash',version)
  return {'html':urls_count,'offline':len(urls),'search':len(index)}
 
-if __name__=='__main__':build_pages()
+if __name__=='__main__':
+ import argparse
+ parser=argparse.ArgumentParser(description='Build the standalone Python fallback site.')
+ parser.add_argument('--out-dir',default=str(DEFAULT_OUT),help='Output directory inside the project (default: dist-fallback)')
+ args=parser.parse_args()
+ build_pages(args.out_dir)

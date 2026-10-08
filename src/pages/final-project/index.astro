@@ -2,7 +2,7 @@
 import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
-// The prebuild copies sanitized final-project HTML outside dist/.
+// The prebuild renders sanitized source Markdown outside dist/.
 // Unlike dist/, src/generated is not cleared when Astro starts its build.
 const rendered=await readFile(path.resolve('src/generated/final-project.html'),'utf8');
 if(!rendered.trim())throw Error('Final project renderer missing after prepare:content');

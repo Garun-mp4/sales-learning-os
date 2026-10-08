@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
-import json, yaml, re, pathlib, hashlib, collections
+import json, yaml, re, pathlib, hashlib, collections, os
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 CONTENT=ROOT/'sales-knowledge-base'
+def write_if_changed(path, content):
+    encoded=json.dumps(content,ensure_ascii=False,indent=2).encode('utf-8') if path.name=='content-manifest.json' else json.dumps(content,ensure_ascii=False,separators=(',',':')).encode('utf-8')
+    if path.is_file() and path.read_bytes()==encoded:return
+    temporary=path.with_name(f'.{path.name}.{os.getpid()}.tmp')
+    try:
+        temporary.write_bytes(encoded);os.replace(temporary,path)
+    finally:
+        temporary.unlink(missing_ok=True)
 legacy=json.loads((ROOT/'src/generated/legacy.json').read_text())
 entries={}; issues=[]; path_ids={}; legacy_map={}; stats=collections.Counter()
 for path in sorted((CONTENT/'modules').rglob('*.md')):
@@ -12,7 +20,7 @@ for path in sorted((CONTENT/'modules').rglob('*.md')):
     if key in entries: issues.append(f'Duplicate ID {key}')
     if kind not in ('module','theory','practice'): issues.append(f'Bad kind {key}')
     if not all(k in meta for k in ('id','title','module','kind','level','group','status','sources','related_practice')): issues.append(f'Missing metadata {key}')
-    entries[key]={'id':key,'title':meta['title'],'module':meta['module'],'kind':kind,'level':meta['level'],'group':meta['group'],'status':meta['status'],'sources':meta.get('sources',[]),'related_practice':meta.get('related_practice',[]),'path':str(path.relative_to(CONTENT)),'bodyLength':len(body)}
+    entries[key]={'id':key,'title':meta['title'],'module':meta['module'],'kind':kind,'level':meta['level'],'group':meta['group'],'status':meta['status'],'sources':meta.get('sources',[]),'related_practice':meta.get('related_practice',[]),'path':path.relative_to(CONTENT).as_posix(),'bodyLength':len(body)}
     path_ids[path.resolve()]=key
 all_source_ids=set()
 source_items=[]
@@ -66,6 +74,6 @@ if issues:
     for issue in issues[:100]:print('ERROR:',issue)
     raise SystemExit(f'Failed audit with {len(issues)} issues')
 manifest={'stages':legacy['stages'],'entries':entries,'legacyMap':legacy_map,'sources':source_items}
-(ROOT/'src/generated/content-manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
-(ROOT/'src/generated/client-index.json').write_text(json.dumps({'stages':legacy['stages'],'entries':{k:{x:e[x] for x in ['id','title','module','kind','level','order','stage'] if x in e} for k,e in entries.items()},'legacyMap':legacy_map},ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+write_if_changed(ROOT/'src/generated/content-manifest.json',manifest)
+write_if_changed(ROOT/'src/generated/client-index.json',{'stages':legacy['stages'],'entries':{k:{x:e[x] for x in ['id','title','module','kind','level','order','stage'] if x in e} for k,e in entries.items()},'legacyMap':legacy_map})
 print('PASS: modules',stats['module'],'lessons',stats['theory'],'practice',stats['practice'],'source records',len(source_items),'legacy map',len(legacy_map),'links OK')

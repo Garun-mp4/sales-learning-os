@@ -3,18 +3,18 @@ These are NOT replacements for real-URL Playwright E2E or production preview.
 Requires pip install playwright, and Chromium at /usr/bin/chromium.
 """
 from browser_helpers import launch_chromium
+from site_helpers import ROOT, SITE
 from pathlib import Path
 import json,re
 from playwright.sync_api import sync_playwright
-ROOT=Path(__file__).resolve().parents[1]
 CSS=(ROOT/'src/styles/app.css').read_text()
 JS=(ROOT/'src/scripts/app.js').read_text()
-INDEX=json.loads((ROOT/'dist/assets/client-index.json').read_text())
-SEARCH=json.loads((ROOT/'dist/assets/search-index.json').read_text())
-SHOT=ROOT/'docs'/'screenshots';SHOT.mkdir(parents=True,exist_ok=True)
+INDEX=json.loads((SITE/'assets/client-index.json').read_text())
+SEARCH=json.loads((SITE/'assets/search-index.json').read_text())
+SHOT=ROOT/'test-results'/'screenshots';SHOT.mkdir(parents=True,exist_ok=True)
 
 def load(page,route):
-    html=(ROOT/'dist'/route/'index.html').read_text()
+    html=(SITE/route/'index.html').read_text()
     html=re.sub(r'<link rel="stylesheet"[^>]*>', '<style>'+CSS+'</style>', html)
     html=re.sub(r'<script[^>]*\bsrc="[^"]+"[^>]*></script>', '', html)
     page.set_content(html,wait_until='domcontentloaded')
@@ -57,7 +57,7 @@ def main():
     roadmap.screenshot(path=str(SHOT/'roadmap-light.png'))
     assert not errors,errors
     print('PASS: embedded Chromium: theme, progress, bookmarks, search, mobile overflow/menu, 22-card roadmap, no JS errors')
-    print('LIMIT: localhost navigation, full Astro install/build, and PWA offline network tests NOT exercised')
+    print('LIMIT: localhost navigation and PWA offline network tests NOT exercised by this in-memory smoke test')
     browser.close()
 
 if __name__=='__main__':main()

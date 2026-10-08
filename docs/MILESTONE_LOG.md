@@ -82,4 +82,15 @@
 | Новый этап | Статус | Последняя запись |
 |---|---|---|
 | M0 — baseline и архитектурное решение | **PASS** | 2026-10-09; результаты выше |
-| M1–M8 | **NOT STARTED** | Реализация будет отмечаться после каждого отдельного gate |
+| M1 | **IN PROGRESS** | Исходники, сборки и все локальные Windows gates готовы; ожидаются GitHub CI Windows/Linux и Vercel preview |
+| M2–M8 | **NOT STARTED** | Начинать по одному этапу после приёмки предыдущего |
+
+### M1 — воспроизводимая сборка и доставка (IN PROGRESS, 2026-10-09)
+
+- Переведён renderer на Astro 7.3.8 / React integration 7.0.1; direct Content Collection читает 430 канонических Markdown-источников без синхронизирующей копии. Критическая Astro image-processing уязвимость устранена обновлением; `npm audit` сообщает 0 уязвимостей.
+- Путь Python `--out-dir` ограничен выделенным `dist-fallback/`: регрессионный тест доказывает, что попытка записывать сборку в произвольную папку отклоняется без удаления существующего файла.
+- Python fallback выводится отдельно в `dist-fallback/`; build/dev/lint/check подготавливают только необходимые входы. Собранные `dist/`, производные `public/` и временные `src/generated/` удалены из Git index и исключены через `.gitignore`; файлы на диске остаются локальными результатами сборки.
+- Добавлены manifest-driven проверки 476 страниц, нормализация offline URL для Windows/POSIX, кастомный 404, Astro Markdown table wrappers, formatting/syntax gates, независимые fallback-проверки и матрица CI Windows/Linux. Исправлена Windows-обёртка verification script: сначала используется доступный `python`, fallback явно выбирает `py -3.12`, так как `py -3` на этом хосте попадает в недоступную 3.14.
+- Фактически пройдено в Windows: `npm ci` (420 пакетов, 0 уязвимостей), `npm run lint`, `npm run check` (42 файла, 0 errors/warnings/hints), `npm run build` (476 страниц, Pagefind 408, offline 937), `npm run test:quality` (включая 150 responsive views и storage tests), `npm run test:e2e` (5/5 URL tests), `npm run test:fallback` (статические, browser, data, responsive и worker gates), плюс полный `verify-windows.ps1` (exit 0).
+- Параллельный dev/build smoke: `npm run build` завершился при запущенном `astro dev`; урок `/lesson/01-001/` продолжал отвечать HTTP 200. Обновлены устаревшие команды проверки и установка зависимостей.
+- Осталось до PASS: отправить ветку с подготовленными изменениями для чистого GitHub CI Windows/Linux и проверить, что веточная Vercel Preview собирается из этого commit. Push в `main` здесь запускает Production deployment и в текущий scope не входит.
