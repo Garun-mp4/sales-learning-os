@@ -4,6 +4,7 @@ declare global {
   interface Window {
     __backupBlob?: Blob;
     __downloadName?: string;
+    __importStarted?: boolean;
   }
 }
 test("Roadmap shows exactly 22 modules", async ({ page }) => {
@@ -352,6 +353,72 @@ test("A quota failure during import aborts the entire replacement", async ({
     window.SalesOSUserStore.getState(),
   );
   const note = await page.evaluate(async () =>
+    window.SalesOSUserStore.getNote("01-001"),
+  );
+  expect(state.lessonStatuses["01-001"]).toBe("theory_completed");
+  expect(state.bookmarks).toEqual(["01-001"]);
+  expect(note.record.text).toBe("Предыдущая заметка");
+});
+
+test("Closing a tab during an active import preserves the previous database", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const originalPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (value, key) {
+      const request = originalPut.call(this, value, key);
+      if (value?.text === "HOLD_IMPORT_UNTIL_TAB_CLOSE") {
+        const store = this;
+        window.__importStarted = true;
+        function keepTransactionActive() {
+          const keepAliveRequest = store.get("m2-import-keepalive");
+          keepAliveRequest.onsuccess = keepTransactionActive;
+        }
+        keepTransactionActive();
+      }
+      return request;
+    };
+  });
+  await page.goto("/lesson/01-001/");
+  await page.evaluate(async () => {
+    await window.SalesOSUserStore.ready;
+    await window.SalesOSUserStore.replaceAll(
+      {
+        format: "sales-os-v2",
+        version: 2,
+        lessonStatuses: { "01-001": "theory_completed" },
+        practiceStatuses: {},
+        bookmarks: ["01-001"],
+        lastVisited: null,
+      },
+      { "01-001": "Предыдущая заметка" },
+    );
+  });
+  await page.goto("/settings/");
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.locator("[data-import]").setInputFiles({
+    name: "interrupted-import.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        format: "sales-os-v2",
+        version: 2,
+        lessonStatuses: { "01-001": "mastered" },
+        practiceStatuses: {},
+        bookmarks: [],
+        notes: { "01-001": "HOLD_IMPORT_UNTIL_TAB_CLOSE" },
+      }),
+    ),
+  });
+  await page.waitForFunction(() => window.__importStarted === true);
+  await page.close({ runBeforeUnload: false });
+
+  const reopened = await page.context().newPage();
+  await reopened.goto("/lesson/01-001/");
+  const state = await reopened.evaluate(async () =>
+    window.SalesOSUserStore.getState(),
+  );
+  const note = await reopened.evaluate(() =>
     window.SalesOSUserStore.getNote("01-001"),
   );
   expect(state.lessonStatuses["01-001"]).toBe("theory_completed");
