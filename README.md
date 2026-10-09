@@ -83,6 +83,7 @@ Vercel устанавливает npm-зависимости из `package-lock.
 | `scripts/after-build.mjs` | Генерация offline manifest и service worker после Astro/Pagefind |
 | `tests/` | Статические, браузерные, data, responsive и URL E2E проверки |
 | `docs/IMPLEMENTATION_ROADMAP.md` | План этапов до полной готовности |
+| `docs/FEATURE_ROADMAP.md` | Восемь продуктовых milestones: практика, тренажёр, занятия, повторение, проекты, заготовки, выделения и синхронизация |
 | `docs/MILESTONE_LOG.md` | Проверяемый статус этапов и результаты QA |
 
 Курс и три справочника доступны через интерфейс `/library/`; редакционная карта находится на `/editorial-review/`. Все основные учебные документы остаются `editorial_draft`, пока проверка каждого из них не внесена в реестр и не пройдены условия полного охвата.
