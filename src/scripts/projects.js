@@ -111,7 +111,7 @@
         2,
       ),
       "application/json",
-      "sales-os-backup-v8.json",
+      "sales-os-backup-v9.json",
     );
   }
   function download(value, type, name) {

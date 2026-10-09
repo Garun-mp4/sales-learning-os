@@ -350,6 +350,281 @@ summary:focus-visible,
   }
 }
 
+/* M7 reading annotations use the same restrained Vercel surfaces and controls. */
+::highlight(sales-os-highlights) {
+  background-color: rgb(0 112 243 / 20%);
+  color: inherit;
+}
+html[data-theme="dark"]::highlight(sales-os-highlights) {
+  background-color: rgb(50 145 255 / 34%);
+  color: inherit;
+}
+.highlight-workspace {
+  min-width: 0;
+  margin: 28px 0 36px;
+  padding: 22px 0 0;
+  border-top: 1px solid var(--border);
+}
+.highlight-workspace-head,
+.highlight-selection-row,
+.highlight-item-head,
+.highlight-catalog-card-head,
+.highlight-review-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.highlight-workspace-head {
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.highlight-workspace-head .h2 {
+  margin: 0 0 6px;
+}
+.highlight-workspace-head p {
+  max-width: 68ch;
+  margin: 0;
+}
+.highlight-workspace-head > a {
+  flex: 0 0 auto;
+}
+.highlight-status {
+  min-height: 22px;
+  margin: 0 0 10px;
+}
+.highlight-selection-row {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+.highlight-selection-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.highlight-manual {
+  margin: 12px 0 18px;
+  border-top: 1px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
+}
+.highlight-manual > summary {
+  padding: 12px 0;
+  color: var(--fg);
+  cursor: pointer;
+  font-weight: 550;
+}
+.highlight-manual form {
+  display: grid;
+  gap: 12px;
+  padding: 0 0 16px;
+}
+.highlight-manual label,
+.highlight-catalog-filters label,
+.highlight-edit label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: var(--fg);
+  font-weight: 500;
+}
+.highlight-manual textarea,
+.highlight-edit textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 11px;
+  border: 1px solid var(--strong);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.55;
+}
+.highlight-manual select {
+  width: 100%;
+  min-width: 0;
+}
+.highlight-manual textarea {
+  resize: vertical;
+}
+.highlight-manual textarea:focus-visible,
+.highlight-edit textarea:focus-visible,
+.highlight-catalog-filters input:focus-visible,
+.highlight-catalog-filters select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.highlight-items {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+.highlight-item,
+.highlight-catalog-card {
+  min-width: 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--border2);
+}
+.highlight-item-head,
+.highlight-catalog-card-head {
+  align-items: flex-start;
+  margin-bottom: 9px;
+}
+.highlight-quote {
+  margin: 0 0 10px;
+  padding: 12px;
+  border-radius: var(--radius-control);
+  background: var(--bg2);
+  color: var(--fg);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.highlight-comment {
+  margin: 0 0 10px;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.highlight-edit {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+.highlight-edit textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+.highlight-item-actions,
+.highlight-review-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.highlight-review-delay {
+  width: auto;
+  min-width: 132px;
+}
+.highlight-changed {
+  margin: 8px 0;
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.highlight-trash {
+  margin-top: 12px;
+  border-top: 1px solid var(--border2);
+}
+.highlight-trash > summary {
+  padding: 12px 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+.highlight-toolbar {
+  position: fixed;
+  z-index: 50;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+}
+.highlight-catalog,
+.highlight-review-list {
+  min-width: 0;
+}
+.highlight-catalog h2 {
+  margin: 0 0 12px;
+}
+.highlight-catalog-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(190px, 0.8fr) minmax(
+      150px,
+      0.5fr
+    );
+  align-items: end;
+  gap: 12px;
+}
+.highlight-catalog-filters input,
+.highlight-catalog-filters select {
+  width: 100%;
+  min-width: 0;
+}
+.highlight-catalog .highlight-status {
+  margin-top: 12px;
+}
+.highlight-catalog-card-head a {
+  min-width: 0;
+  color: var(--fg);
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.highlight-catalog-card-head a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.highlight-catalog-meta {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.highlight-review-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+}
+.highlight-review-card-head {
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.highlight-review-card-head a {
+  color: var(--fg);
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.highlight-review-card textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 11px;
+  border: 1px solid var(--strong);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+.highlight-review-card textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .highlight-toolbar {
+    display: none;
+  }
+  .highlight-workspace-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .highlight-catalog-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .highlight-item-head,
+  .highlight-catalog-card-head,
+  .highlight-review-card-head {
+    flex-direction: column;
+  }
+  .highlight-item-actions > .btn,
+  .highlight-review-actions > .btn {
+    flex: 1 1 auto;
+  }
+}
+
 /* Practice feedback stays readable alongside the existing local editor. */
 .practice-feedback,
 .practice-comparison {

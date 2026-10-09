@@ -19,8 +19,8 @@ let pendingImport = null;
 let pendingRestore = null;
 function defaultState() {
   return {
-    format: "sales-os-v8",
-    version: 8,
+    format: "sales-os-v9",
+    version: 9,
     lessonStatuses: {},
     practiceStatuses: {},
     bookmarks: [],
@@ -31,6 +31,7 @@ function defaultState() {
     knowledgeReview: window.SalesOSKnowledge.empty(),
     projects: window.SalesOSProjects.empty(),
     personalTemplates: window.SalesOSTemplates.empty(),
+    annotations: window.SalesOSHighlights.empty(),
     revisitQueue: {},
     revisitHistory: [],
     noteMergeSources: {},
@@ -1439,8 +1440,16 @@ async function renderReviewQueue() {
     const items = Object.values(current.revisitQueue || {}).filter((item) =>
       Number.isFinite(item.dueAt),
     );
+    const highlightReviews = Object.values(
+      current.annotations?.items || {},
+    ).filter(
+      (item) =>
+        !item.deletedAt && Number.isFinite(item.reviewAt) && item.reviewAt > 0,
+    );
     if (counter) {
-      const dueCount = items.filter((item) => item.dueAt <= Date.now()).length;
+      const dueCount =
+        items.filter((item) => item.dueAt <= Date.now()).length +
+        highlightReviews.filter((item) => item.reviewAt <= Date.now()).length;
       counter.textContent = String(dueCount);
       counter.hidden = dueCount === 0;
       counter.setAttribute("aria-label", `${dueCount} повтора пора выполнить`);
@@ -1478,7 +1487,7 @@ async function renderReviewQueue() {
     dueGroup.hidden = due.length === 0;
     dueCount.textContent = String(due.length);
     upcomingGroup.hidden = upcoming.length === 0;
-    empty.hidden = validItems.length > 0;
+    empty.hidden = validItems.length > 0 || highlightReviews.length > 0;
     error.hidden = true;
     rootElement.setAttribute("aria-busy", "false");
   } catch {
@@ -1686,8 +1695,8 @@ async function exportData() {
   const sizeBytes = await downloadJSON(
     {
       ...exportedState,
-      format: "sales-os-v8",
-      version: 8,
+      format: "sales-os-v9",
+      version: 9,
       notes,
       exportedAt: new Date(exportedAt).toISOString(),
     },
@@ -1748,7 +1757,8 @@ function validateBackupState(obj, idx) {
       (obj.format === "sales-os-v5" && obj.version === 5) ||
       (obj.format === "sales-os-v6" && obj.version === 6) ||
       (obj.format === "sales-os-v7" && obj.version === 7) ||
-      (obj.format === "sales-os-v8" && obj.version === 8)
+      (obj.format === "sales-os-v8" && obj.version === 8) ||
+      (obj.format === "sales-os-v9" && obj.version === 9)
     ) ||
     !isRecord(obj.lessonStatuses) ||
     !isRecord(obj.practiceStatuses) ||
@@ -1829,12 +1839,28 @@ function validateBackupState(obj, idx) {
   if (obj.version >= 5) next.today = window.SalesOSToday.validate(obj.today);
   else if (obj.today !== undefined)
     throw Error("Занятия требуют формат sales-os-v5 или новее");
-  if (obj.version === 8)
+  if (obj.version >= 8)
     next.personalTemplates = window.SalesOSTemplates.validate(
       obj.personalTemplates,
     );
   else if (obj.personalTemplates !== undefined)
     throw Error("Личные шаблоны требуют формат sales-os-v8");
+  if (obj.version >= 9) {
+    next.annotations = window.SalesOSHighlights.validate(obj.annotations);
+    for (const item of Object.values(next.annotations.items)) {
+      const entry =
+        item.documentId === "FINAL_PROJECT"
+          ? { kind: "final_project" }
+          : idx.entries[item.documentId];
+      if (
+        !entry ||
+        !["theory", "practice", "module", "final_project"].includes(entry.kind)
+      )
+        throw Error("Выделение ссылается на неизвестный учебный материал");
+    }
+  } else if (obj.annotations !== undefined) {
+    throw Error("Выделения требуют формат sales-os-v9");
+  }
   return next;
 }
 function isWorkspaceId(id, idx) {
@@ -2092,6 +2118,7 @@ function renderImportPreview(preview) {
     ["Сохранённые занятия", preview.totals.today],
     ["Проекты (включая архив)", preview.totals.projects],
     ["Личные шаблоны (включая архив и версии)", preview.totals.templates],
+    ["Выделения и заметки к фрагментам", preview.totals.highlights],
     ["Ответы и архивы проверки понимания", preview.totals.knowledge],
   ];
   meta.textContent = `${preview.format} · ${formatBytes(preview.bytes)}${preview.exportedAt ? ` · экспортировано ${preview.exportedAt}` : ""}`;
@@ -2214,6 +2241,7 @@ async function prepareImport(file) {
     today: Object.keys(next.today.plans).length,
     projects: Object.keys(next.projects.items).length,
     templates: Object.keys(next.personalTemplates.items).length,
+    highlights: Object.keys(next.annotations.items).length,
     knowledge: Object.keys(next.knowledgeReview.attempts).length,
     trainer: Object.keys(next.trainerSessions).length,
   };
@@ -2639,9 +2667,12 @@ if (searchInput) {
             module: "extra",
             level: "extra",
             url: `library/templates/?template=${encodeURIComponent(item.id)}`,
-            note: [item.body, item.whenToUse, item.resultNote, ...item.tags].join(
-              "\n",
-            ),
+            note: [
+              item.body,
+              item.whenToUse,
+              item.resultNote,
+              ...item.tags,
+            ].join("\n"),
             bookmarked: false,
           }));
         const localRecords = [...ids]

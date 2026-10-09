@@ -126,10 +126,14 @@ write_if_changed(ASSETS / 'practice-feedback.js', (ROOT / 'src/scripts/practice-
 
 app_js = (ROOT / "src/scripts/app.js").read_bytes()
 user_store_js = (ROOT / "src/scripts/user-store.js").read_bytes()
+highlights_core_js = (ROOT / "src/scripts/highlights-core.js").read_bytes()
+highlights_js = (ROOT / "src/scripts/highlights.js").read_bytes()
 app_css = (ROOT / "src/styles/app.css").read_bytes()
 client_index = (ROOT / "src/generated/client-index.json").read_bytes()
 for name, content in (
     ("user-store.js", user_store_js),
+    ("highlights-core.js", highlights_core_js),
+    ("highlights.js", highlights_js),
     ("app.js", app_js),
     ("app.css", app_css),
     ("client-index.json", client_index),
@@ -145,6 +149,8 @@ urls = {
     "sources/",
     "search/",
     "bookmarks/",
+    "highlights/",
+    "review/",
     "final-project/",
     "library/",
     "editorial-review/",
@@ -152,6 +158,8 @@ urls = {
     "assets/app.js",
     "assets/templates-core.js",
     "assets/templates.js",
+    "assets/highlights-core.js",
+    "assets/highlights.js",
     "assets/practice-feedback.js",
     "assets/user-store.js",
     "assets/app.css",
@@ -172,7 +180,7 @@ old_favicon = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rec
 if legacy_favicon.is_file() and legacy_favicon.read_bytes() == old_favicon:
     legacy_favicon.unlink()
 urls.update(f"level/{stage['id']}/" for stage in manifest["stages"])
-urls.update(['projects/', 'assets/projects-core.js', 'assets/projects.js', 'review/check/', 'assets/knowledge-core.js', 'assets/knowledge.js', 'today/', 'assets/today-core.js', 'assets/today.js', 'trainer/', 'assets/trainer-core.js', 'assets/trainer.js', 'assets/templates-core.js', 'assets/templates.js', *(f'trainer/{s["id"]}/' for s in scenarios)])
+urls.update(['projects/', 'assets/projects-core.js', 'assets/projects.js', 'review/check/', 'assets/knowledge-core.js', 'assets/knowledge.js', 'today/', 'assets/today-core.js', 'assets/today.js', 'trainer/', 'assets/trainer-core.js', 'assets/trainer.js', 'assets/templates-core.js', 'assets/templates.js', 'assets/highlights-core.js', 'assets/highlights.js', *(f'trainer/{s["id"]}/' for s in scenarios)])
 urls.update(f"source/{source['id']}/" for source in manifest["sources"])
 urls.update(f"library/{identifier}/" for identifier in library_pages)
 urls.update(

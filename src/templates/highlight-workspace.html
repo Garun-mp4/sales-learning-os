@@ -1,0 +1,46 @@
+<section class="highlight-workspace" id="highlight-workspace" data-highlight-workspace aria-labelledby="highlight-workspace-title">
+  <div class="highlight-workspace-head">
+    <div>
+      <h2 class="h2" id="highlight-workspace-title">Мои выделения</h2>
+      <p class="small muted">Цитаты и комментарии сохраняются только на этом устройстве.</p>
+    </div>
+    <a class="btn smallbtn" href="/highlights/">Все выделения <span data-highlight-page-count>0</span></a>
+  </div>
+  <p class="highlight-status" data-highlight-status role="status" aria-live="polite"></p>
+  <p class="small muted" data-highlight-support hidden>Этот браузер сохранит цитату и комментарий, но не сможет подсветить место в тексте. Обновите браузер или откройте материал в поддерживаемой версии.</p>
+  <div class="highlight-selection-row">
+    <button class="btn smallbtn" type="button" data-highlight-selection-action disabled>Сохранить выбранный фрагмент</button>
+    <span class="small muted" data-highlight-selection-label>Выберите текст в статье или добавьте абзац вручную.</span>
+  </div>
+  <details class="highlight-manual">
+    <summary>Добавить абзац или цитату вручную</summary>
+    <form data-highlight-form>
+      <label>Абзац материала
+        <select class="status-select" data-highlight-block-select aria-label="Выберите абзац материала">
+          <option value="">Сначала выберите абзац</option>
+        </select>
+      </label>
+      <label>Цитата
+        <textarea data-highlight-quote rows="4" maxlength="10000" required placeholder="Цитата появится после выбора абзаца. Её можно сократить или уточнить."></textarea>
+      </label>
+      <label>Ваш комментарий
+        <textarea data-highlight-comment rows="3" maxlength="5000" placeholder="Почему этот фрагмент важен? Что стоит применить или проверить?"></textarea>
+      </label>
+      <p class="small muted">Если похожая цитата встречается несколько раз, добавьте в неё соседние слова, чтобы привязка была однозначной.</p>
+      <div class="row wrap">
+        <button class="btn primary smallbtn" type="submit" data-highlight-save>Сохранить выделение</button>
+        <button class="btn smallbtn" type="button" data-highlight-cancel hidden>Отменить перепривязку</button>
+      </div>
+    </form>
+  </details>
+  <div class="highlight-items" data-highlight-items aria-live="polite">
+    <p class="small muted">Загружаем выделения…</p>
+  </div>
+  <details class="highlight-trash" data-highlight-trash hidden>
+    <summary>Корзина <span class="badge" data-highlight-trash-count>0</span></summary>
+    <div class="highlight-items" data-highlight-trash-items></div>
+  </details>
+</section>
+<div class="highlight-toolbar" data-highlight-toolbar role="group" aria-label="Действия с выбранным текстом" hidden>
+  <button class="btn primary smallbtn" type="button" data-highlight-toolbar-action>Добавить комментарий</button>
+</div>

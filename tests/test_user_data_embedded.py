@@ -10,7 +10,7 @@ import json,re
 from playwright.sync_api import sync_playwright
 CSS=(ROOT/'src/styles/app.css').read_text(encoding='utf-8')
 JS=(ROOT/'src/scripts/app.js').read_text(encoding='utf-8')
-STORE_JS=(ROOT/'src/scripts/projects-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/knowledge-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/today-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/trainer-core.js').read_text(encoding='utf-8')+'\n'+(ROOT/'src/scripts/templates-core.js').read_text(encoding='utf-8')+'\n'+(ROOT/'src/scripts/user-store.js').read_text(encoding='utf-8')
+STORE_JS=(ROOT/'src/scripts/projects-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/knowledge-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/today-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/trainer-core.js').read_text(encoding='utf-8')+'\n'+(ROOT/'src/scripts/templates-core.js').read_text(encoding='utf-8')+'\n'+(ROOT/'src/scripts/highlights-core.js').read_text(encoding='utf-8')+'\n'+(ROOT/'src/scripts/user-store.js').read_text(encoding='utf-8')
 INDEX=json.loads((SITE/'assets/client-index.json').read_text(encoding='utf-8'))
 SEARCH=json.loads((SITE/'assets/search-index.json').read_text(encoding='utf-8'))
 
@@ -115,7 +115,7 @@ def main():
       assert page.evaluate("localStorage.getItem('sales-os-note-01-MODULE')")=='Историческая заметка к модулю 01'
       print('PASS: v1 legacy roadmap progress and notes migrated to stable IDs')
 
-      # A valid v7 backup remains importable, with the newly introduced M6 library empty.
+      # Previous v7/v8 backups remain importable with newly introduced features empty.
       v7=page.evaluate('''()=>{
         const state=JSON.parse(localStorage.getItem('sales-os-v2'));
         state.format='sales-os-v7';state.version=7;delete state.personalTemplates;
@@ -126,7 +126,19 @@ def main():
       assert get_state(page)['personalTemplates']['items']=={}
       print('PASS: v7 backup imports with an empty v8 personal-template library')
 
-      # Seed a personal template with history and verify both survive an exported v8 backup.
+      v8=page.evaluate('''()=>{
+        const state=JSON.parse(localStorage.getItem('sales-os-v2'));
+        state.format='sales-os-v8';state.version=8;
+        state.personalTemplates=window.SalesOSTemplates.empty();
+        delete state.annotations;
+        state.notes={'01-MODULE':localStorage.getItem('sales-os-note-01-MODULE')};
+        return state;
+      }''')
+      upload_json(page,v8)
+      assert get_state(page)['annotations']['items']=={}
+      print('PASS: v8 backup imports with an empty M7 highlights catalog')
+
+      # Seed personal data from M6 and M7 and verify it survives a v9 backup round trip.
       page.evaluate('''async()=>{
         const store=window.SalesOSUserStore;await store.ready;
         const current=await store.getState();
@@ -138,7 +150,18 @@ def main():
         let templates=window.SalesOSTemplates.create(current.personalTemplates,fields,Date.now(),id);
         templates.items[id].versions.push({...fields,id:versionId,name:'Базовая версия',createdAt:Date.now()+1});
         templates=window.SalesOSTemplates.validate(templates);
-        await store.updateState(state=>({...state,personalTemplates:templates}));
+        const docId='01-001';
+        const blockId=window.SalesOSHighlights.stableBlockId(docId,['Обмен ценностью'],'Пример локальной цитаты');
+        let annotations=window.SalesOSHighlights.create(window.SalesOSHighlights.empty(),{
+          documentId:docId,blockIds:[blockId],quote:'Пример локальной цитаты',anchorQuote:'Пример локальной цитаты',
+          contextBefore:'',contextAfter:'',textVersion:'1234abcd'
+        },'Сохранить только в браузере',Date.now(),'33333333-3333-4333-8333-333333333333');
+        const finalBlock=window.SalesOSHighlights.stableBlockId('FINAL_PROJECT',['Этап 1'],'Заметка итогового проекта');
+        annotations=window.SalesOSHighlights.create(annotations,{
+          documentId:'FINAL_PROJECT',blockIds:[finalBlock],quote:'Заметка итогового проекта',anchorQuote:'Заметка итогового проекта',
+          contextBefore:'',contextAfter:'',textVersion:'87654321'
+        },'Фрагмент итогового проекта',Date.now(),'44444444-4444-4444-8444-444444444444');
+        await store.updateState(state=>({...state,personalTemplates:templates,annotations}));
       }''')
 
       # Export keeps the schema compact, but includes human-entered notes.
@@ -149,25 +172,32 @@ def main():
       page.locator('[data-export]').click()
       page.wait_for_timeout(200)
       saved_backup=page.evaluate('''async()=>JSON.parse(await window.__downloadedBackup.text())''')
-      assert saved_backup['format']=='sales-os-v8'
+      assert saved_backup['format']=='sales-os-v9'
       assert saved_backup['notes']['01-MODULE']=='Историческая заметка к модулю 01'
       assert saved_backup['lessonStatuses']['01-001']=='theory_completed'
       assert page.evaluate('window.__downloadName')=='sales-os-backup.json'
-      assert saved_backup['version']==8
+      assert saved_backup['version']==9
+      saved_highlights=saved_backup['annotations']['items']
+      assert len(saved_highlights)==2
+      assert any(value['quote']=='Пример локальной цитаты' and value['comment']=='Сохранить только в браузере' for value in saved_highlights.values())
+      assert any(value['documentId']=='FINAL_PROJECT' and value['comment']=='Фрагмент итогового проекта' for value in saved_highlights.values())
       saved_templates=saved_backup['personalTemplates']['items']
       assert len(saved_templates)==1
       saved_template=next(iter(saved_templates.values()))
       assert saved_template['title']=='Локальный шаблон'
       assert saved_template['versions'][0]['name']=='Базовая версия'
-      print('PASS: v8 backup export preserves private templates and history alongside notes/statuses')
+      print('PASS: v9 backup export preserves private templates, text annotations, notes and statuses')
       upload_json(page,saved_backup)
       restored=get_state(page)['personalTemplates']['items']
       assert len(restored)==1
       restored_template=next(iter(restored.values()))
       assert restored_template['title']=='Локальный шаблон'
       assert restored_template['versions'][0]['name']=='Базовая версия'
+      restored_highlights=get_state(page)['annotations']['items']
+      assert len(restored_highlights)==2
+      assert any(value['documentId']=='FINAL_PROJECT' and value['comment']=='Фрагмент итогового проекта' for value in restored_highlights.values())
       assert page.evaluate("localStorage.getItem('sales-os-note-01-MODULE')")=='Историческая заметка к модулю 01'
-      print('PASS: v8 backup round-trip restores personal template history and notes')
+      print('PASS: v9 backup round-trip restores personal template history, text annotations and notes')
 
       # Preserve clean state on broken JSON, bogus IDs and forbidden module bookmarks.
       for bad in [

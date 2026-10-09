@@ -41,6 +41,7 @@ expected.update(
         "sources/index.html",
         "search/index.html",
         "bookmarks/index.html",
+        "highlights/index.html",
         "final-project/index.html",
         "library/index.html",
         "library/glossary/index.html",
@@ -82,6 +83,7 @@ for path in html_files:
         "today",
         "projects",
         "bookmarks",
+        "highlights",
         "review",
         "search",
     }

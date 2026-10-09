@@ -18,6 +18,7 @@ type SalesOSProgressState = {
     tombstones: Record<string, number>;
     migrations: string[];
   };
+  annotations: { items: Record<string, SalesOSHighlightRecord> };
   knowledgeReview: {
     enabled: boolean;
     settingsUpdatedAt: number;
@@ -44,6 +45,25 @@ type SalesOSProgressState = {
   lastExport: { exportedAt: number; sizeBytes: number } | null;
   lastVisited?: string | null;
   legacyImported?: boolean;
+};
+
+type SalesOSHighlightRecord = {
+  id: string;
+  documentId: string;
+  blockIds: string[];
+  quote: string;
+  anchorQuote: string;
+  contextBefore: string;
+  contextAfter: string;
+  textVersion: string;
+  comment: string;
+  createdAt: number;
+  updatedAt: number;
+  revision: number;
+  deletedAt: number;
+  reviewAt: number;
+  scheduledAt: number;
+  recallDraft: string;
 };
 
 type SalesOSPracticeDraft = {

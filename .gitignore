@@ -47,3 +47,6 @@ __pycache__/
 /src/generated/template-manager.html
 /public/assets/templates-core.js
 /public/assets/templates.js
+
+/public/assets/highlights-core.js
+/public/assets/highlights.js

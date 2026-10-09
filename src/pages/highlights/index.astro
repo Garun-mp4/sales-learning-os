@@ -1,0 +1,30 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import PageHeading from '../../components/PageHeading.astro';
+---
+<Shell title="Мои выделения" description="Личный каталог цитат и комментариев к учебным материалам. Данные хранятся только на этом устройстве." active="highlights">
+  <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <span aria-current="page">Мои выделения</span></nav>
+  <PageHeading eyebrow="ЛИЧНАЯ БИБЛИОТЕКА" title="Мои выделения" description="Сохранённые цитаты, заметки к ним и повторы — в контексте учебного материала." />
+  <section class="highlight-catalog" data-highlight-catalog aria-busy="true" aria-labelledby="highlight-catalog-title">
+    <h2 class="h2" id="highlight-catalog-title">Найти фрагмент</h2>
+    <div class="highlight-catalog-filters">
+      <label>Поиск по цитате и комментарию
+        <input class="search-field" type="search" data-highlight-search autocomplete="off" placeholder="Введите слово из цитаты или заметки" />
+      </label>
+      <label>Модуль
+        <select class="status-select" data-highlight-module><option value="">Все модули</option></select>
+      </label>
+      <label>Показать
+        <select class="status-select" data-highlight-scope>
+          <option value="active">Сохранённые</option>
+          <option value="deleted">Корзина</option>
+          <option value="all">Все</option>
+        </select>
+      </label>
+    </div>
+    <p class="highlight-status" data-highlight-catalog-status role="status" aria-live="polite">Загружаем личные данные…</p>
+    <div class="highlight-catalog-list" data-highlight-catalog-list></div>
+    <div class="empty-state" data-highlight-empty hidden><h2 class="h2">Ничего не найдено</h2><p class="muted">Измените запрос или фильтр. Новые цитаты можно сохранять прямо в тексте урока.</p></div>
+    <p class="notice" data-highlight-catalog-error hidden role="status">Не удалось открыть локальный каталог. Обновите страницу; данные на устройстве не изменены.</p>
+  </section>
+</Shell>

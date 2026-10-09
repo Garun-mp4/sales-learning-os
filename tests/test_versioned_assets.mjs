@@ -24,7 +24,9 @@ try {
     for (const name of [
       "app.css",
       "app.js",
+      "highlights-core.js",
       "user-store.js",
+      "highlights.js",
       "practice-feedback.js",
       "today-core.js",
       "today.js",
@@ -43,14 +45,14 @@ try {
       );
     await writeFile(
       path.join(cwd, "dist/index.html"),
-      '<link href="/assets/app.css"><script src="/assets/user-store.js"></script><script src="/assets/app.js"></script><script src="/assets/templates-core.js"></script><script src="/assets/templates.js"></script>',
+      '<link href="/assets/app.css"><script src="/assets/highlights-core.js"></script><script src="/assets/user-store.js"></script><script src="/assets/app.js"></script><script src="/assets/templates-core.js"></script><script src="/assets/templates.js"></script><script src="/assets/highlights.js"></script>',
     );
     execFileSync(process.execPath, [script], { cwd, stdio: "pipe" });
     const html = await readFile(path.join(cwd, "dist/index.html"), "utf8");
     const refs = [...html.matchAll(/assets\/versioned\/[^"]+/g)].map(
       (match) => match[0],
     );
-    assert.equal(refs.length, 5);
+    assert.equal(refs.length, 7);
     const manifest = JSON.parse(
       await readFile(path.join(cwd, "dist/assets/offline-files.json"), "utf8"),
     );
@@ -74,13 +76,13 @@ try {
     "CSS address must change across releases",
   );
   assert.notEqual(
-    builds[0][2],
-    builds[1][2],
+    builds[0][3],
+    builds[1][3],
     "App address must change across releases",
   );
   assert.equal(
-    builds[0][1],
-    builds[1][1],
+    builds[0][2],
+    builds[1][2],
     "Unchanged storage bytes keep the same address",
   );
   console.log(

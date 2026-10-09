@@ -32,7 +32,9 @@ await mkdir(path.join(root, "assets/versioned"), { recursive: true });
 for (const name of [
   "app.css",
   "app.js",
+  "highlights-core.js",
   "user-store.js",
+  "highlights.js",
   "practice-feedback.js",
   "today-core.js",
   "today.js",

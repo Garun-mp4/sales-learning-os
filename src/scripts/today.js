@@ -56,8 +56,8 @@
         try {
           const data = {
             ...(await store.getState()),
-            format: "sales-os-v8",
-            version: 8,
+            format: "sales-os-v9",
+            version: 9,
             exportedAt: new Date().toISOString(),
             notes: await store.getAllNotes(),
           };
@@ -68,7 +68,7 @@
             ),
             a = el("a");
           a.href = url;
-          a.download = "sales-os-backup-v8.json";
+          a.download = "sales-os-backup-v9.json";
           a.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (e) {

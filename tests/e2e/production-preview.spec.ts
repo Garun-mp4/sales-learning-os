@@ -15,6 +15,27 @@ async function chooseTheme(page: Page, theme: string) {
   await page.getByRole("menuitemradio", { name: label }).click();
 }
 
+async function selectFirstHighlightParagraph(page: Page) {
+  await page
+    .locator("article[data-annotation-content] p")
+    .first()
+    .evaluate((paragraph) => {
+      const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+      const nodes: Text[] = [];
+      let node: Node | null;
+      while ((node = walker.nextNode())) nodes.push(node as Text);
+      if (!nodes.length) throw new Error("No selectable article text");
+      const range = document.createRange();
+      range.setStart(nodes[0], 0);
+      const endNode = nodes.at(-1)!;
+      range.setEnd(endNode, endNode.length);
+      const selection = getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+  await expect(page.locator("[data-highlight-selection-action]")).toBeEnabled();
+}
+
 test("Production Pagefind filters the shared course corpus", async ({
   page,
 }) => {
@@ -113,6 +134,41 @@ test("The complete production pack installs and supports offline lessons and sea
     .locator("textarea[data-note]")
     .fill("полный офлайн пакет подтверждён");
   await page.waitForTimeout(650);
+  await selectFirstHighlightParagraph(page);
+  await page.locator("[data-highlight-selection-action]").click();
+  const quote = await page.locator("[data-highlight-quote]").inputValue();
+  await page.locator("[data-highlight-comment]").fill("создано без сети");
+  await page.locator("[data-highlight-save]").click();
+  await expect(
+    page.locator("[data-highlight-items] .highlight-item"),
+  ).toHaveCount(1);
+  const highlightId = await page
+    .locator("[data-highlight-items] .highlight-item")
+    .getAttribute("data-highlight-id");
+  expect(highlightId).toBeTruthy();
+  await page.reload();
+  await expect(
+    page.locator("[data-highlight-items] .highlight-item"),
+  ).toHaveCount(1);
+  await page.goto("/highlights/");
+  const sourceLink = page
+    .locator(`[data-highlight-id="${highlightId}"]`)
+    .getByRole("link", {
+      name: "Обмен ценностью: клиентская задача → решение → результат",
+    });
+  await expect(sourceLink).toBeVisible();
+  await expect(
+    page.locator(`[data-highlight-id="${highlightId}"]`),
+  ).toContainText("создано без сети");
+  await sourceLink.click();
+  await expect(page).toHaveURL(new RegExp(`[?&]annotation=${highlightId}`));
+  await expect
+    .poll(() =>
+      page.evaluate(() => CSS.highlights.get("sales-os-highlights")?.size || 0),
+    )
+    .toBeGreaterThan(0);
+  expect(quote.length).toBeGreaterThan(8);
+
   await page.goto("/search/");
   await page
     .locator("[data-search-input]")

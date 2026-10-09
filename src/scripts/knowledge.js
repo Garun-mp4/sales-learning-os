@@ -103,7 +103,7 @@
               ),
               a = el("a");
             a.href = url;
-            a.download = "sales-os-backup-v8.json";
+            a.download = "sales-os-backup-v9.json";
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
           } catch (e) {

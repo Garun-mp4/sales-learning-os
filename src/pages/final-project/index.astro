@@ -3,6 +3,7 @@ import Shell from '../../layouts/Shell.astro';import PageHeading from '../../com
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import PracticeWorkspace from '../../components/PracticeWorkspace.astro';
+import HighlightWorkspace from '../../components/HighlightWorkspace.astro';
 // The prebuild renders sanitized source Markdown outside dist/.
 // Unlike dist/, src/generated is not cleared when Astro starts its build.
 const rendered=await readFile(path.resolve('src/generated/final-project.html'),'utf8');
@@ -11,11 +12,12 @@ const source=await readFile(path.resolve('sales-knowledge-base/FINAL_PROJECT.md'
 const rubric=[...source.matchAll(/^\d+\. \*\*(.+?):\*\* (.+)$/gm)].map((match,index)=>({id:`criterion-${index+1}`,label:match[1],description:match[2]}));
 if(rubric.length!==10)throw Error('Expected ten final-project checkpoints');
 ---
-<Shell title="Итоговый проект" description="Соберите путь от выбора ниши и исследования клиента до предложения, переговоров и ретроспективы сделки." active="practice"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/practice/">Практика</a> › <span aria-current="page">Итоговый проект</span></nav>
+<Shell title="Итоговый проект" description="Соберите путь от выбора ниши и исследования клиента до предложения, переговоров и ретроспективы сделки." active="practice" documentId="FINAL_PROJECT" documentKind="final_project"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/practice/">Практика</a> › <span aria-current="page">Итоговый проект</span></nav>
 <PageHeading eyebrow="СКВОЗНАЯ ПРАКТИКА" title="От первого клиента до сделки" description="Практический маршрут для применения знаний на собственных проектах."/>
 <section class="knowledge-entry"><div><h2 class="h2">Рабочая тетрадь проекта</h2><p>Несколько проектов, контекст, десять этапов, снимки практик и экспорт. Прежний общий ответ доступен ниже и переносится в «Мой первый проект».</p></div><a class="btn primary" href="/projects/">Открыть мои проекты</a></section>
 <a class="btn" href="#workspace-FINAL_PROJECT">Перейти к этапам проекта</a>
-<article class="article prose" data-pagefind-body data-search-id="FINAL_PROJECT" data-search-level="extra" data-search-module="extra" data-search-kind="final_project" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]" set:html={rendered}></article>
+<article class="article prose" data-annotation-content data-pagefind-body data-search-id="FINAL_PROJECT" data-search-level="extra" data-search-module="extra" data-search-kind="final_project" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]" set:html={rendered}></article>
+<HighlightWorkspace />
 <PracticeWorkspace id="FINAL_PROJECT" title="От первого клиента до сделки" rubric={rubric}/>
 <div class="editbox"><strong>Мои прежние заметки и общий обзор проекта</strong><textarea data-note="FINAL_PROJECT" aria-label="Заметки итогового проекта" placeholder="Цели, результаты, ссылки на документы и выводы..."></textarea><p class="hint" data-save-hint>Данные остаются в браузере</p></div>
 </Shell>

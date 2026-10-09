@@ -5,7 +5,7 @@ import Icon from '../components/Icon.astro';
 interface Props { title: string; description?: string; active?: string; module?: string; documentId?: string; documentKind?: string; libraryId?: string; reading?: boolean }
 const {title, description, active, module, documentId, documentKind, libraryId, reading=false}=Astro.props;
 const pathname = Astro.url.pathname;
-const privateUtility = /^\/(?:settings|bookmarks|review|search|today|projects)(?:\/|$)/.test(pathname) || /^\/404(?:\.html|\/|$)/.test(pathname);
+const privateUtility = /^\/(?:settings|bookmarks|highlights|review|search|today|projects)(?:\/|$)/.test(pathname) || /^\/404(?:\.html|\/|$)/.test(pathname);
 const metaDescription = (description || (documentId
   ? `${title} — ${documentKind === 'practice' ? 'практическое задание' : 'учебный материал'} модуля ${module}. Самостоятельное обучение продажам в Sales OS.`
   : module
@@ -70,6 +70,7 @@ const currentSection = active ?? (
         <a class:list={['nav-item',currentSection==='sources'&&'active']} href="/sources/" aria-label="Источники" aria-current={currentSection==='sources'?'page':undefined} title="Источники"><Icon name="library"/><span>Источники</span></a>
         <a class:list={['nav-item',currentSection==='library'&&'active']} href="/library/" aria-label="Справочные материалы" aria-current={currentSection==='library'?'page':undefined} title="Справочные материалы"><Icon name="book"/><span>Справочники</span></a>
         <a class:list={['nav-item',currentSection==='bookmarks'&&'active']} href="/bookmarks/" aria-label="Закладки" aria-current={currentSection==='bookmarks'?'page':undefined} title="Закладки"><Icon name="star"/><span>Закладки</span></a>
+        <a class:list={['nav-item',currentSection==='highlights'&&'active']} href="/highlights/" aria-label="Мои выделения" aria-current={currentSection==='highlights'?'page':undefined} title="Мои выделения"><Icon name="library"/><span>Мои выделения</span></a>
         <div class="nav-caption">Программа · 4 уровня</div>
         {stages.map(s=><details class="nav-group" open={modules.some(m=>m.module===module&&m.stage===s.id)||s.id===1}>
           <summary><span class="num">{String(s.id).padStart(2,'0')}</span><span>{s.title}</span><span class="arr"><Icon name="chevron" size={14}/></span></summary>
@@ -107,6 +108,7 @@ const currentSection = active ?? (
   <script src="/assets/knowledge-core.js" defer is:inline></script>
   <script src="/assets/projects-core.js" defer is:inline></script>
   <script src="/assets/templates-core.js" defer is:inline></script>
+  <script src="/assets/highlights-core.js" defer is:inline></script>
   <script src="/assets/user-store.js" defer is:inline></script>
   <script src="/assets/app.js" defer is:inline></script>
   {(documentKind==='practice'||pathname==='/final-project/')&&<script src="/assets/practice-feedback.js" defer is:inline></script>}
@@ -115,5 +117,6 @@ const currentSection = active ?? (
   {libraryId==='templates'&&<script src="/assets/templates.js" defer is:inline></script>}
   {currentSection==='today'&&<script src="/assets/today.js" defer is:inline></script>}
   {currentSection==='trainer'&&<script src="/assets/trainer.js" defer is:inline></script>}
+  {(currentSection==='review'||currentSection==='highlights'||['theory','practice','module','final_project'].includes(documentKind||''))&&<script src="/assets/highlights.js" defer is:inline></script>}
 </body>
 </html>

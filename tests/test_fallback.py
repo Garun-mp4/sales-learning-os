@@ -50,6 +50,21 @@ fallback = ROOT / "dist-fallback"
 review_page = (fallback / "review/index.html").read_text(encoding="utf-8")
 assert 'data-review-queue' in review_page
 assert 'data-review-due-list' in review_page and 'data-review-upcoming-list' in review_page
+assert 'data-highlight-reviews' in review_page
+assert 'assets/highlights.js' in review_page
+catalog_page = (fallback / "highlights/index.html").read_text(encoding="utf-8")
+assert 'name="robots" content="noindex, nofollow"' in catalog_page
+assert 'data-highlight-catalog' in catalog_page and 'assets/highlights.js' in catalog_page
+lesson_page = (fallback / "lesson/01-001/index.html").read_text(encoding="utf-8")
+assert 'article class="article" data-annotation-content' in lesson_page
+assert 'data-highlight-workspace' in lesson_page
+practice_page = (fallback / "practice/01-P01/index.html").read_text(encoding="utf-8")
+article_start = practice_page.index('data-annotation-content')
+article_end = practice_page.index('</article>', article_start)
+answer_start = practice_page.index('data-practice-answer="criterion-1"')
+assert article_end < answer_start, "Practice answers must stay outside annotation content"
+for asset in ("highlights-core.js", "highlights.js"):
+    assert (fallback / "assets" / asset).is_file(), f"Missing fallback asset {asset}"
 settings_page = (fallback / "settings/index.html").read_text(encoding="utf-8")
 for selector in (
     'data-backup-last-export',
