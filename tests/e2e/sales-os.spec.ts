@@ -189,12 +189,10 @@ test("Course libraries are navigable, indexed in fallback search and copyable", 
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page
     .getByRole("button", {
-      name: "Скопировать шаблон «Первое деловое сообщение»",
+      name: "Скопировать текст «Первое деловое сообщение»",
     })
     .click();
-  await expect(page.locator("#toast")).toContainText(
-    "Текст шаблона скопирован",
-  );
+  await expect(page.locator("#toast")).toContainText("Текст скопирован");
   await expect
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toContain("Здравствуйте!");
@@ -1213,7 +1211,7 @@ test("Structured practice drafts, rubric self-review and iteration history survi
   const backup = await page.evaluate(async () =>
     JSON.parse(await window.__backupBlob!.text()),
   );
-  expect(backup.format).toBe("sales-os-v7");
+  expect(backup.format).toBe("sales-os-v9");
   expect(backup.practiceDrafts["01-P01"].answers["criterion-1"]).toContain(
     "Путь клиента",
   );

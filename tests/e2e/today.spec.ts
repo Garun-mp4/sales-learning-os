@@ -183,7 +183,7 @@ test("M3 backup v5 roundtrip, v4 compatibility, malformed plans and recovery", a
   await page.locator("[data-export]").click();
   const path = await (await downloadPromise).path();
   const backup = JSON.parse(await readFile(path!, "utf8"));
-  expect(backup.format).toBe("sales-os-v7");
+  expect(backup.format).toBe("sales-os-v9");
   expect(backup.today).toEqual(original);
   const ctx = await browser.newContext(),
     other = await ctx.newPage();
@@ -211,6 +211,8 @@ test("M3 backup v5 roundtrip, v4 compatibility, malformed plans and recovery", a
   delete legacy.today;
   delete legacy.knowledgeReview;
   delete legacy.projects;
+  delete legacy.personalTemplates;
+  delete legacy.annotations;
   await importData(legacy);
   await other.locator("[data-import-merge]").click();
   expect((await current(other)).today).toEqual(original);
@@ -296,6 +298,6 @@ test("M3 temporary storage exports plan in place; invalid write preserves it", a
     .click();
   const file = await (await promise).path();
   const backup = JSON.parse(await readFile(file!, "utf8"));
-  expect(backup.format).toBe("sales-os-v7");
+  expect(backup.format).toBe("sales-os-v9");
   expect(backup.today).toEqual(before.today);
 });

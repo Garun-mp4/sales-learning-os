@@ -112,7 +112,7 @@ test("M2 draft resume, single submit, compare, recover deletion and backup v4", 
   await page.locator("[data-export]").click();
   const file = await (await downloadPromise).path();
   const backup = JSON.parse(await readFile(file!, "utf8"));
-  expect(backup.format).toBe("sales-os-v7");
+  expect(backup.format).toBe("sales-os-v9");
   const clean = await browser.newContext();
   const restored = await clean.newPage();
   await restored.goto(new URL("/settings/", page.url()).href);

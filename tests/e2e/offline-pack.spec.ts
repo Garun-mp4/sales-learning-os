@@ -60,12 +60,21 @@ async function useShortManifest(
             versionedAsset("today-core", "js"),
             versionedAsset("knowledge-core", "js"),
             versionedAsset("projects-core", "js"),
+            versionedAsset("templates-core", "js"),
+            versionedAsset("highlights-core", "js"),
             versionedAsset("knowledge", "js"),
             versionedAsset("projects", "js"),
+            versionedAsset("highlights", "js"),
             "projects/",
             "review/check/",
             "assets/client-index.json",
             "assets/search-index.json",
+            "assets/brand/logo-light.png",
+            "assets/brand/logo-dark.png",
+            "assets/brand/mark-light.png",
+            "assets/brand/mark-dark.png",
+            "assets/fonts/Geist-Variable.woff2",
+            "assets/fonts/GeistMono-Variable.woff2",
             "lesson/01-001/",
             "search/",
           ].map((resourceUrl) => ({ url: resourceUrl, bytes: 0 }));
@@ -194,7 +203,7 @@ test("A complete offline pack survives reload and opens lessons and private note
     };
   }, testModeKey);
   expect(installed.fullManifestTotal).toBeGreaterThan(450);
-  expect(installed.total).toBe(16);
+  expect(installed.total).toBe(25);
   expect(installed.ready).toBe(true);
   expect(installed.keys).toContain("sales-os-offline-000000000005");
 
@@ -204,7 +213,9 @@ test("A complete offline pack survives reload and opens lessons and private note
     "Обмен ценностью",
   );
   await page.locator("textarea[data-note]").fill("offline-private-note-314159");
-  await page.waitForTimeout(650);
+  await expect(page.locator("[data-save-hint]")).toHaveText(
+    "Сохранено на этом устройстве",
+  );
   await page.goto("/search/");
   await page.locator("[data-search-input]").fill("offline-private-note-314159");
   await page.locator("[data-search-private]").check();

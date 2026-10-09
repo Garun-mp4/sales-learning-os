@@ -272,7 +272,7 @@ test("M5 mobile dark and desktop light have no horizontal overflow", async ({
     });
   }
 });
-test("M5 temporary storage retains workbook and offers in-place v7 backup", async ({
+test("M5 temporary storage retains workbook and offers in-place v9 backup", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -298,7 +298,7 @@ test("M5 temporary storage retains workbook and offers in-place v7 backup", asyn
   const backup = JSON.parse(
     await readFile((await (await file).path())!, "utf8"),
   );
-  expect(backup.version).toBe(7);
+  expect(backup.version).toBe(9);
   expect(Object.values(backup.projects.items)).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -421,10 +421,10 @@ for (const version of [1, 2, 3])
     const current = JSON.parse(
       await readFile((await (await download).path())!, "utf8"),
     );
-    expect(current.version).toBe(7);
+    expect(current.version).toBe(9);
     expect(Object.keys(current.projects.items)).toHaveLength(1);
     await page.locator("[data-import]").setInputFiles({
-      name: "v7.json",
+      name: "v9.json",
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(current)),
     });
