@@ -1,0 +1,7 @@
+---
+import Shell from '../layouts/Shell.astro';
+import today from '../generated/today.html?raw';
+---
+<Shell title="Занятие на сегодня" active="today">
+  <Fragment set:html={today}/>
+</Shell>

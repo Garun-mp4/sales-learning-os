@@ -30,3 +30,7 @@ __pycache__/
 /src/generated/trainer-pages.json
 /public/assets/trainer-core.js
 /public/assets/trainer.js
+
+/src/generated/today.html
+/public/assets/today-core.js
+/public/assets/today.js

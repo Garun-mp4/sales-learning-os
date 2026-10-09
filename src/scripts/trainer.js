@@ -44,7 +44,8 @@
   }
   function setBusy(value) {
     busy = value;
-    for (const b of work.querySelectorAll("button")) b.disabled = value;
+    for (const b of work.querySelectorAll("button"))
+      b.disabled = value && !(b.type === "submit" && fieldLocks === 0);
     const form = work.querySelector("form");
     if (form)
       for (const input of form.querySelectorAll("input,textarea"))
@@ -367,7 +368,7 @@
     });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      if (busy) return;
+      if (fieldLocks > 0) return;
       clearTimeout(timer);
       const draft = readDraft();
       enqueue(async () => {

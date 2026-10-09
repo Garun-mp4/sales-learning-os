@@ -5,11 +5,15 @@ const catalog = JSON.parse(
 );
 const workspace = (p: Page) => p.locator("[data-trainer-workspace]");
 async function send(p: Page, action: string, text = "Учебный ответ") {
+  const count = await workspace(p).locator(".trainer-transcript li").count();
   await workspace(p).locator("textarea").fill(text);
   await workspace(p).locator(`input[value="${action}"]`).check();
   await workspace(p)
     .getByRole("button", { name: "Отправить ответ и действие", exact: true })
     .click();
+  await expect(workspace(p).locator(".trainer-transcript li")).toHaveCount(
+    count + 1,
+  );
   await expect(p.locator("[data-trainer-notice]")).toContainText("Сохранено");
 }
 async function begin(p: Page, id = "price-context") {
@@ -108,7 +112,7 @@ test("M2 draft resume, single submit, compare, recover deletion and backup v4", 
   await page.locator("[data-export]").click();
   const file = await (await downloadPromise).path();
   const backup = JSON.parse(await readFile(file!, "utf8"));
-  expect(backup.format).toBe("sales-os-v4");
+  expect(backup.format).toBe("sales-os-v5");
   const clean = await browser.newContext();
   const restored = await clean.newPage();
   await restored.goto(new URL("/settings/", page.url()).href);
@@ -158,7 +162,7 @@ test("M2 preserve old versions and reject malformed/future backups", async ({
     window.SalesOSUserStore.getState(),
   );
   for (const bad of [
-    { ...state, format: "sales-os-v5", version: 5, notes: {} },
+    { ...state, format: "sales-os-v6", version: 6, notes: {} },
     { ...state, notes: {}, trainerSessions: { broken: { id: "broken" } } },
   ]) {
     await page.locator("[data-import]").setInputFiles({
@@ -371,4 +375,41 @@ test("M2 full offline pack supports resume and finish", async ({
     "Изменение вынесено",
   );
   await context.setOffline(false);
+});
+test("M2 submit during slow autosave queues exactly one transition", async ({
+  page,
+}) => {
+  await begin(page);
+  await page.evaluate(() => {
+    const store = window.SalesOSUserStore,
+      original = store.updateState;
+    (window as any).autosaveRunning = false;
+    store.updateState = async function (fn) {
+      (window as any).autosaveRunning = true;
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const result = await original.call(store, fn);
+      (window as any).autosaveRunning = false;
+      return result;
+    };
+  });
+  await workspace(page).locator('input[value="clarify"]').check();
+  await workspace(page)
+    .locator("textarea")
+    .fill("Отправляю во время автосохранения");
+  await expect
+    .poll(() => page.evaluate(() => (window as any).autosaveRunning))
+    .toBe(true);
+  await workspace(page)
+    .getByRole("button", { name: "Отправить ответ и действие", exact: true })
+    .click();
+  await expect(workspace(page).locator(".trainer-transcript li")).toHaveCount(
+    1,
+  );
+  await page.reload();
+  await expect(workspace(page).locator(".trainer-transcript li")).toHaveCount(
+    1,
+  );
+  await expect(workspace(page)).toContainText(
+    "Отправляю во время автосохранения",
+  );
 });

@@ -7,6 +7,10 @@ type SalesOSProgressState = {
   practiceStatuses: Record<string, string>;
   bookmarks: string[];
   practiceDrafts: Record<string, SalesOSPracticeDraft>;
+  today: {
+    preferences: { budget: number; goal: string; updatedAt: number };
+    plans: Record<string, unknown>;
+  };
   trainerSessions: Record<string, SalesOSTrainerSession>;
   practiceAttempts: Record<
     string,
@@ -98,6 +102,11 @@ type SalesOSUserDataStore = {
 declare global {
   interface Window {
     SalesOSUserStore: SalesOSUserDataStore;
+    SalesOSToday: {
+      empty: () => SalesOSProgressState["today"];
+      validate: (raw: unknown) => SalesOSProgressState["today"];
+      merge: (a: unknown, b: unknown) => SalesOSProgressState["today"];
+    };
     SalesOSTrainer: {
       validateSessions: (raw: unknown) => Record<string, SalesOSTrainerSession>;
     };

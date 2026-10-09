@@ -26,6 +26,8 @@ try {
       "app.js",
       "user-store.js",
       "practice-feedback.js",
+      "today-core.js",
+      "today.js",
       "trainer-core.js",
       "trainer.js",
     ])

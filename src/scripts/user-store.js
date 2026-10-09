@@ -36,14 +36,15 @@
 
   function defaultState() {
     return {
-      format: "sales-os-v4",
-      version: 4,
+      format: "sales-os-v5",
+      version: 5,
       lessonStatuses: {},
       practiceStatuses: {},
       bookmarks: [],
       practiceDrafts: {},
       practiceAttempts: {},
       trainerSessions: {},
+      today: window.SalesOSToday.empty(),
       revisitQueue: {},
       revisitHistory: [],
       noteMergeSources: {},
@@ -81,6 +82,7 @@
       value.trainerSessions && Object.keys(value.trainerSessions).length
         ? window.SalesOSTrainer.validateSessions(value.trainerSessions)
         : {};
+    state.today = window.SalesOSToday.validate(value.today);
     state.revisitQueue = normalizeRevisitQueue(value.revisitQueue);
     state.revisitHistory = Array.isArray(value.revisitHistory)
       ? value.revisitHistory
@@ -1232,6 +1234,7 @@
           merged[field][id] = status;
       }
     }
+    merged.today = window.SalesOSToday.merge(current.today, incoming.today);
     merged.bookmarks = [
       ...new Set([...current.bookmarks, ...incoming.bookmarks]),
     ];

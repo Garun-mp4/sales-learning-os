@@ -35,6 +35,7 @@ expected.update(
         "roadmap/index.html",
         "practice/index.html",
         "review/index.html",
+        "today/index.html",
         "sources/index.html",
         "search/index.html",
         "bookmarks/index.html",
@@ -76,6 +77,7 @@ for path in html_files:
     robots = soup.select_one('meta[name="robots"]')
     private_utility = name == "404.html" or name.split("/", 1)[0] in {
         "settings",
+        "today",
         "bookmarks",
         "review",
         "search",
