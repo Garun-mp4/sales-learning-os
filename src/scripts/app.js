@@ -1,6 +1,7 @@
 /* Sales OS local-first interface. No analytics, cookies, trackers, or external APIs. */
 const root = document.documentElement.dataset.root || "./";
 const userStore = window.SalesOSUserStore;
+const rowChevron = document.getElementById("ui-row-chevron")?.innerHTML || "";
 const statusLabels = {
   not_started: "Не начато",
   in_progress: "Изучаю",
@@ -2621,7 +2622,7 @@ if (searchInput) {
             privateResults && item.bookmarked
               ? `${kindLabels[item.kind] || "Материал"} · закладка`
               : (kindLabels[item.kind] || "Материал") + module;
-          return `<a class="item" href="${escapeHtml(href)}">${id}<div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${escapeHtml(kind)}</div><div class="search-excerpt">${highlightSearch(searchExcerpt(item.excerpt || "Материал курса", query), query)}</div></div><span class="ic-right">→</span></a>`;
+          return `<a class="item" href="${escapeHtml(href)}">${id}<div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${escapeHtml(kind)}</div><div class="search-excerpt">${highlightSearch(searchExcerpt(item.excerpt || "Материал курса", query), query)}</div></div><span class="ic-right">${rowChevron}</span></a>`;
         })
         .join("");
     const publicHtml = publicItems.length
@@ -2696,7 +2697,7 @@ if (bookRoot) {
         ? es
             .map(
               (e) =>
-                `<a class="item" href="${root}${e.kind === "practice" ? "practice" : "lesson"}/${e.id}/"><span class="number">${e.id}</span><div class="itext"><div class="ititle">${escapeHtml(e.title)}</div></div><span class="ic-right">→</span></a>`,
+                `<a class="item" href="${root}${e.kind === "practice" ? "practice" : "lesson"}/${e.id}/"><span class="number">${e.id}</span><div class="itext"><div class="ititle">${escapeHtml(e.title)}</div></div><span class="ic-right">${rowChevron}</span></a>`,
             )
             .join("")
         : `<div class="empty-state"><h2 class="h2">Пока нет закладок</h2><p class="muted">Сохраните урок или задание, чтобы быстро вернуться к нему.</p><a class="btn primary" href="${root}roadmap/">Открыть программу</a></div>`;

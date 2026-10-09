@@ -56,7 +56,7 @@ const currentSection = active ?? (
   <div class="mobile-shade" aria-hidden="true"></div>
   <div class="app">
     <aside class="side" id="side-navigation" aria-label="Навигация по Sales OS" tabindex="-1">
-      <div class="side-top"><a class="brand-lockup" href="/" aria-label="Sales OS — на главную"><img class="brand-logo brand-logo-light" src="/assets/brand/logo-light.png" alt="" width="1361" height="754"/><img class="brand-logo brand-logo-dark" src="/assets/brand/logo-dark.png" alt="" width="1361" height="754"/><img class="brand-symbol brand-symbol-light" src="/assets/brand/mark-light.png" alt="" width="512" height="512"/><img class="brand-symbol brand-symbol-dark" src="/assets/brand/mark-dark.png" alt="" width="512" height="512"/></a><span class="version">2.0</span><button class="iconbtn side-close" type="button" data-menu-close aria-label="Закрыть меню">×</button></div>
+      <div class="side-top"><a class="brand-lockup" href="/" aria-label="Sales OS — на главную"><img class="brand-logo brand-logo-light" src="/assets/brand/logo-light.png" alt="" width="1361" height="754"/><img class="brand-logo brand-logo-dark" src="/assets/brand/logo-dark.png" alt="" width="1361" height="754"/><img class="brand-symbol brand-symbol-light" src="/assets/brand/mark-light.png" alt="" width="512" height="512"/><img class="brand-symbol brand-symbol-dark" src="/assets/brand/mark-dark.png" alt="" width="512" height="512"/></a><span class="version">2.0</span><button class="iconbtn side-close" type="button" data-menu-close aria-label="Закрыть меню"><Icon name="close"/></button></div>
       <nav class="side-body" aria-label="Главное меню">
         <div class="nav-caption">Рабочая область</div>
         <a class:list={['nav-item',currentSection==='home'&&'active']} href="/" aria-label="Обзор" aria-current={currentSection==='home'?'page':undefined} title="Обзор"><Icon name="home"/><span>Обзор</span></a>
@@ -69,7 +69,7 @@ const currentSection = active ?? (
         <a class:list={['nav-item',currentSection==='bookmarks'&&'active']} href="/bookmarks/" aria-label="Закладки" aria-current={currentSection==='bookmarks'?'page':undefined} title="Закладки"><Icon name="star"/><span>Закладки</span></a>
         <div class="nav-caption">Программа · 4 уровня</div>
         {stages.map(s=><details class="nav-group" open={modules.some(m=>m.module===module&&m.stage===s.id)||s.id===1}>
-          <summary><span class="num">{String(s.id).padStart(2,'0')}</span><span>{s.title}</span><span class="arr">›</span></summary>
+          <summary><span class="num">{String(s.id).padStart(2,'0')}</span><span>{s.title}</span><span class="arr"><Icon name="chevron" size={14}/></span></summary>
           <div class="nav-sub">{modules.filter(m=>m.stage===s.id).map(m=><a class:list={['nav-item',m.module===module&&'active']} href={`/module/${m.id}/`} aria-label={`${m.module} · ${m.title}`} aria-current={m.module===module?(pathname===`/module/${m.id}/`?'page':'location'):undefined} title={m.title}><span class="label-number">{m.module}</span><span>{m.title}</span></a>)}</div>
         </details>)}
       </nav>
@@ -89,7 +89,7 @@ const currentSection = active ?? (
             <button class="theme-option" type="button" role="menuitemradio" aria-checked="false" tabindex="-1" data-theme-option="dark"><span>Тёмная</span><span class="theme-option-check"><Icon name="checkmark" size={14}/></span></button>
           </div>
         </details>
-        <a class="iconbtn" href="/settings/" title="Настройки" aria-label="Настройки" aria-current={currentSection==='settings'?'page':undefined}><Icon name="settings"/></a>
+        <a class="iconbtn" href="/settings/" title="Настройки" aria-label="Настройки" aria-current={currentSection==='settings'?'page':undefined}><Icon name="settings" size={18}/></a>
       </header>
       <main id="main" tabindex="-1" class:list={['container',reading&&'reading-layout']}>
         <slot />
@@ -98,6 +98,7 @@ const currentSection = active ?? (
     </div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <template id="ui-row-chevron"><Icon name="chevron"/></template>
   <script src="/assets/user-store.js" defer is:inline></script>
   <script src="/assets/app.js" defer is:inline></script>
 </body>

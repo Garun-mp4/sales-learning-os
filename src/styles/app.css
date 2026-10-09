@@ -225,8 +225,9 @@ summary:focus-visible,
   color: var(--inverted);
 }
 .icon {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-size, 16px);
+  height: var(--icon-size, 16px);
+  display: block;
   flex-shrink: 0;
   stroke-width: 1.7;
 }
@@ -1360,11 +1361,11 @@ summary:focus-visible,
   .toc-disclosure summary::marker {
     content: "";
   }
-  .toc-disclosure summary span {
+  .toc-disclosure summary .icon {
     color: var(--muted);
     transition: transform var(--motion-fast) var(--ease-standard);
   }
-  .toc-disclosure[open] summary span {
+  .toc-disclosure[open] summary .icon {
     transform: rotate(180deg);
   }
   .toc-disclosure .toc {

@@ -867,8 +867,11 @@ test("The new brand assets and bundled Cyrillic fonts are served locally", async
       .evaluate((image) => (image as HTMLImageElement).naturalWidth > 0),
   ).toBe(true);
   await expect(
-    page.locator('.topbar a[href="/settings/"] .icon path').nth(1),
-  ).toHaveAttribute("d", /M19\.4/);
+    page.locator('.topbar a[href="/settings/"] .icon'),
+  ).toHaveAttribute("data-icon", "settings");
+  await expect(
+    page.locator('.topbar a[href="/settings/"] .icon circle'),
+  ).toHaveAttribute("cx", "12");
   await page.locator("[data-theme-trigger]").click();
   await page.getByRole("menuitemradio", { name: "Тёмная" }).click();
   await expect(page.locator("[data-theme-color]")).toHaveAttribute(
