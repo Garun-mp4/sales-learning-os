@@ -2,7 +2,7 @@
 
 **Основание:** полный аудит от 8 октября 2026 года, `docs/AUDIT_2026-10-08.md`, и действующий визуальный контракт `DESIGN-vercel.md`.
 **Назначение:** актуальный план исправлений и развития уже существующего проекта; статусы и подтверждения исполнения фиксируются ниже и в `docs/MILESTONE_LOG.md`.
-**Текущий статус на 2026-10-09:** M0–M7 прошли инженерные gates. M8 проходит финальную приёмку: чистая Windows-установка, production build, quality/fallback, 38 URL E2E, 9/9 production-preview тестов, обход всех 482 manifest routes и 210 screenshot views уже прошли. Финальная Vercel Preview текущего commit и ручные NVDA/native browser zoom проверки остаются открытыми до фактической проверки. Независимый редакторский gate M5-CONTENT остаётся OPEN: 0/430 документов имеют полную запись проверки.
+**Текущий статус на 2026-10-09:** M0–M7 прошли инженерные gates. Локальная M8-приёмка прошла: чистая Windows-установка, production build, quality/fallback, 38 URL E2E, 9/9 production-preview тестов, обход всех 482 manifest routes и 210 screenshot views. Кодовый commit `5beaee938c28b31604868dec827eb7fc3b230e8e` опубликован в Vercel Preview со статусом `READY`, однако защищённое содержимое не удалось прочитать: Vercel отказал в создании bypass URL с 403, а доступные Vercel API вернули 403 для detail/log endpoints. Для закрытия M8 нужны авторизованная проверка Preview, ручная NVDA/native browser zoom проверка. Независимый редакторский gate M5-CONTENT остаётся OPEN: 0/430 документов имеют полную запись проверки.
 
 ## Целевой результат
 
