@@ -1,6 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+
+const themeLabels: Record<string, string> = {
+  system: "Системная",
+  light: "Светлая",
+  dark: "Тёмная",
+};
+
+async function chooseTheme(page: Page, theme: string) {
+  const label = themeLabels[theme];
+  if (!label) throw new Error(`Unsupported theme: ${theme}`);
+  await page.locator("[data-theme-trigger]").click();
+  await page.getByRole("menuitemradio", { name: label }).click();
+}
 
 test("Production Pagefind filters the shared course corpus", async ({
   page,
@@ -130,7 +143,7 @@ test("Search and settings remain responsive in both themes", async ({
     for (const theme of ["light", "dark"]) {
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto(`/${route}/`);
-      await page.locator("[data-theme-select]").first().selectOption(theme);
+      await chooseTheme(page, theme);
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await expect(page.locator("#toast")).not.toHaveClass(/on/);
       await page.evaluate(() => document.fonts.ready);
@@ -185,7 +198,7 @@ test("Practice editor and revisit queue stay readable across mobile, tablet and 
     for (const theme of ["light", "dark"]) {
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto(`/${route}/`);
-      await page.locator("[data-theme-select]").first().selectOption(theme);
+      await chooseTheme(page, theme);
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       if (route === "review")
         await expect(page.locator(".revisit-card")).toBeVisible();
@@ -249,7 +262,7 @@ test("All audited page families render across the release viewport and theme mat
   for (const theme of ["light", "dark"]) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/");
-    await page.locator("[data-theme-select]").first().selectOption(theme);
+    await chooseTheme(page, theme);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expect(page.locator("#toast")).not.toHaveClass(/on/);
     await page.evaluate(async () => {

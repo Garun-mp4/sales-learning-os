@@ -34,7 +34,8 @@ def main():
     assert 'Обмен ценностью' in desktop.locator('article.article').inner_text()
     desktop.locator('[data-status-control]').select_option('theory_completed')
     desktop.locator('[data-bookmark]').click()
-    desktop.locator('[data-theme-select]').first.select_option('dark')
+    desktop.locator('[data-theme-trigger]').click()
+    desktop.get_by_role('menuitemradio',name='Тёмная').click()
     assert desktop.locator('html').get_attribute('data-theme')=='dark'
     assert desktop.locator('[data-bookmark]').get_attribute('aria-pressed')=='true'
     assert desktop.locator('[data-status-control]').input_value()=='theory_completed'

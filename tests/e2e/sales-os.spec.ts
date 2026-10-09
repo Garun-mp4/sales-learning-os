@@ -201,7 +201,8 @@ test("Course libraries are navigable, indexed in fallback search and copyable", 
 });
 test("Theme, progress and notes persist", async ({ page }) => {
   await page.goto("/lesson/01-001/");
-  await page.locator("[data-theme-select]").first().selectOption("dark");
+  await page.locator("[data-theme-trigger]").click();
+  await page.getByRole("menuitemradio", { name: "Тёмная" }).click();
   await page.locator("[data-status-control]").selectOption("theory_completed");
   await page.locator("textarea[data-note]").fill("Проверочная запись");
   await page.waitForTimeout(650);
@@ -213,6 +214,43 @@ test("Theme, progress and notes persist", async ({ page }) => {
   await expect(page.locator("textarea[data-note]")).toHaveValue(
     "Проверочная запись",
   );
+});
+test("Theme menu supports keyboard selection, Escape and Tab", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const trigger = page.locator("[data-theme-trigger]");
+  const menu = page.getByRole("menu", { name: "Выбор цветовой темы" });
+
+  await trigger.press("ArrowDown");
+  await expect(menu).toBeVisible();
+  const systemOption = page.getByRole("menuitemradio", { name: "Системная" });
+  const lightOption = page.getByRole("menuitemradio", { name: "Светлая" });
+  await expect(systemOption).toBeFocused();
+  await systemOption.press("ArrowDown");
+  await expect(lightOption).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(trigger).toHaveAttribute("aria-label", "Цветовая тема: Светлая");
+  await expect(menu).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await page.goto("/settings/");
+  const settingsTheme = page.locator(".settings-row [data-theme-select]");
+  await expect(settingsTheme).toHaveValue("light");
+  await settingsTheme.selectOption("dark");
+  await expect(trigger).toHaveAttribute("aria-label", "Цветовая тема: Тёмная");
+
+  await trigger.press("ArrowDown");
+  await expect(page.getByRole("menuitemradio", { name: "Тёмная" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await trigger.press("ArrowDown");
+  await page.keyboard.press("Tab");
+  await expect(menu).toBeHidden();
+  await expect(page.locator('a[aria-label="Настройки"]')).toBeFocused();
 });
 test("Mobile has no horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -804,7 +842,11 @@ test("The new brand assets and bundled Cyrillic fonts are served locally", async
       .locator(".side-top .brand-logo-light")
       .evaluate((image) => (image as HTMLImageElement).naturalWidth > 0),
   ).toBe(true);
-  await page.locator("[data-theme-select]").selectOption("dark");
+  await expect(
+    page.locator('.topbar a[href="/settings/"] .icon path').nth(1),
+  ).toHaveAttribute("d", /M19\.4/);
+  await page.locator("[data-theme-trigger]").click();
+  await page.getByRole("menuitemradio", { name: "Тёмная" }).click();
   await expect(page.locator("[data-theme-color]")).toHaveAttribute(
     "content",
     "#000000",

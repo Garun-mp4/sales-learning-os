@@ -113,6 +113,11 @@ function toast(message) {
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => el.classList.remove("on"), 3500);
 }
+const themeLabels = {
+  system: "Системная",
+  light: "Светлая",
+  dark: "Тёмная",
+};
 function showTheme(pref) {
   let dark =
     pref === "dark" ||
@@ -126,8 +131,25 @@ function showTheme(pref) {
   document
     .querySelectorAll("[data-theme-select]")
     .forEach((e) => (e.value = pref));
+  document.querySelectorAll("[data-theme-picker]").forEach((picker) => {
+    const trigger = picker.querySelector("[data-theme-trigger]");
+    const label = themeLabels[pref] ?? themeLabels.system;
+    const labelElement = trigger?.querySelector("[data-theme-label]");
+    if (labelElement) labelElement.textContent = label;
+    trigger?.setAttribute("aria-label", `Цветовая тема: ${label}`);
+    picker.querySelectorAll("[data-theme-option]").forEach((option) => {
+      const selected = option.dataset.themeOption === pref;
+      option.setAttribute("aria-checked", String(selected));
+      option.tabIndex = selected ? 0 : -1;
+    });
+  });
 }
 const currentTheme = () => userStore.readTheme();
+function setThemePreference(pref) {
+  userStore.writeTheme(pref);
+  showTheme(pref);
+  toast("Тема изменена");
+}
 showTheme(currentTheme());
 window
   .matchMedia("(prefers-color-scheme: dark)")
@@ -136,11 +158,76 @@ window
   });
 document.querySelectorAll("[data-theme-select]").forEach((el) =>
   el.addEventListener("change", () => {
-    userStore.writeTheme(el.value);
-    showTheme(el.value);
-    toast("Тема изменена");
+    setThemePreference(el.value);
   }),
 );
+const themePicker = document.querySelector("[data-theme-picker]");
+if (themePicker) {
+  const themeTrigger = themePicker.querySelector("[data-theme-trigger]");
+  const themeOptions = [...themePicker.querySelectorAll("[data-theme-option]")];
+  const selectedThemeOption = () =>
+    themeOptions.find(
+      (option) => option.dataset.themeOption === currentTheme(),
+    ) || themeOptions[0];
+  const closeThemePicker = (restoreFocus = false) => {
+    themePicker.open = false;
+    themeTrigger?.setAttribute("aria-expanded", "false");
+    if (restoreFocus) themeTrigger?.focus();
+  };
+
+  themePicker.addEventListener("toggle", () => {
+    const isOpen = themePicker.open;
+    themeTrigger?.setAttribute("aria-expanded", String(isOpen));
+    if (isOpen) selectedThemeOption()?.focus({ preventScroll: true });
+  });
+  themePicker.addEventListener("keydown", (event) => {
+    const currentIndex = themeOptions.indexOf(event.target);
+    if (event.key === "Escape" && themePicker.open) {
+      event.preventDefault();
+      closeThemePicker(true);
+      return;
+    }
+    if (event.key === "Tab" && themePicker.open) {
+      closeThemePicker();
+      return;
+    }
+    if (
+      event.target === themeTrigger &&
+      (event.key === "ArrowDown" || event.key === "ArrowUp")
+    ) {
+      event.preventDefault();
+      themePicker.open = true;
+      themeTrigger?.setAttribute("aria-expanded", "true");
+      selectedThemeOption()?.focus({ preventScroll: true });
+      return;
+    }
+    if (currentIndex < 0) return;
+
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowDown") nextIndex = currentIndex + 1;
+    else if (event.key === "ArrowUp") nextIndex = currentIndex - 1;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = themeOptions.length - 1;
+    else return;
+
+    event.preventDefault();
+    themeOptions[
+      (nextIndex + themeOptions.length) % themeOptions.length
+    ].focus();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (themePicker.open && !themePicker.contains(event.target))
+      closeThemePicker();
+  });
+  themeOptions.forEach((option) =>
+    option.addEventListener("click", () => {
+      const pref = option.dataset.themeOption;
+      if (!pref) return;
+      if (pref !== currentTheme()) setThemePreference(pref);
+      closeThemePicker(true);
+    }),
+  );
+}
 const sideNavigation = document.querySelector("#side-navigation");
 const menuToggle = document.querySelector("[data-menu-toggle]");
 const drawerBackground = document.querySelector("[data-drawer-background]");

@@ -81,7 +81,14 @@ const currentSection = active ?? (
         <a class="brand-compact" href="/" aria-label="На главную Sales OS"><img class="brand-symbol brand-symbol-light" src="/assets/brand/mark-light.png" alt="" width="512" height="512"/><img class="brand-symbol brand-symbol-dark" src="/assets/brand/mark-dark.png" alt="" width="512" height="512"/><span>Sales OS</span></a>
         <span class="spacer"></span>
         <a class="toplink" href="/search/" aria-label="Поиск"><Icon name="search"/><span>Поиск</span><span class="search-shortcut">/</span></a>
-        <select class="theme-switch" data-theme-select aria-label="Цветовая тема"><option value="system">Системная</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select>
+        <details class="theme-picker" data-theme-picker>
+          <summary class="theme-picker-trigger" data-theme-trigger aria-haspopup="menu" aria-expanded="false" aria-controls="theme-menu" aria-label="Цветовая тема: Системная"><span data-theme-label>Системная</span><Icon name="chevron-down" size={14}/></summary>
+          <div class="theme-menu" id="theme-menu" role="menu" aria-label="Выбор цветовой темы">
+            <button class="theme-option" type="button" role="menuitemradio" aria-checked="true" tabindex="0" data-theme-option="system"><span>Системная</span><span class="theme-option-check"><Icon name="checkmark" size={14}/></span></button>
+            <button class="theme-option" type="button" role="menuitemradio" aria-checked="false" tabindex="-1" data-theme-option="light"><span>Светлая</span><span class="theme-option-check"><Icon name="checkmark" size={14}/></span></button>
+            <button class="theme-option" type="button" role="menuitemradio" aria-checked="false" tabindex="-1" data-theme-option="dark"><span>Тёмная</span><span class="theme-option-check"><Icon name="checkmark" size={14}/></span></button>
+          </div>
+        </details>
         <a class="iconbtn" href="/settings/" title="Настройки" aria-label="Настройки" aria-current={currentSection==='settings'?'page':undefined}><Icon name="settings"/></a>
       </header>
       <main id="main" tabindex="-1" class:list={['container',reading&&'reading-layout']}>
