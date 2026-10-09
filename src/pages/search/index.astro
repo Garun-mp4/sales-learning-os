@@ -1,4 +1,5 @@
 ---
+import {modules} from '../../lib/course';
 import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';
 ---
 <Shell title="Поиск" description="Ищите по урокам, практикам, итоговому проекту, справочникам и каталогу источников Sales OS." active="search"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <span aria-current="page">Поиск</span></nav>
@@ -7,10 +8,10 @@ import Shell from '../../layouts/Shell.astro';import PageHeading from '../../com
   <label class="small muted" for="search-input">Поисковый запрос</label>
   <input class="search-field" id="search-input" name="q" type="search" data-search-input autocomplete="off" placeholder="Например, возражения, SPIN, обмен ценностью"/>
   <div class="search-filters" aria-label="Фильтры результатов">
-    <label><span>Уровень</span><select class="status-select" data-search-level aria-label="Фильтр по уровню"><option value="">Любой</option><option value="required">Обязательный</option><option value="advanced">Продвинутый</option><option value="extra">Дополнительные материалы</option></select></label>
-    <label><span>Модуль</span><select class="status-select" data-search-module aria-label="Фильтр по модулю"><option value="">Все модули</option>{Array.from({length:22},(_,index)=>{const number=String(index+1).padStart(2,'0');return <option value={number}>{number} · Модуль {number}</option>})}<option value="extra">Без модуля</option></select></label>
+    <label><span>Категория изучения</span><select class="status-select" data-search-level aria-label="Фильтр по категории изучения"><option value="">Любой</option><option value="required">Обязательный</option><option value="advanced">Продвинутый</option><option value="extra">Дополнительные материалы</option></select></label>
+    <label><span>Модуль</span><select class="status-select" data-search-module aria-label="Фильтр по модулю"><option value="">Все модули</option>{modules.map(module=><option value={module.module}>{module.module} · {module.title}</option>)}<option value="extra">Без модуля</option></select></label>
     <label><span>Тип</span><select class="status-select" data-search-kind aria-label="Фильтр по типу материала"><option value="">Все типы</option><option value="theory">Теория</option><option value="practice">Практика</option><option value="module">Глава модуля</option><option value="final_project">Итоговый проект</option><option value="library">Справочник</option><option value="source">Источник</option></select></label>
   </div>
-  <label class="search-private"><input type="checkbox" data-search-private/><span><strong>Искать в моих заметках и закладках</strong><span>Только локально на этом устройстве. Поисковая фраза не добавляется в адрес страницы.</span></span></label>
+  <label class="search-private"><input type="checkbox" data-search-private/><span><strong>Искать в моих заметках, ответах и закладках</strong><span>Только локально на этом устройстве. Поисковая фраза не добавляется в адрес страницы.</span></span></label>
 </div>
-<div class="notice search-status" data-search-status role="status" aria-live="polite" aria-atomic="true" aria-busy="true">Загрузка поиска…</div><div class="stack search-results" data-search-results role="region" aria-label="Результаты поиска" aria-busy="true"></div></Shell>
+<div class="notice search-status" data-search-status role="status" aria-live="polite" aria-atomic="true" aria-busy="true">Загрузка поиска…</div><div class="stack search-results" data-search-results role="region" aria-label="Результаты поиска" aria-busy="true"></div><button class="btn" type="button" data-search-more hidden>Показать ещё</button></Shell>

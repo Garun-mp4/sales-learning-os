@@ -510,6 +510,18 @@ function updateProgress(idx) {
     el.textContent = statusLabels[value] || "Не начато";
     el.classList.toggle("ok", isDone(e));
   }
+  for (const link of document.querySelectorAll("[data-module-continue]")) {
+    const plan = coursePlan(idx).filter(
+      (entry) => entry.module === link.dataset.moduleContinue,
+    );
+    const next =
+      plan.find((entry) => statusOf(entry) === "in_progress") ||
+      plan.find((entry) => !isDone(entry));
+    link.href = next ? hrefForLearningEntry(next) : root + "final-project/";
+    link.textContent = next
+      ? "Продолжить модуль"
+      : "Перейти к итоговому проекту";
+  }
   updateLearningNextSteps(idx);
 }
 let latestHomeProgressRefresh = 0;
@@ -589,7 +601,9 @@ function bookmarkSync() {
   document.querySelectorAll("[data-bookmark]").forEach((el) => {
     const b = state.bookmarks.includes(el.dataset.bookmark);
     el.setAttribute("aria-pressed", String(b));
-    el.innerHTML = b ? "★ В закладках" : "☆ В закладки";
+    const label = el.querySelector("[data-bookmark-label]");
+    if (label) label.textContent = b ? "В закладках" : "В закладки";
+    else el.textContent = b ? "В закладках" : "В закладки";
   });
 }
 bookmarkSync();
@@ -868,6 +882,11 @@ function createNoteEditor(el) {
         }
       } else {
         el.value = record.text;
+        setNoteStatus(
+          { saveLabel },
+          record.text ? "Сохранено на этом устройстве" : "Изменений нет",
+          record.text ? "saved" : "idle",
+        );
       }
     })
     .catch(() => {
@@ -919,6 +938,21 @@ function hydratePracticeForm(form, draft = {}) {
       String(ratings[field.dataset.practiceReview]) === field.value;
   const nextStep = form.querySelector("[data-practice-next]");
   if (nextStep) nextStep.value = draft.nextStep || "";
+  updateCriteriaProgress(form);
+}
+function updateCriteriaProgress(form) {
+  const fields = [...form.querySelectorAll("[data-practice-answer]")];
+  const filled = fields.filter((field) => field.value.trim());
+  const workspace = form.closest(".practice-workspace");
+  const progress = workspace?.querySelector("[data-criteria-progress]");
+  if (progress)
+    progress.textContent = `Заполнено ${filled.length} из ${fields.length}`;
+  for (const field of fields) {
+    const link = workspace?.querySelector(
+      `.criterion-nav a[href="#criterion-${form.dataset.practiceForm}-${field.dataset.practiceAnswer}"]`,
+    );
+    if (link) link.dataset.filled = String(Boolean(field.value.trim()));
+  }
 }
 function createPracticeFormEditor(form) {
   const id = form.dataset.practiceForm;
@@ -1145,9 +1179,17 @@ function createPracticeFormEditor(form) {
     return saving;
   }
 
+  function showSaveError() {
+    status.textContent =
+      "Не удалось сохранить — ответ остался в форме. Попробуйте сохранить ещё раз или скачайте резервную копию.";
+    updateStorageWarning(
+      userStore.getMode(),
+      "Черновик не сохранён надёжно. Ответ остаётся в форме; скачайте резервную копию до выхода.",
+    );
+  }
   function scheduleSave() {
     clearTimeout(timer);
-    timer = setTimeout(() => void saveDraft(), 450);
+    timer = setTimeout(() => void saveDraft().catch(showSaveError), 450);
   }
 
   async function saveSeparateVersion() {
@@ -1197,6 +1239,7 @@ function createPracticeFormEditor(form) {
     ),
   );
   form.addEventListener("input", () => {
+    updateCriteriaProgress(form);
     dirty = true;
     editVersion++;
     status.textContent = "Несохранённые изменения — сохраняем черновик…";
@@ -1207,57 +1250,73 @@ function createPracticeFormEditor(form) {
     editVersion++;
     scheduleSave();
   });
+  let submitting = false;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!(await saveDraft())) return;
-    const snapshot = practiceDraftFromForm(form);
-    if (!Object.values(snapshot.answers).some((answer) => answer.trim())) {
-      status.textContent = "Сначала добавьте ответ хотя бы по одному критерию.";
-      form.querySelector("[data-practice-answer]")?.focus();
-      return;
-    }
-    const rubric = [...form.querySelectorAll("[data-practice-criterion]")].map(
-      (item) => ({
+    if (submitting) return;
+    submitting = true;
+    const buttons = document.querySelectorAll(
+      `[data-practice-save], [data-practice-save-top]`,
+    );
+    const submitButtons = [...buttons].filter((button) => button.form === form);
+    submitButtons.forEach((button) => (button.disabled = true));
+    try {
+      if (!(await saveDraft())) return;
+      const snapshot = practiceDraftFromForm(form);
+      if (!Object.values(snapshot.answers).some((answer) => answer.trim())) {
+        status.textContent =
+          "Сначала добавьте ответ хотя бы по одному критерию.";
+        form.querySelector("[data-practice-answer]")?.focus();
+        return;
+      }
+      const rubric = [
+        ...form.querySelectorAll("[data-practice-criterion]"),
+      ].map((item) => ({
         id: item.dataset.practiceCriterion,
         label: item.dataset.practiceLabel,
         description: item.dataset.practiceDescription,
-      }),
-    );
-    const attempt = {
-      id: createPracticeClientId(),
-      createdAt: Date.now(),
-      rubric,
-      ...snapshot,
-    };
-    const result = await userStore.updateState((current) => {
-      const history = current.practiceAttempts?.[id] || [];
-      const previous = history[history.length - 1];
-      const signature = (item) =>
-        JSON.stringify({
-          answers: item.answers,
-          selfReview: item.selfReview,
-          nextStep: item.nextStep || "",
-        });
-      if (previous && signature(previous) === signature(attempt))
-        return current;
-      return {
-        ...current,
-        practiceAttempts: {
-          ...current.practiceAttempts,
-          [id]: [...history, attempt],
-        },
+      }));
+      const attempt = {
+        id: createPracticeClientId(),
+        createdAt: Date.now(),
+        rubric,
+        ...snapshot,
       };
-    });
-    state = result.state;
-    renderHistory(state.practiceAttempts?.[id] || []);
-    status.textContent = result.durable
-      ? "Итерация сохранена в истории на этом устройстве"
-      : "Итерация доступна только во временной памяти";
-    if (!result.durable)
-      updateStorageWarning(
-        result.mode,
-        "История практики не сохранена надёжно. Скачайте резервную копию до выхода.",
-      );
+      const result = await userStore.updateState((current) => {
+        const history = current.practiceAttempts?.[id] || [];
+        const previous = history[history.length - 1];
+        const signature = (item) =>
+          JSON.stringify({
+            answers: item.answers,
+            selfReview: item.selfReview,
+            nextStep: item.nextStep || "",
+          });
+        if (previous && signature(previous) === signature(attempt))
+          return current;
+        return {
+          ...current,
+          practiceAttempts: {
+            ...current.practiceAttempts,
+            [id]: [...history, attempt],
+          },
+        };
+      });
+      state = result.state;
+      renderHistory(state.practiceAttempts?.[id] || []);
+      status.textContent = result.durable
+        ? "Итерация сохранена в истории на этом устройстве"
+        : "Итерация доступна только во временной памяти";
+      if (!result.durable)
+        updateStorageWarning(
+          result.mode,
+          "История практики не сохранена надёжно. Скачайте резервную копию до выхода.",
+        );
+    } catch {
+      showSaveError();
+    } finally {
+      submitting = false;
+      submitButtons.forEach((button) => (button.disabled = false));
+    }
   });
   const editor = {
     get dirty() {
@@ -1725,16 +1784,18 @@ function validateBackupState(obj, idx) {
   }
   return next;
 }
+function isWorkspaceId(id, idx) {
+  return (
+    id === "FINAL_PROJECT" ||
+    (Object.hasOwn(idx.entries, id) && idx.entries[id].kind === "practice")
+  );
+}
 function validatePracticeDrafts(raw, idx) {
   if (raw === undefined) return {};
   if (!isRecord(raw)) throw Error("Invalid practice drafts");
   const drafts = {};
   for (const [id, value] of Object.entries(raw)) {
-    if (
-      !Object.hasOwn(idx.entries, id) ||
-      idx.entries[id].kind !== "practice" ||
-      !isRecord(value)
-    )
+    if (!isWorkspaceId(id, idx) || !isRecord(value))
       throw Error("Invalid practice draft ID");
     const validateTextMap = (map) => {
       if (map === undefined) return {};
@@ -1811,11 +1872,7 @@ function validatePracticeAttempts(raw, idx) {
   let count = 0;
   let characters = 0;
   for (const [id, list] of Object.entries(raw)) {
-    if (
-      !Object.hasOwn(idx.entries, id) ||
-      idx.entries[id].kind !== "practice" ||
-      !Array.isArray(list)
-    )
+    if (!isWorkspaceId(id, idx) || !Array.isArray(list))
       throw Error("Invalid practice attempt ID");
     attempts[id] = list.map((attempt) => {
       if (
@@ -2208,12 +2265,58 @@ document
     document.querySelector("[data-restore-dialog]")?.close();
   });
 // Public search indexes are static and local; private notes never leave this browser.
+function searchExcerpt(body, query) {
+  const clean = String(body)
+    .replace(/[#*_`]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const term = query.trim().split(/\s+/)[0] || "";
+  const position = clean
+    .toLocaleLowerCase("ru")
+    .indexOf(term.toLocaleLowerCase("ru"));
+  let start = Math.max(0, position - 65);
+  if (start) {
+    const boundary = clean.indexOf(" ", start);
+    if (boundary >= 0) start = boundary + 1;
+  }
+  let end = Math.min(clean.length, start + 220);
+  if (end < clean.length) {
+    const boundary = clean.lastIndexOf(" ", end);
+    if (boundary > start) end = boundary;
+  }
+  return (
+    (start ? "…" : "") +
+    clean.slice(start, end) +
+    (end < clean.length ? "…" : "")
+  );
+}
+function highlightSearch(text, query) {
+  const terms = [...new Set(query.trim().split(/\s+/).filter(Boolean))];
+  if (!terms.length) return escapeHtml(text);
+  const expression = new RegExp(
+    terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+    "giu",
+  );
+  let cursor = 0,
+    html = "";
+  for (const match of text.matchAll(expression)) {
+    html +=
+      escapeHtml(text.slice(cursor, match.index)) +
+      "<mark>" +
+      escapeHtml(match[0]) +
+      "</mark>";
+    cursor = match.index + match[0].length;
+  }
+  return html + escapeHtml(text.slice(cursor));
+}
 const searchInput = document.querySelector("[data-search-input]");
 if (searchInput) {
   const params = new URLSearchParams(location.search);
   searchInput.value = params.get("q") || "";
   const resultRoot = document.querySelector("[data-search-results]");
   const searchStatus = document.querySelector("[data-search-status]");
+  const moreButton = document.querySelector("[data-search-more]");
+  let visibleLimit = 60;
   const levelFilter = document.querySelector("[data-search-level]");
   const moduleFilter = document.querySelector("[data-search-module]");
   const kindFilter = document.querySelector("[data-search-kind]");
@@ -2317,6 +2420,10 @@ if (searchInput) {
     const mine = ++serial;
     resultRoot.setAttribute("aria-busy", "true");
     searchStatus.setAttribute("aria-busy", "true");
+    if (moreButton) {
+      moreButton.hidden = true;
+      moreButton.disabled = true;
+    }
     const query = searchInput.value.trim(),
       text = normalized(query);
     // Search state stays in the page, not in a request URL or browser history.
@@ -2339,6 +2446,7 @@ if (searchInput) {
     let publicItems = [],
       publicCount = 0,
       privateItems = [],
+      privateCount = 0,
       privateError = false;
     if (pagefind) {
       try {
@@ -2347,7 +2455,7 @@ if (searchInput) {
         });
         publicCount = match.results.length;
         const hits = await Promise.all(
-          match.results.slice(0, 60).map((result) => result.data()),
+          match.results.slice(0, visibleLimit).map((result) => result.data()),
         );
         publicItems = hits
           .filter((item) => item.url?.startsWith("/"))
@@ -2409,8 +2517,8 @@ if (searchInput) {
         .sort((left, right) => right.score - left.score);
       publicCount = matches.length;
       publicItems = matches
-        .slice(0, 60)
-        .map((item) => ({ ...item, excerpt: item.text.slice(0, 180) }));
+        .slice(0, visibleLimit)
+        .map((item) => ({ ...item, excerpt: searchExcerpt(item.text, query) }));
     }
 
     if (includePrivate) {
@@ -2421,10 +2529,19 @@ if (searchInput) {
           userStore.getAllNotes(),
         ]);
         const notes = { ...savedNotes, ...userStore.getDrafts() };
+        const answers = Object.fromEntries(
+          Object.entries(savedState.practiceDrafts || {}).map(([id, draft]) => [
+            id,
+            [...Object.values(draft.answers || {}), draft.nextStep || ""].join(
+              "\n",
+            ),
+          ]),
+        );
         const entries = index.entries || {};
         const ids = new Set([
           ...savedState.bookmarks,
           ...Object.keys(notes).filter((id) => notes[id]?.trim()),
+          ...Object.keys(answers).filter((id) => answers[id]?.trim()),
         ]);
         const localRecords = [...ids]
           .map((id) => {
@@ -2447,7 +2564,9 @@ if (searchInput) {
                   "/" +
                   encodeURIComponent(id) +
                   "/",
-              note: notes[id] || "",
+              note: [notes[id] || "", answers[id] || ""]
+                .filter(Boolean)
+                .join("\n"),
               bookmarked: savedState.bookmarks.includes(id),
             };
           })
@@ -2467,11 +2586,11 @@ if (searchInput) {
           .map((item) => ({
             ...item,
             excerpt: item.note
-              ? item.note.slice(0, 180)
+              ? searchExcerpt(item.note, query)
               : "Сохранено в закладках на этом устройстве",
-          }))
-          .slice(0, 60);
-        privateItems = localRecords;
+          }));
+        privateCount = localRecords.length;
+        privateItems = localRecords.slice(0, visibleLimit);
       } catch {
         privateError = true;
       }
@@ -2502,7 +2621,7 @@ if (searchInput) {
             privateResults && item.bookmarked
               ? `${kindLabels[item.kind] || "Материал"} · закладка`
               : (kindLabels[item.kind] || "Материал") + module;
-          return `<a class="item" href="${escapeHtml(href)}">${id}<div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${escapeHtml(kind)} · ${escapeHtml(item.excerpt || "Материал курса")}</div></div><span class="ic-right">→</span></a>`;
+          return `<a class="item" href="${escapeHtml(href)}">${id}<div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${escapeHtml(kind)}</div><div class="search-excerpt">${highlightSearch(searchExcerpt(item.excerpt || "Материал курса", query), query)}</div></div><span class="ic-right">→</span></a>`;
         })
         .join("");
     const publicHtml = publicItems.length
@@ -2513,25 +2632,42 @@ if (searchInput) {
       : "";
     resultRoot.innerHTML = publicHtml + privateHtml;
     const publicSummary = publicCount
-      ? `Материалов: ${publicCount}${publicCount > 60 ? " (первые 60)" : ""}`
+      ? `Материалов: ${publicCount}. Показано: ${publicItems.length}.`
       : "Совпадений в материалах нет.";
     const privateSummary = includePrivate
       ? privateError
         ? " Не удалось прочитать личные записи; они не отправлялись в запрос."
-        : ` Личных совпадений: ${privateItems.length}${privateItems.length === 60 ? "+" : ""}.`
+        : ` Личных совпадений: ${privateCount}. Показано: ${privateItems.length}.`
       : "";
     searchStatus.textContent = `${publicSummary}${privateSummary}`;
+    if (moreButton) {
+      moreButton.hidden =
+        publicItems.length >= publicCount &&
+        privateItems.length >= privateCount;
+      moreButton.disabled = false;
+    }
     resultRoot.setAttribute("aria-busy", "false");
     searchStatus.setAttribute("aria-busy", "false");
   }
   searchInput.addEventListener("input", () => {
+    visibleLimit = 60;
     clearTimeout(lastTimer);
     lastTimer = setTimeout(search, 180);
   });
   filters.forEach((control) =>
-    control.addEventListener("change", () => void search()),
+    control.addEventListener("change", () => {
+      visibleLimit = 60;
+      void search();
+    }),
   );
-  privateToggle?.addEventListener("change", () => void search());
+  privateToggle?.addEventListener("change", () => {
+    visibleLimit = 60;
+    void search();
+  });
+  moreButton?.addEventListener("click", () => {
+    visibleLimit += 60;
+    void search();
+  });
   window.addEventListener("popstate", () => {
     const current = new URLSearchParams(location.search);
     searchInput.value = current.get("q") || "";
@@ -2547,13 +2683,15 @@ if (bookRoot) {
   const bookList = bookRoot.querySelector("[data-bookmark-list]");
   async function renderBookmarks() {
     bookRoot.setAttribute("aria-busy", "true");
+    bookStatus.hidden = false;
     bookStatus.textContent = "Загрузка закладок…";
     try {
       const idx = await getIndex();
       const es = state.bookmarks.map((id) => idx.entries[id]).filter(Boolean);
+      bookStatus.hidden = es.length === 0;
       bookStatus.textContent = es.length
         ? `Сохранено закладок: ${es.length}.`
-        : "Пока нет закладок.";
+        : "";
       bookList.innerHTML = es.length
         ? es
             .map(
@@ -2561,8 +2699,9 @@ if (bookRoot) {
                 `<a class="item" href="${root}${e.kind === "practice" ? "practice" : "lesson"}/${e.id}/"><span class="number">${e.id}</span><div class="itext"><div class="ititle">${escapeHtml(e.title)}</div></div><span class="ic-right">→</span></a>`,
             )
             .join("")
-        : `<div class="notice">Откройте <a href="${root}roadmap/">урок</a> или <a href="${root}practice/">задание</a> и сохраните его в закладки.</div>`;
+        : `<div class="empty-state"><h2 class="h2">Пока нет закладок</h2><p class="muted">Сохраните урок или задание, чтобы быстро вернуться к нему.</p><a class="btn primary" href="${root}roadmap/">Открыть программу</a></div>`;
     } catch {
+      bookStatus.hidden = true;
       bookStatus.textContent = "";
       bookList.innerHTML =
         '<div class="notice" role="alert">Не удалось загрузить закладки. Попробуйте ещё раз. <button class="btn smallbtn" type="button" data-bookmarks-retry>Повторить</button></div>';
@@ -3207,4 +3346,42 @@ if (templateLibrary) {
       }
     });
   }
+}
+
+// A single passive handler keeps both desktop and mobile contents in sync.
+const tocLinks = [...document.querySelectorAll(".toc a[href^='#']")];
+const tocTargets = [
+  ...new Set(
+    tocLinks
+      .map((link) =>
+        document.getElementById(decodeURIComponent(link.hash.slice(1))),
+      )
+      .filter(Boolean),
+  ),
+];
+if (tocTargets.length) {
+  let scheduled = false;
+  function updateToc() {
+    scheduled = false;
+    const current =
+      [...tocTargets]
+        .reverse()
+        .find((target) => target.getBoundingClientRect().top <= 120) ||
+      tocTargets[0];
+    for (const link of tocLinks) {
+      if (decodeURIComponent(link.hash.slice(1)) === current.id)
+        link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    }
+  }
+  function scheduleToc() {
+    if (!scheduled) {
+      scheduled = true;
+      requestAnimationFrame(updateToc);
+    }
+  }
+  window.addEventListener("scroll", scheduleToc, { passive: true });
+  window.addEventListener("resize", scheduleToc);
+  window.addEventListener("hashchange", scheduleToc);
+  updateToc();
 }

@@ -32,6 +32,7 @@ entries = manifest["entries"]
 search_index = []
 for entry in entries.values():
     raw = (CONTENT / entry["path"]).read_text(encoding="utf-8").split("---", 2)[2]
+    raw = re.sub(r"^## (?:\d+\. )?(?:Материалы для углубления|Источники для проверки[^\n]*|Рекомендуемые материалы)[\s\S]*?(?=^## |\Z)", "", raw, flags=re.M)
     text = re.sub(r"\[([^]]+)\]\([^)]*\)", r"\1", raw)
     route_kind = {"module": "module", "theory": "lesson", "practice": "practice"}[entry["kind"]]
     search_index.append(

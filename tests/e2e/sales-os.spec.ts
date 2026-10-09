@@ -170,7 +170,7 @@ test("Program moves from required lessons to practice and then to the next modul
     "/final-project/",
   );
   await page.goto("/lesson/01-012/");
-  await expect(page.locator(".pagehead")).toContainText("Продвинутый материал");
+  await expect(page.locator(".pagehead")).toContainText("Продвинутое изучение");
 });
 test("Course libraries are navigable, indexed in fallback search and copyable", async ({
   page,
@@ -203,12 +203,15 @@ test("Theme, progress and notes persist", async ({ page }) => {
   await page.goto("/lesson/01-001/");
   await page.locator("[data-theme-trigger]").click();
   await page.getByRole("menuitemradio", { name: "Тёмная" }).click();
-  await page.locator("[data-status-control]").selectOption("theory_completed");
+  await page
+    .locator("[data-status-control]")
+    .first()
+    .selectOption("theory_completed");
   await page.locator("textarea[data-note]").fill("Проверочная запись");
   await page.waitForTimeout(650);
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.locator("[data-status-control]")).toHaveValue(
+  await expect(page.locator("[data-status-control]").first()).toHaveValue(
     "theory_completed",
   );
   await expect(page.locator("textarea[data-note]")).toHaveValue(
@@ -242,7 +245,9 @@ test("Theme menu supports keyboard selection, Escape and Tab", async ({
   await expect(trigger).toHaveAttribute("aria-label", "Цветовая тема: Тёмная");
 
   await trigger.press("ArrowDown");
-  await expect(page.getByRole("menuitemradio", { name: "Тёмная" })).toBeFocused();
+  await expect(
+    page.getByRole("menuitemradio", { name: "Тёмная" }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
   await expect(trigger).toBeFocused();
@@ -600,10 +605,24 @@ test("Bookmarks distinguish a recoverable index error from an empty list", async
   expect(indexRequests).toBe(1);
   await alert.getByRole("button", { name: "Повторить" }).click();
   await expect(alert).toHaveCount(0);
-  await expect(bookmarks.locator("[data-bookmark-status]")).toHaveText(
-    "Пока нет закладок.",
+  await expect(bookmarks.locator(".empty-state h2")).toHaveText(
+    "Пока нет закладок",
   );
+  await expect(bookmarks.locator("[data-bookmark-status]")).toBeHidden();
+  await expect(
+    bookmarks.getByRole("link", { name: "Открыть программу" }),
+  ).toHaveAttribute("href", "/roadmap/");
   await expect(bookmarks.locator("[data-bookmark-list] a.item")).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator("[data-theme-trigger]").click();
+  await page
+    .getByRole("menuitemradio", { name: "Тёмная", exact: true })
+    .click();
+  await expect(page.locator("#toast")).not.toHaveClass(/on/);
+  await page.screenshot({
+    path: "docs/screenshots/visual-audit-2026-10-09/bookmarks-dark-1440.png",
+    animations: "disabled",
+  });
 });
 
 test("Two tabs merge independent progress and bookmark updates", async ({
@@ -615,8 +634,11 @@ test("Two tabs merge independent progress and bookmark updates", async ({
     second.goto("/practice/01-P01/"),
   ]);
   await Promise.all([
-    page.locator("[data-status-control]").selectOption("theory_completed"),
-    second.locator("[data-status-control]").selectOption("completed"),
+    page
+      .locator("[data-status-control]")
+      .first()
+      .selectOption("theory_completed"),
+    second.locator("[data-status-control]").first().selectOption("completed"),
   ]);
   await Promise.all([
     page.locator("[data-bookmark]").click(),
@@ -650,7 +672,7 @@ test("Two tabs merge independent progress and bookmark updates", async ({
   );
 
   await second.reload();
-  await expect(second.locator("[data-status-control]")).toHaveValue(
+  await expect(second.locator("[data-status-control]").first()).toHaveValue(
     "completed",
   );
   await expect(second.locator("[data-bookmark]")).toHaveAttribute(
@@ -744,7 +766,9 @@ test("A stale localStorage note cannot replace the newer IndexedDB record", asyn
   await expect(second.locator("textarea[data-note]")).toHaveValue(
     "Актуальная запись IndexedDB",
   );
-  await expect(second.locator("[data-status-control]")).toHaveValue("mastered");
+  await expect(second.locator("[data-status-control]").first()).toHaveValue(
+    "mastered",
+  );
 });
 
 test("An IndexedDB v1 text note is upgraded without losing its content", async ({
@@ -900,7 +924,10 @@ test("Blocked storage remains readable and makes the temporary-save limitation e
     "в этой вкладке",
   );
 
-  await page.locator("[data-status-control]").selectOption("theory_completed");
+  await page
+    .locator("[data-status-control]")
+    .first()
+    .selectOption("theory_completed");
   await expect(page.locator("#toast")).toContainText("временной памяти");
   await page.locator("textarea[data-note]").fill("Ответ для резервной копии");
   await expect(page.locator(".note-recovery")).toBeVisible();
@@ -1079,12 +1106,15 @@ test("A quota failure keeps progress temporary without changing the saved databa
     };
   });
 
-  await page.locator("[data-status-control]").selectOption("theory_completed");
+  await page
+    .locator("[data-status-control]")
+    .first()
+    .selectOption("theory_completed");
   await expect(page.locator("#toast")).toContainText("временной памяти");
   await expect(page.locator("#storage-warning")).toContainText(
     "не сохранён надёжно",
   );
-  await expect(page.locator("[data-status-control]")).toHaveValue(
+  await expect(page.locator("[data-status-control]").first()).toHaveValue(
     "theory_completed",
   );
 

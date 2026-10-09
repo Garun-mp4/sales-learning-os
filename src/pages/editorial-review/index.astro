@@ -22,7 +22,7 @@ const modulesWithContent = modules.map((module) => ({
   <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <a href="/library/">Справочники</a> › <span aria-current="page">Готовность материалов</span></nav>
   <PageHeading eyebrow="РЕДАКТОРСКАЯ ПРИЁМКА" title="Готовность материалов" description={`Проверяемая карта редакционного статуса ${all.length} основных материалов курса.`} />
   <section class="notice editorial-notice" aria-labelledby="editorial-status-title">
-    <div><strong id="editorial-status-title">Редакторский gate открыт</strong><p>{verifiedCount} из {all.length} документов имеют запись полной редакторской проверки; {pendingCount} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div>
+    <div><strong id="editorial-status-title">Редакторская проверка не завершена</strong><p>{verifiedCount} из {all.length} документов имеют запись полной редакторской проверки; {pendingCount} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div>
   </section>
   <div class="stat-grid editorial-summary" aria-label="Сводка редакционной проверки">
     <div class="stat"><div class="label">Документы с полной проверкой</div><div class="value">{verifiedCount} / {all.length}</div></div>

@@ -181,3 +181,8 @@
 - Vercel Preview для коммита `2da6af0602d96e31c4a6eb42cb2aa03f5f5e8a31` (deployment `sales-learning-99wdbp9v6-garun-s-projects.vercel.app`) достиг `READY`. Подключённый авторизованный браузер открыл 15 маршрутов, включая 4 личных раздела: все вернули страницу с ровно одним H1, description и без browser errors; публичные canonical/og:url совпадают с production origin и pathname, личные маршруты имеют `noindex, nofollow` и не содержат этих URL. API detail endpoints Vercel всё ещё отвечают 403, но для read-only browser smoke доступ к проекту достаточен; protection и production settings не менялись.
 - **Оставшиеся обязательные проверки M8:** `Get-Command NVDA` и стандартные папки установки не обнаружили доступный screen reader, поэтому NVDA speech не проверена; browser-native zoom 200% и увеличение системного текста также остаются открытыми. Автоматический reflow на 640 CSS px не заменяет эти проверки.
 - Независимый контентный gate остаётся **M5-CONTENT OPEN, 0/430** полных проверок. Production deployment не выполнялся.
+
+
+## Визуальный аудит — 2026-10-09
+
+V01–V20 реализованы и проверены. Актуальная трассировка изменений, команды проверки, совместимость данных и открытые границы приёмки: [отчёт о выполнении](VISUAL_AUDIT_IMPLEMENTATION_2026-10-09.md). Редакционный gate 0/430 и ручная проверка доступности остаются открытыми.

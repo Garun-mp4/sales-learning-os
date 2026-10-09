@@ -9,7 +9,7 @@ import PageHeading from '../../components/PageHeading.astro';
   <section class="review-queue" data-review-queue aria-busy="true" aria-live="polite">
     <div class="review-queue-group" data-review-due-group hidden><div class="section-head"><h2 class="h2">Пора вернуться</h2><span class="badge" data-review-due-count></span></div><div class="stack" data-review-due-list></div></div>
     <div class="review-queue-group" data-review-upcoming-group hidden><div class="section-head"><h2 class="h2">Запланировано позже</h2></div><div class="stack" data-review-upcoming-list></div></div>
-    <div class="notice" data-review-empty hidden>Очередь пока пуста. На уроке или задании выберите «Вернуться позже», когда захотите запланировать повторение.</div>
+    <div class="empty-state" data-review-empty hidden><h2 class="h2">Очередь пока пуста</h2><p class="muted">На уроке или задании выберите «Вернуться позже», чтобы запланировать повторение.</p><a class="btn primary" href="/roadmap/">Открыть программу</a></div>
     <p class="notice" data-review-error hidden role="status">Не удалось загрузить очередь. Проверьте локальное хранилище и обновите страницу.</p>
   </section>
 </Shell>

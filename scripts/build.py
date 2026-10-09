@@ -44,9 +44,25 @@ ICONS={
  'checkmark':'<path d="m5 12 4 4L19 6"/>',
 }
 def icon(name):return '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICONS.get(name,ICONS['arrow'])+'</svg>'
+def quantity(count,forms):
+ n=abs(count)%100
+ index=2 if 11<=n<=14 else 0 if n%10==1 else 1 if 2<=n%10<=4 else 2
+ return f'{count} {forms[index]}'
+
 def h(s):return html.escape(str(s),quote=True)
 def route(e):return f"{ {'module':'module','theory':'lesson','practice':'practice'}[e['kind']]}/{e['id']}/"
 def link(path,depth):return '../'*depth+path
+
+def annotate_table(table):
+ labels=[cell.get_text(' ',strip=True) for cell in table.select('thead th')]
+ table['role']='table'
+ for section in table.find_all(['thead','tbody'],recursive=False):
+  section['role']='rowgroup'
+  for row in section.find_all('tr',recursive=False):
+   row['role']='row'
+   for index,cell in enumerate(row.find_all(['td','th'],recursive=False)):
+    cell['role']='columnheader' if cell.name=='th' else 'cell'
+    cell['data-label']=labels[index] if index<len(labels) else ''
 
 def md_html(e,depth):
  path=CONTENT/e['path'];raw=path.read_text(encoding='utf-8');body=raw.split('---',2)[2].strip()
@@ -79,7 +95,9 @@ def md_html(e,depth):
     if candidate:a['href']=link(route(candidate),depth)+('#'+anchor if anchor else '')
     else:a['href']=link('sources/',depth)
   elif href.startswith(('javascript:','data:')):a['href']='#'
- for t in soup.select('table'):t.wrap(soup.new_tag('div',attrs={'class':'table-wrap','role':'group','tabindex':'0','aria-label':'Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.'}))
+ for t in soup.select('table'):
+  annotate_table(t)
+  t.wrap(soup.new_tag('div',attrs={'class':'table-wrap','role':'group','tabindex':'0','aria-label':'Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.'}))
  return str(soup),toc
 
 def slugify(value):
@@ -129,13 +147,19 @@ def render_module(e):
  g=collections.OrderedDict()
  for topic in theory:g.setdefault(topic['group'],[]).append(topic)
  stage=e['stage'];txt=breadcrumb([('Roadmap','roadmap/'),(next(s['title'] for s in STAGES if s['id']==stage),f'level/{stage}/'),(e['title'],None)],depth)
- txt+=header(f'МОДУЛЬ {mod} · УРОВЕНЬ {stage}',e['title'],e.get('description',''),f'<div class="row wrap">{editorial_badge()}<span class="badge">{len(theory)} тем</span><span class="badge">{len(practice)} практик</span><span class="badge">{h(e.get("time",""))}</span></div>')
+ txt+=header(f'МОДУЛЬ {mod} · УРОВЕНЬ {stage}',e['title'],e.get('description',''),f'<div class="row wrap">{editorial_badge()}<span class="badge">{quantity(len(theory),("тема","темы","тем"))}</span><span class="badge">{quantity(len(practice),("практика","практики","практик"))}</span><span class="badge">{h(e.get("time",""))}</span></div>')
  txt+=f'<div class="module-summary"><strong>Результат изучения</strong><p>{h(e.get("outcome", ""))}</p></div>'
+ txt+=f'<nav class="module-actions" aria-label="Действия модуля"><a class="btn primary" data-module-continue="{mod}" href="{link(route(theory[0]),depth)}">Начать модуль</a><a class="btn" href="#module-theory">Теория</a><a class="btn" href="#module-practice">Практика</a><a class="btn" href="#module-overview">Обзор</a></nav>'
  module_body,_=md_html(e,depth)
- txt+=f'<article class="article module-reading" data-pagefind-body data-search-id="{e["id"]}" data-search-level="{e["level"]}" data-search-module="{mod}" data-search-kind="module" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]">'+module_body+'</article>'
- txt+='<div class="section-head"><h2 class="h2">Теория</h2><span class="small muted">По порядку, от основ к практике</span></div>'
+ chapter=BeautifulSoup(module_body,'html.parser')
+ for node in list(chapter.contents):
+  if getattr(node,'name',None)=='h2':break
+  node.extract()
+ module_body=str(chapter)
+ txt+=f'<article id="module-overview" class="article module-reading prose" data-pagefind-body data-search-id="{e["id"]}" data-search-level="{e["level"]}" data-search-module="{mod}" data-search-kind="module" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]">'+module_body+'</article>'
+ txt+='<div class="section-head"><h2 class="h2" id="module-theory">Теория</h2><span class="small muted">По порядку, от основ к практике</span></div>'
  for k,items in g.items():txt+=f'<section class="module-section"><h2>{h(k)} <span class="badge">{len(items)}</span></h2><div class="stack">'+''.join(list_item(x,depth) for x in items)+'</div></section>'
- txt+='<div class="section-head"><h2 class="h2">Практика</h2><span class="small muted">Применить знания</span></div><div class="stack">'+''.join(list_item(x,depth) for x in practice)+'</div>'
+ txt+='<div class="section-head"><h2 class="h2" id="module-practice">Практика</h2><span class="small muted">Применить знания</span></div><div class="stack">'+''.join(list_item(x,depth) for x in practice)+'</div>'
  txt+=f'<div class="editbox"><strong>Заметки по модулю</strong><p class="hint">Выводы и собственные наблюдения. Сохраняются только в браузере.</p><textarea data-note="{mod}-MODULE" aria-label="Заметки к модулю" placeholder="Что узнал и что попробовал на своих проектах..."></textarea><div class="hint" data-save-hint>Локальное сохранение</div></div>'
  return page_shell(txt,e['title'],depth,'',e)
 
@@ -161,6 +185,9 @@ def sources_chips(e,depth):
  return '<div class="source-chips">'+''.join(f'<a class="badge" href="{link("source/"+sid+"/",depth)}">{h(sid)} · источник</a>' for sid in e['sources'] if any(s['id']==sid for s in SOURCES))+'</div>'
 
 def practice_rubric(e):
+ if e['id']=='FINAL_PROJECT':
+  raw=(CONTENT/'FINAL_PROJECT.md').read_text(encoding='utf-8')
+  return [(f'criterion-{index}',label,description) for index,(label,description) in enumerate(re.findall(r'^\d+\. \*\*(.+?):\*\* (.+)$',raw,re.M),1)]
  raw=(CONTENT/e['path']).read_text(encoding='utf-8').split('---',2)[2]
  lines=raw.splitlines();start=next((i for i,line in enumerate(lines) if re.match(r'^##\s+Рубрика проверки(?:\s|$)',line.strip(),re.I)),None)
  if start is None:return []
@@ -186,8 +213,8 @@ def practice_workspace(e):
  fields=[]
  for index,(criterion,label,description) in enumerate(criteria,1):
   options=''.join(f'<label class="review-choice"><input type="radio" name="review-{e["id"]}-{criterion}" value="{value}" data-practice-review="{criterion}"/><span>{text}</span></label>' for value,text in enumerate(('Пока не выполнено','Частично','Выполнено по условию')))
-  fields.append(f'<fieldset class="practice-criterion" data-practice-criterion="{criterion}" data-practice-label="{h(label)}" data-practice-description="{h(description)}"><legend><span class="criterion-number">{index:02}</span>{h(label)}</legend><p>{h(description)}</p><label for="answer-{e["id"]}-{criterion}">Мой ответ</label><textarea id="answer-{e["id"]}-{criterion}" data-practice-answer="{criterion}" rows="3" maxlength="10000" placeholder="Запишите наблюдаемый результат, основания и оставшиеся вопросы…"></textarea><fieldset class="self-review" aria-label="Самопроверка: {h(label)}"><legend>Самопроверка по критерию</legend>{options}</fieldset></fieldset>')
- return f'<section class="practice-workspace" aria-labelledby="practice-workspace-{e["id"]}"><div class="section-head"><div><span class="eyebrow">ЛИЧНАЯ ПРАКТИКА</span><h2 class="h2" id="practice-workspace-{e["id"]}">Ответ и следующая итерация</h2></div></div><p class="muted">Ответьте по критериям самого задания. Черновик хранится только в этом браузере; в каждой итерации сохраняется снимок ответа и самооценки.</p><form data-practice-form="{e["id"]}" data-practice-title="{h(e["title"])}">'+''.join(fields)+f'<label for="next-step-{e["id"]}">Что проверить или улучшить в следующей итерации?</label><textarea id="next-step-{e["id"]}" data-practice-next rows="3" maxlength="10000" placeholder="Один конкретный следующий шаг…"></textarea><div class="practice-form-actions"><button class="btn primary" type="submit" data-practice-save>Сохранить итерацию</button><span data-practice-draft-status role="status" aria-live="polite">Черновик загрузится из этого браузера</span></div></form><section class="practice-draft-versions" data-practice-versions hidden aria-labelledby="draft-versions-{e["id"]}"><h3 id="draft-versions-{e["id"]}">Другие черновики из объединённых копий</h3><div data-practice-versions-list></div></section><section class="practice-history" aria-labelledby="practice-history-{e["id"]}"><div class="section-head"><h3 class="h2" id="practice-history-{e["id"]}">История итераций</h3><span class="small muted" data-practice-history-count>0 сохранено</span></div><div data-practice-history-list><p class="muted">Сохранённых итераций пока нет.</p></div></section></section>'
+  fields.append(f'<fieldset class="practice-criterion" id="criterion-{e["id"]}-{criterion}" data-practice-criterion="{criterion}" data-practice-label="{h(label)}" data-practice-description="{h(description)}"><legend><span class="criterion-number">{index:02}</span>{h(label)}</legend><p>{h(description)}</p><label for="answer-{e["id"]}-{criterion}">Мой ответ</label><textarea id="answer-{e["id"]}-{criterion}" data-practice-answer="{criterion}" rows="3" maxlength="10000" placeholder="Запишите наблюдаемый результат, основания и оставшиеся вопросы…"></textarea><fieldset class="self-review" aria-label="Самопроверка: {h(label)}"><legend>Самопроверка по критерию</legend>{options}</fieldset></fieldset>')
+ return f'<section class="practice-workspace" id="workspace-{e["id"]}" aria-labelledby="practice-workspace-{e["id"]}"><div class="section-head"><div><span class="eyebrow">ЛИЧНАЯ ПРАКТИКА</span><h2 class="h2" id="practice-workspace-{e["id"]}">Ответ и следующая итерация</h2></div></div><p class="muted">Ответьте по критериям самого задания. Черновик хранится только в этом браузере; в каждой итерации сохраняется снимок ответа и самооценки.</p><nav class="criterion-nav" aria-label="Критерии ответа">{''.join(f'<a href="#criterion-{e["id"]}-{criterion}" title="{h(label)}">{index}. {h(label)}</a>' for index,(criterion,label,description) in enumerate(criteria,1))}</nav><p class="small muted" data-criteria-progress role="status" aria-live="polite">Заполнено 0 из {len(criteria)}</p><p><button class="btn" type="submit" form="form-{e["id"]}" data-practice-save-top>Сохранить итерацию</button> <a class="btn" href="#history-{e["id"]}">История итераций</a></p><form id="form-{e["id"]}" data-practice-form="{e["id"]}" data-practice-title="{h(e["title"])}">'+''.join(fields)+f'<label for="next-step-{e["id"]}">Что проверить или улучшить в следующей итерации?</label><textarea id="next-step-{e["id"]}" data-practice-next rows="3" maxlength="10000" placeholder="Один конкретный следующий шаг…"></textarea><div class="practice-form-actions"><button class="btn primary" type="submit" data-practice-save>Сохранить итерацию</button><span data-practice-draft-status role="status" aria-live="polite">Загрузка черновика…</span></div></form><section class="practice-draft-versions" data-practice-versions hidden aria-labelledby="draft-versions-{e["id"]}"><h3 id="draft-versions-{e["id"]}">Другие черновики из объединённых копий</h3><div data-practice-versions-list></div></section><section class="practice-history" id="history-{e["id"]}" aria-labelledby="practice-history-{e["id"]}"><div class="section-head"><h3 class="h2" id="practice-history-{e["id"]}">История итераций</h3><span class="small muted" data-practice-history-count>0 сохранено</span></div><div data-practice-history-list><p class="muted">Сохранённых итераций пока нет.</p></div></section></section>'
 
 def render_document(e):
  depth=2;kind=e['kind'];isprac=kind=='practice';mod=ENTRIES[e['module']+'-MODULE'];mark,toc=md_html(e,depth)
@@ -196,7 +223,10 @@ def render_document(e):
  text=breadcrumb([('Roadmap','roadmap/'),(f'Модуль {e["module"]}',route(mod)),(e['id'],None)],depth)
  text+=header(f'{"ПРАКТИКА" if isprac else "УЧЕБНЫЙ МАТЕРИАЛ"} · {e["id"]}',e['title'],'',f'<div class="row wrap">{editorial_badge()}<span class="badge">{h(e["group"])}</span><span class="badge">{"Продвинутый" if e["level"]=="advanced" else "Обязательный"} материал</span></div>')
  options=('<option value="not_started">Не начато</option><option value="in_progress">В процессе</option>'+('<option value="self_reviewed">Самопроверка выполнена</option><option value="completed">Выполнено (самоотметка)</option>' if isprac else '<option value="theory_completed">Теория изучена</option><option value="mastered">Навык освоен (самооценка)</option>'))
- text+=f'<div class="reading-controls"><label class="small muted" for="status">Мой статус</label><select class="status-select" id="status" data-status-control="{e["id"]}" data-kind="{kind}">{options}</select><button type="button" class="btn smallbtn" data-bookmark="{e["id"]}" aria-pressed="false">☆ В закладки</button><a class="btn smallbtn" href="{link(route(mod),depth)}">К модулю</a><details class="revisit-schedule"><summary class="btn smallbtn">Вернуться позже</summary><div class="revisit-popover"><label for="revisit-delay-{e["id"]}">Показать снова</label><select id="revisit-delay-{e["id"]}" data-revisit-delay="{e["id"]}"><option value="1">Завтра</option><option value="3">Через 3 дня</option><option value="7">Через неделю</option></select><button type="button" class="btn smallbtn" data-revisit-add="{e["id"]}" data-revisit-title="{h(e["title"])}">Добавить в очередь</button><p class="small muted" data-revisit-status="{e["id"]}" role="status" aria-live="polite"></p></div></details></div>'
+ text+=f'<div class="reading-controls"><label class="small muted" for="status">Мой статус</label><select class="status-select" id="status" data-status-control="{e["id"]}" data-kind="{kind}">{options}</select><button type="button" class="btn smallbtn" data-bookmark="{e["id"]}" aria-pressed="false">{icon("star")}<span data-bookmark-label>В закладки</span></button><a class="btn smallbtn" href="{link(route(mod),depth)}">К модулю</a><details class="revisit-schedule"><summary class="btn smallbtn">Вернуться позже</summary><div class="revisit-popover"><label for="revisit-delay-{e["id"]}">Показать снова</label><select id="revisit-delay-{e["id"]}" data-revisit-delay="{e["id"]}"><option value="1">Завтра</option><option value="3">Через 3 дня</option><option value="7">Через неделю</option></select><button type="button" class="btn smallbtn" data-revisit-add="{e["id"]}" data-revisit-title="{h(e["title"])}">Добавить в очередь</button><p class="small muted" data-revisit-status="{e["id"]}" role="status" aria-live="polite"></p></div></details></div>'
+ if isprac:
+  toc.extend([('Мой ответ',f'workspace-{e["id"]}','h2'),('История итераций',f'history-{e["id"]}','h2')])
+  text+=f'<a class="btn primary" href="#workspace-{e["id"]}">Перейти к ответу</a>'
  if toc:
   text+='<details class="toc-disclosure"><summary>Содержание материала<span aria-hidden="true">⌄</span></summary><nav class="toc" aria-label="Содержание материала">'
   text+=''.join(f'<a class="depth{3 if node=="h3" else 2}" href="#{h(slug)}">{h(label)}</a>' for label,slug,node in toc)
@@ -207,7 +237,8 @@ def render_document(e):
  else:
   text+='<div class="notice">Практическое задание оценивается самостоятельно. Отметка «Выполнено» не является независимой проверкой работы.</div>'
   text+=practice_workspace(e)
- text+=f'<div class="editbox"><strong>{notes_title}</strong><p class="hint">Текст хранится локально на этом устройстве. Не размещайте персональные данные клиентов без разрешения.</p><textarea data-note="{e["id"]}" aria-label="{notes_title}" placeholder="Напишите свои выводы, ответ или ссылку на рабочий документ..."></textarea><div class="hint" data-save-hint>Сохранение на устройстве</div></div>'
+ text+=f'<div class="editbox"><strong>{notes_title}</strong><p class="hint">Текст хранится локально на этом устройстве. Не размещайте персональные данные клиентов без разрешения.</p><textarea data-note="{e["id"]}" aria-label="{notes_title}" placeholder="Напишите свои выводы, ответ или ссылку на рабочий документ..."></textarea><div class="hint" data-save-hint>Загрузка заметки…</div></div>'
+ text+=f'<div class="reading-completion"><label for="status-bottom">Мой статус</label><select class="status-select" id="status-bottom" data-status-control="{e["id"]}" data-kind="{kind}">{options}</select></div>'
  text+='<nav class="navprevnext" aria-label="Соседние материалы">'
  for item,name in ((prev,'← Предыдущий материал'),(nextdoc,'Следующий материал →')):
   if item:text+=f'<a href="{link(route(item),depth)}">{name}<strong>{h(item["title"])}</strong></a>'
@@ -233,13 +264,14 @@ def render_library(identifier):
   if url.startswith(('http://','https://')):anchor['rel']='noopener noreferrer';anchor['target']='_blank'
   elif url.startswith(('javascript:','data:')):anchor['href']='#'
  for table in soup.select('table'):
+  annotate_table(table)
   table.wrap(soup.new_tag('div',attrs={'class':'table-wrap','role':'group','tabindex':'0','aria-label':'Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.'}))
  depth=2
  crumb=breadcrumb([('Обзор',''),('Справочники','library/'),(title,None)],depth)
  text=crumb+header('СПРАВОЧНЫЙ МАТЕРИАЛ · РЕДАКЦИОННЫЙ ЧЕРНОВИК',title,description)
  copy=' data-template-copy=""' if identifier=='templates' else ''
- text+=f'<article class="article library-content" data-pagefind-body data-search-id="{identifier}" data-search-level="extra" data-search-module="extra" data-search-kind="library" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]"{copy}>{soup}</article><a class="btn" href="{link("library/",depth)}">← Ко всем справочникам</a>'
- return page_shell(text,title,depth,'library')
+ text+=f'<article class="article library-content prose" data-library-id="{identifier}" data-pagefind-body data-search-id="{identifier}" data-search-level="extra" data-search-module="extra" data-search-kind="library" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]"{copy}>{soup}</article><a class="btn" href="{link("library/",depth)}">← Ко всем справочникам</a>'
+ return page_shell(f'<div data-library-id="{identifier}">{text}</div>',title,depth,'library')
 
 def render_editorial_review():
  ledger=json.loads((CONTENT/'editorial-review-ledger.json').read_text(encoding='utf-8'))
@@ -248,7 +280,7 @@ def render_editorial_review():
  pending=sum(entry['status']!='verified' for entry in ENTRIES.values());verified=len(ENTRIES)-pending
  text=breadcrumb([('Обзор',''),('Справочники','library/'),('Готовность материалов',None)],1)
  text+=header('РЕДАКТОРСКАЯ ПРИЁМКА','Готовность материалов',f'Проверяемая карта редакционного статуса {len(ENTRIES)} основных материалов курса.')
- text+=f'<section class="notice editorial-notice" aria-labelledby="editorial-status-title"><div><strong id="editorial-status-title">Редакторский gate открыт</strong><p>{verified} из {len(ENTRIES)} документов имеют запись полной редакторской проверки; {pending} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div></section>'
+ text+=f'<section class="notice editorial-notice" aria-labelledby="editorial-status-title"><div><strong id="editorial-status-title">Редакторская проверка не завершена</strong><p>{verified} из {len(ENTRIES)} документов имеют запись полной редакторской проверки; {pending} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div></section>'
  text+=f'<div class="stat-grid editorial-summary" aria-label="Сводка редакционной проверки"><div class="stat"><div class="label">Документы с полной проверкой</div><div class="value">{verified} / {len(ENTRIES)}</div></div><div class="stat"><div class="label">Ожидают рецензента</div><div class="value">{pending}</div></div><div class="stat"><div class="label">Записи проверки тезисов</div><div class="value">{len(ledger["records"])}</div></div></div>'
  text+='<p class="muted editorial-scope">Указанные в карточке материала источники — исходные рекомендации, а не доказательство того, что каждый тезис сверен. Проверка фиксируется отдельно для конкретного тезиса, источника, даты, охвата и ответственного рецензента. Правовые и платформенные правила требуют профильной проверки на указанную дату.</p>'
  source_ids={source['id'] for source in SOURCES}
@@ -300,6 +332,7 @@ def build_pages(output_dir=DEFAULT_OUT):
  st=f'<div class="eyebrow">ПЕРСОНАЛЬНАЯ СИСТЕМА ОБУЧЕНИЯ</div><h1 class="h1">Продажи. От понимания — к практике.</h1><p class="intro">Структурированная база знаний для работы с клиентами через переписку: 22 модуля, теория, упражнения и реальные проекты. Изучайте по порядку и сохраняйте свой прогресс.</p>'
  st+='<div class="stat-grid"><div class="stat"><div class="label">Пройдено теории</div><div class="value" data-global-theory>0 / 336</div><div class="label">336 уроков</div></div><div class="stat"><div class="label">Практика</div><div class="value" data-global-practice>0 / 72</div><div class="label">72 задания</div></div><div class="stat"><div class="label">Общий прогресс</div><div class="value" data-global-pct>0%</div><div class="progress" role="progressbar" aria-label="Общий прогресс обучения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0%" data-global-progress><span data-global-fill></span></div></div></div>'
  st+='<section class="next-steps" aria-label="Следующие шаги обучения"><div class="dash-hero return-step" data-return-card hidden><div class="eyebrow">ПОСЛЕДНИЙ ОТКРЫТЫЙ МАТЕРИАЛ</div><h2 data-return-title>Ваш последний материал</h2><p>Вернитесь туда, где вы остановились.</p><a data-return class="btn" href="lesson/01-001/">Вернуться к материалу →</a></div><div class="dash-hero program-step"><div class="eyebrow">ПРОГРАММА · ПО ПОРЯДКУ</div><h2 data-program-title>Начните с основ продаж</h2><p data-program-description>Сначала разберите обязательные темы, затем закрепите их практикой. Продвинутые материалы доступны в любой момент.</p><a data-continue class="btn primary" href="lesson/01-001/">Начать программу →</a></div></section>'
+ stats=BeautifulSoup(st,'html.parser');counter=stats.select_one('.stat-grid');counter.extract();stats.select_one('.next-steps').insert_after(counter);st=str(stats)
  pending=sum(e['status']!='verified' for e in ENTRIES.values())
  st+=f'<section class="home-resources" aria-label="Справочные материалы"><a href="library/">Глоссарий, кейсы и шаблоны <span>Открыть справочники →</span></a><a href="editorial-review/">Готовность материалов <span>{pending} документов ожидают рецензента →</span></a></section>'
  st+='<div class="section-head"><h2 class="h2">Ваш путь обучения</h2><a href="roadmap/" class="small muted">Все 22 модуля →</a></div>'
@@ -323,12 +356,12 @@ def build_pages(output_dir=DEFAULT_OUT):
  practice=sorted([e for e in ENTRIES.values() if e['kind']=='practice'],key=lambda e:e['id'])
  text=breadcrumb([('Обзор',''),('Практика',None)],1)+header('ПРИМЕНЕНИЕ ЗНАНИЙ','Практические задания','72 упражнения, связанные с реальными задачами продаж сайтов и IT-услуг. Результаты сохраняются локально.')
  text+='<section class="notice project-callout" aria-labelledby="practice-project-title"><h2 id="practice-project-title">Сквозной итоговый проект</h2><p>Соберите путь от выбора ниши и исследования клиентов до оффера, переговоров и ретроспективы. Если реальной сделки пока нет, проект можно пройти как учебную симуляцию.</p><a class="btn smallbtn" href="../final-project/">Открыть итоговый проект →</a></section>'
- text+='<div class="filter-row"><label><span class="small muted">Модуль </span><select data-filter="module"><option value="">Все модули</option>'+''.join(f'<option value="{e["module"]}">{e["module"]} · {h(e["title"])}</option>' for e in ENTRIES.values() if e['kind']=='module')+'</select></label><label><span class="small muted">Уровень </span><select data-filter="level"><option value="">Любой</option><option value="required">Обязательные</option><option value="advanced">Продвинутые</option></select></label><span class="badge" role="status" aria-live="polite">Показано <span data-filter-count>72</span> из 72 заданий</span></div><div class="notice" data-filter-empty hidden>По выбранным фильтрам заданий нет. <button class="btn smallbtn" type="button" data-filter-reset>Сбросить фильтры</button></div><div class="stack">'
+ text+='<div class="filter-row"><label><span class="small muted">Модуль </span><select data-filter="module"><option value="">Все модули</option>'+''.join(f'<option value="{e["module"]}">{e["module"]} · {h(e["title"])}</option>' for e in ENTRIES.values() if e['kind']=='module')+'</select></label><label><span class="small muted">Категория изучения </span><select data-filter="level"><option value="">Любой</option><option value="required">Обязательные</option><option value="advanced">Продвинутые</option></select></label><span class="badge" role="status" aria-live="polite">Показано <span data-filter-count>72</span> из 72 заданий</span></div><div class="notice" data-filter-empty hidden>По выбранным фильтрам заданий нет. <button class="btn smallbtn" type="button" data-filter-reset>Сбросить фильтры</button></div><div class="stack">'
  text+=''.join(f'<div data-filter-item data-mod="{e["module"]}" data-level="{e["level"]}">{list_item(e,1)}</div>' for e in practice)+'</div>'
  save('practice/index.html',page_shell(text,'Практика',1,'practice'))
  # Sources
  kinds={'BOOKS':'Книги','VIDEOS':'Видео','COURSES':'Курсы','STUDIES':'Исследования','GUIDES_AND_LAWS':'Справочники и правила'}
- text=breadcrumb([('Обзор',''),('Источники',None)],1)+header('БИБЛИОТЕКА','Источники знаний','Книги, исследования, открытые курсы и видео. Ссылки предоставлены из исходной Markdown-базы; независимая редакционная проверка каждого материала не завершена.')
+ text=breadcrumb([('Обзор',''),('Источники',None)],1)+header('БИБЛИОТЕКА','Источники знаний','Книги, исследования, открытые курсы и видео. Ссылки предоставлены из каталога курса; независимая редакционная проверка каждого материала не завершена.')
  for typ,label in kinds.items():
   items=[s for s in SOURCES if s['type']==typ]
   if not items:continue
@@ -339,8 +372,8 @@ def build_pages(output_dir=DEFAULT_OUT):
  save('sources/index.html',page_shell(text,'Источники',1,'sources'))
  for s in SOURCES:
   text=breadcrumb([('Источники','sources/'),(s['id'],None)],2)+header('ИСТОЧНИК · '+s['id'],s['title'],s.get('author') or '')
-  text+='<div class="notice">Описание и ссылка перенесены из каталога Markdown. Полная самостоятельная проверка текста, видео или издания не заявляется.</div>'
-  text+=f'<article class="article source-content" data-pagefind-body data-search-id="{s["id"]}" data-search-level="extra" data-search-module="extra" data-search-kind="source" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]"><p class="small muted">{h(s.get("author", ""))} · {h(s.get("type", ""))}</p>'
+  text+='<div class="notice">Описание и ссылка перенесены из каталога курса. Полная самостоятельная проверка текста, видео или издания не заявляется.</div>'
+  text+=f'<article class="article source-content" data-pagefind-body data-search-id="{s["id"]}" data-search-level="extra" data-search-module="extra" data-search-kind="source" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]"><p class="small muted">{h(s.get("author", ""))} · {h(kinds.get(s.get("type", ""), "Источник"))}</p>'
   if s.get('description'):text+='<p class="intro">'+h(s['description'])+'</p>'
   text+='</article>'
   url=s.get('url')
@@ -364,7 +397,7 @@ def build_pages(output_dir=DEFAULT_OUT):
  for record in ledger['records']:reviews_by_document[record['documentId']].append(record)
  verified=len(ENTRIES)-pending
  text=breadcrumb([('Обзор',''),('Справочники','library/'),('Готовность материалов',None)],1)+header('РЕДАКТОРСКАЯ ПРИЁМКА','Готовность материалов',f'Проверяемая карта редакционного статуса {len(ENTRIES)} основных материалов курса.')
- text+=f'<section class="notice editorial-notice" aria-labelledby="editorial-status-title"><div><strong id="editorial-status-title">Редакторский gate открыт</strong><p>{verified} из {len(ENTRIES)} документов имеют запись полной редакторской проверки; {pending} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div></section>'
+ text+=f'<section class="notice editorial-notice" aria-labelledby="editorial-status-title"><div><strong id="editorial-status-title">Редакторская проверка не завершена</strong><p>{verified} из {len(ENTRIES)} документов имеют запись полной редакторской проверки; {pending} ожидают рецензента. Технические проверки не снимают статус черновика.</p></div></section>'
  text+=f'<div class="stat-grid editorial-summary" aria-label="Сводка редакционной проверки"><div class="stat"><div class="label">Документы с полной проверкой</div><div class="value">{verified} / {len(ENTRIES)}</div></div><div class="stat"><div class="label">Ожидают рецензента</div><div class="value">{pending}</div></div><div class="stat"><div class="label">Записи проверки тезисов</div><div class="value">{len(ledger["records"])}</div></div></div>'
  text+='<p class="muted editorial-scope">Указанные в карточке материала источники — исходные рекомендации, а не доказательство того, что каждый тезис сверен. Проверка фиксируется отдельно для конкретного тезиса, источника, даты, охвата и ответственного рецензента. Правовые и платформенные правила требуют профильной проверки на указанную дату.</p>'
  source_ids={source['id'] for source in SOURCES}
@@ -389,7 +422,7 @@ def build_pages(output_dir=DEFAULT_OUT):
  save('bookmarks/index.html',page_shell(text,'Закладки',1,'bookmarks'))
  # Search
  text=breadcrumb([('Обзор',''),('Поиск',None)],1)+header('ПОИСК ПО КУРСУ','Найти материал','Единый поиск по курсу, итоговому проекту, справочникам и карточкам источников.')
- text+='<div class="search-controls"><label class="small muted" for="search-input">Поисковый запрос</label><input class="search-field" id="search-input" name="q" type="search" data-search-input autocomplete="off" placeholder="Например, возражения, SPIN, обмен ценностью"/><div class="search-filters" aria-label="Фильтры результатов"><label><span>Уровень</span><select class="status-select" data-search-level aria-label="Фильтр по уровню"><option value="">Любой</option><option value="required">Обязательный</option><option value="advanced">Продвинутый</option><option value="extra">Дополнительные материалы</option></select></label><label><span>Модуль</span><select class="status-select" data-search-module aria-label="Фильтр по модулю"><option value="">Все модули</option>'+''.join(f'<option value="{number}">{number} · Модуль {number}</option>' for number in (f'{i:02}' for i in range(1,23)))+'<option value="extra">Без модуля</option></select></label><label><span>Тип</span><select class="status-select" data-search-kind aria-label="Фильтр по типу материала"><option value="">Все типы</option><option value="theory">Теория</option><option value="practice">Практика</option><option value="module">Глава модуля</option><option value="final_project">Итоговый проект</option><option value="library">Справочник</option><option value="source">Источник</option></select></label></div><label class="search-private"><input type="checkbox" data-search-private/><span><strong>Искать в моих заметках и закладках</strong><span>Только локально на этом устройстве. Поисковая фраза не добавляется в адрес страницы.</span></span></label></div><div class="notice search-status" data-search-status role="status" aria-live="polite" aria-atomic="true" aria-busy="true">Загрузка поиска…</div><div class="stack search-results" data-search-results role="region" aria-label="Результаты поиска" aria-busy="true"></div>'
+ text+='<div class="search-controls"><label class="small muted" for="search-input">Поисковый запрос</label><input class="search-field" id="search-input" name="q" type="search" data-search-input autocomplete="off" placeholder="Например, возражения, SPIN, обмен ценностью"/><div class="search-filters" aria-label="Фильтры результатов"><label><span>Категория изучения</span><select class="status-select" data-search-level aria-label="Фильтр по категории изучения"><option value="">Любой</option><option value="required">Обязательный</option><option value="advanced">Продвинутый</option><option value="extra">Дополнительные материалы</option></select></label><label><span>Модуль</span><select class="status-select" data-search-module aria-label="Фильтр по модулю"><option value="">Все модули</option>'+''.join(f'<option value="{m["module"]}">{m["module"]} · {h(m["title"])}</option>' for m in sorted((e for e in ENTRIES.values() if e["kind"]=="module"),key=lambda e:e["module"]))+'<option value="extra">Без модуля</option></select></label><label><span>Тип</span><select class="status-select" data-search-kind aria-label="Фильтр по типу материала"><option value="">Все типы</option><option value="theory">Теория</option><option value="practice">Практика</option><option value="module">Глава модуля</option><option value="final_project">Итоговый проект</option><option value="library">Справочник</option><option value="source">Источник</option></select></label></div><label class="search-private"><input type="checkbox" data-search-private/><span><strong>Искать в моих заметках, ответах и закладках</strong><span>Только локально на этом устройстве. Поисковая фраза не добавляется в адрес страницы.</span></span></label></div><div class="notice search-status" data-search-status role="status" aria-live="polite" aria-atomic="true" aria-busy="true">Загрузка поиска…</div><div class="stack search-results" data-search-results role="region" aria-label="Результаты поиска" aria-busy="true"></div><button class="btn" type="button" data-search-more hidden>Показать ещё</button>'
  save('search/index.html',page_shell(text,'Поиск',1,'search'))
  # Final project
  final_path=CONTENT/'FINAL_PROJECT.md'
@@ -397,12 +430,14 @@ def build_pages(output_dir=DEFAULT_OUT):
  markup=MarkdownIt('default',{'html':False}).enable('table').render(raw)
  soup=BeautifulSoup(markup,'html.parser')
  if soup.h1:soup.h1.decompose()
- for t in soup.select('table'):t.wrap(soup.new_tag('div',attrs={'class':'table-wrap','role':'group','tabindex':'0','aria-label':'Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.'}))
- text=breadcrumb([('Практика','practice/'),('Итоговый проект',None)],1)+header('СКВОЗНАЯ ПРАКТИКА','От первого клиента до сделки','Практический маршрут, объединяющий навыки из разных модулей. Если реальной сделки пока нет, пройдите его как учебную симуляцию.')+'<article class="article" data-pagefind-body data-search-id="FINAL_PROJECT" data-search-level="extra" data-search-module="extra" data-search-kind="final_project" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]">'+str(soup)+'</article><div class="editbox"><strong>Мой итоговый проект</strong><textarea data-note="FINAL_PROJECT" aria-label="Заметки итогового проекта" placeholder="Цели, результаты, ссылки на документы и выводы..."></textarea><p class="hint" data-save-hint>Данные остаются в браузере</p></div>'
+ for t in soup.select('table'):
+  annotate_table(t)
+  t.wrap(soup.new_tag('div',attrs={'class':'table-wrap','role':'group','tabindex':'0','aria-label':'Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.'}))
+ text=breadcrumb([('Практика','practice/'),('Итоговый проект',None)],1)+header('СКВОЗНАЯ ПРАКТИКА','От первого клиента до сделки','Практический маршрут, объединяющий навыки из разных модулей. Если реальной сделки пока нет, пройдите его как учебную симуляцию.')+'<a class="btn primary" href="#workspace-FINAL_PROJECT">Перейти к этапам проекта</a><article class="article prose" data-pagefind-body data-search-id="FINAL_PROJECT" data-search-level="extra" data-search-module="extra" data-search-kind="final_project" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]">'+str(soup)+'</article>'+practice_workspace({'id':'FINAL_PROJECT','title':'От первого клиента до сделки'})+'<div class="editbox"><strong>Мои прежние заметки и общий обзор проекта</strong><textarea data-note="FINAL_PROJECT" aria-label="Заметки итогового проекта" placeholder="Цели, результаты, ссылки на документы и выводы..."></textarea><p class="hint" data-save-hint>Данные остаются в браузере</p></div>'
  save('final-project/index.html',page_shell(text,'Итоговый проект',1,'practice'))
  # Review queue
  text=breadcrumb([('Обзор',''),('Очередь повтора',None)],1)+header('ВОЗВРАТ К МАТЕРИАЛАМ','Очередь повтора','Вы сами выбираете, когда вернуться. Перед открытием материала попробуйте сначала вспомнить основную мысль.')
- text+='<p class="notice">Без серий и баллов: запись остаётся в очереди, пока вы сами не отметите её просмотренной или не перенесёте.</p><section class="review-queue" data-review-queue aria-busy="true" aria-live="polite"><div class="review-queue-group" data-review-due-group hidden><div class="section-head"><h2 class="h2">Пора вернуться</h2><span class="badge" data-review-due-count></span></div><div class="stack" data-review-due-list></div></div><div class="review-queue-group" data-review-upcoming-group hidden><div class="section-head"><h2 class="h2">Запланировано позже</h2></div><div class="stack" data-review-upcoming-list></div></div><div class="notice" data-review-empty hidden>Очередь пока пуста. На уроке или задании выберите «Вернуться позже», когда захотите запланировать повторение.</div><p class="notice" data-review-error hidden role="status">Не удалось загрузить очередь. Проверьте локальное хранилище и обновите страницу.</p></section>'
+ text+='<p class="notice">Без серий и баллов: запись остаётся в очереди, пока вы сами не отметите её просмотренной или не перенесёте.</p><section class="review-queue" data-review-queue aria-busy="true" aria-live="polite"><div class="review-queue-group" data-review-due-group hidden><div class="section-head"><h2 class="h2">Пора вернуться</h2><span class="badge" data-review-due-count></span></div><div class="stack" data-review-due-list></div></div><div class="review-queue-group" data-review-upcoming-group hidden><div class="section-head"><h2 class="h2">Запланировано позже</h2></div><div class="stack" data-review-upcoming-list></div></div><div class="notice" data-review-empty hidden><h2 class="h2">Очередь пока пуста</h2><p>На уроке или задании выберите «Вернуться позже», чтобы запланировать повторение.</p><a class="btn primary" href="../roadmap/">Открыть программу</a></div><p class="notice" data-review-error hidden role="status">Не удалось загрузить очередь. Проверьте локальное хранилище и обновите страницу.</p></section>'
  save('review/index.html',page_shell(text,'Очередь повтора',1,'review',description='Просматривайте запланированные уроки, вспоминайте основную мысль и переносите дату повтора. Очередь хранится в этом браузере.'))
  # Settings
  text=breadcrumb([('Обзор',''),('Настройки',None)],1)+header('ПРИЛОЖЕНИЕ','Настройки и данные','Все ответы, заметки и прогресс хранятся локально. Регистрация и сервер не требуются.')
@@ -418,10 +453,12 @@ def build_pages(output_dir=DEFAULT_OUT):
  index=[]
  for e in ENTRIES.values():
   raw=(CONTENT/e['path']).read_text(encoding='utf-8').split('---',2)[2]
+  raw=re.sub(r'^## (?:\d+\. )?(?:Материалы для углубления|Источники для проверки[^\n]*|Рекомендуемые материалы)[\s\S]*?(?=^## |\Z)', '', raw, flags=re.M)
   text=re.sub(r'\[([^]]+)\]\([^)]*\)',r'\1',raw)
   index.append({'id':e['id'],'kind':e['kind'],'level':e['level'],'module':e['module'],'title':e['title'],'url':f'{route(e)}','text':text})
  for identifier,(title,_,_,filename) in LIBRARIES.items():
   raw=(CONTENT/filename).read_text(encoding='utf-8').split('---',2)[2]
+  raw=re.sub(r'^## (?:\d+\. )?(?:Материалы для углубления|Источники для проверки[^\n]*|Рекомендуемые материалы)[\s\S]*?(?=^## |\Z)', '', raw, flags=re.M)
   text=re.sub(r'\[([^]]+)\]\([^)]*\)',r'\1',raw)
   index.append({'id':identifier,'kind':'library','level':'extra','module':'extra','title':title,'url':f'library/{identifier}/','text':text})
  final_raw=(CONTENT/'FINAL_PROJECT.md').read_text(encoding='utf-8')

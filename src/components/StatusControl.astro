@@ -1,0 +1,12 @@
+---
+interface Props { id:string; kind:string; suffix?:string }
+const {id,kind,suffix='top'}=Astro.props;
+const controlId=`status-${id}-${suffix}`;
+---
+<div class="status-field">
+  <label class="small muted" for={controlId}>Мой статус</label>
+  <select id={controlId} class="status-select" data-status-control={id} data-kind={kind}>
+    <option value="not_started">Не начато</option><option value="in_progress">В процессе</option>
+    {kind==='practice'?<><option value="self_reviewed">Самопроверка выполнена</option><option value="completed">Выполнено (самооценка)</option></>:<><option value="theory_completed">Теория изучена</option><option value="mastered">Навык освоен (самооценка)</option></>}
+  </select>
+</div>

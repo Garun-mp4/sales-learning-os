@@ -1,4 +1,5 @@
 ---
+import {quantity} from '../lib/ui-copy';
 import { href,type Entry,ofModule } from '../lib/course';
 interface Props {entry:Entry}
 const {entry:e}=Astro.props;
@@ -7,5 +8,5 @@ const total=ofModule(e.module);
 <a class="card" href={href(e)}>
   <div class="card-n">МОДУЛЬ {e.module}</div><h3>{e.title}</h3><p>{e.description}</p>
   <div class="progress" role="progressbar" aria-label={`Прогресс модуля ${e.module}`} aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0%" data-module-progress={e.module}><span data-module-fill={e.module}></span></div>
-  <div class="card-bottom"><span>{total.filter(x=>x.kind==='theory').length} тем</span><span>·</span><span>{total.filter(x=>x.kind==='practice').length} практики</span><span class="spacer"></span><strong data-module-pct={e.module}>0%</strong></div>
+  <div class="card-bottom"><span>{quantity(total.filter(x=>x.kind==='theory').length,['тема','темы','тем'])}</span><span>·</span><span>{quantity(total.filter(x=>x.kind==='practice').length,['практика','практики','практик'])}</span><span class="spacer"></span><strong data-module-pct={e.module}>0%</strong></div>
 </a>

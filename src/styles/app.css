@@ -854,9 +854,11 @@ summary:focus-visible,
   gap: 9px;
 }
 .toc a {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
-  line-height: 1.4;
+  line-height: 1.5;
+  display: block;
+  padding-block: 4px;
   overflow-wrap: anywhere;
 }
 .toc a:hover {
@@ -868,7 +870,7 @@ summary:focus-visible,
 .article {
   font-size: 15px;
   line-height: 1.76;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .article h1 {
   display: none;
@@ -879,7 +881,6 @@ summary:focus-visible,
   line-height: 1.3;
   margin: 42px 0 16px;
   font-weight: 650;
-  scroll-margin-top: 88px;
 }
 .article h3 {
   font-size: 18px;
@@ -887,7 +888,6 @@ summary:focus-visible,
   letter-spacing: -0.02em;
   margin: 29px 0 12px;
   font-weight: 620;
-  scroll-margin-top: 88px;
 }
 .article p {
   margin: 0 0 19px;
@@ -945,7 +945,7 @@ summary:focus-visible,
 }
 .article table {
   border-collapse: collapse;
-  min-width: 520px;
+  min-width: 640px;
   width: 100%;
   font-size: 13px;
 }
@@ -958,6 +958,8 @@ summary:focus-visible,
 .article th {
   padding: 11px 12px;
   border-bottom: 1px solid var(--border);
+  overflow-wrap: normal;
+  min-width: 130px;
 }
 .article .table-wrap {
   width: 100%;
@@ -2325,5 +2327,180 @@ summary:focus-visible,
   }
   .review-choice {
     width: 100%;
+  }
+}
+
+/* Reading measure and task navigation share the existing Geist/monochrome tokens. */
+.prose {
+  max-width: 75ch;
+}
+.prose.library-content:has(table) {
+  max-width: 100%;
+}
+.status-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.status-field select {
+  max-width: 100%;
+}
+.module-actions,
+.criterion-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0 28px;
+}
+.criterion-nav a {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.criterion-nav a:hover,
+.toc a[aria-current="location"] {
+  color: var(--fg);
+  background: var(--bg2);
+}
+.criterion-nav a[data-filled="true"] {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+.reading-completion {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding-top: 24px;
+  margin-top: 32px;
+}
+.empty-state {
+  padding: 24px 0;
+}
+.empty-state p {
+  max-width: 65ch;
+}
+.practice-form-actions {
+  position: sticky;
+  bottom: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  z-index: 2;
+}
+[data-search-more] {
+  margin-top: 18px;
+}
+.search-excerpt {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.search-excerpt mark {
+  background: var(--bg3);
+  color: var(--fg);
+  font-weight: 600;
+}
+[data-bookmark][aria-pressed="true"] .icon {
+  fill: currentColor;
+}
+@media (max-width: 600px) {
+  .reader .article .table-wrap,
+  [data-library-id="glossary"] .article .table-wrap {
+    overflow: visible;
+  }
+  .reader .article table,
+  [data-library-id="glossary"] .article table {
+    min-width: 0;
+    display: block;
+  }
+  .reader .article thead,
+  [data-library-id="glossary"] .article thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .reader .article tbody,
+  [data-library-id="glossary"] .article tbody {
+    display: grid;
+    gap: 12px;
+  }
+  .reader .article tbody tr,
+  [data-library-id="glossary"] .article tbody tr {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .reader .article td,
+  [data-library-id="glossary"] .article td {
+    display: block;
+    min-width: 0;
+    border: 0;
+    padding: 6px 0;
+    font-size: 14px;
+    overflow-wrap: break-word;
+  }
+  .reader .article td:first-child,
+  [data-library-id="glossary"] .article td:first-child {
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .reader .article td:not(:first-child)::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .practice-workspace {
+    padding: 16px;
+  }
+  .practice-criterion {
+    padding: 12px;
+  }
+  .criterion-nav {
+    gap: 6px;
+  }
+  .criterion-nav a {
+    width: 100%;
+  }
+  .practice-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    bottom: 8px;
+  }
+  .practice-form-actions .btn {
+    width: 100%;
+  }
+  .article,
+  textarea,
+  .search-field,
+  .status-select,
+  .filter-row select {
+    font-size: 16px;
+  }
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stat:last-child {
+    grid-column: 1/-1;
+  }
+  .stat .value {
+    font-size: 26px;
+  }
+  .reading-completion {
+    align-items: stretch;
   }
 }

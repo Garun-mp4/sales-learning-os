@@ -38,3 +38,46 @@ assert.equal(
 console.log(
   "PASS: rendered Markdown tables are wrapped without changing document order",
 );
+
+const element = (tagName, children = [], properties = {}) => ({
+  type: "element",
+  tagName,
+  children,
+  properties,
+});
+const text = (value) => ({ type: "text", value });
+const header = element("th", [text("Что проверить")]);
+const cell = element("td", [text("Полное определение")]);
+const annotated = element("table", [
+  element("thead", [element("tr", [text("\n"), header])]),
+  element("tbody", [element("tr", [text("\n"), cell])]),
+]);
+const checks = element("li", [
+  element("input", [], { type: "checkbox", disabled: true }),
+  text("Ориентир освоения"),
+]);
+const reference = element("p", [text("Повторённая ссылка")]);
+const content = element("p", [text("Самостоятельное объяснение")]);
+const document = {
+  type: "root",
+  children: [
+    annotated,
+    checks,
+    element("h2", [text("Источники для проверки")]),
+    reference,
+    element("h2", [text("Следующий раздел")]),
+    content,
+  ],
+};
+rehypeWrapTables()(document);
+assert.equal(cell.properties["data-label"], "Что проверить");
+assert.equal(cell.properties.role, "cell");
+assert.equal(header.properties.role, "columnheader");
+assert.equal(annotated.properties.role, "table");
+assert.equal(checks.children.length, 1);
+assert.equal(checks.children[0].value, "Ориентир освоения");
+assert.equal(reference.properties["data-pagefind-ignore"], true);
+assert.equal(content.properties["data-pagefind-ignore"], undefined);
+console.log(
+  "PASS: table labels survive whitespace, checklist text remains and only reference sections leave the search index",
+);

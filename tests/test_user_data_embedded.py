@@ -58,7 +58,7 @@ def main():
       browser=launch_chromium(p)
       page=browser.new_page()
       load(page,'lesson/01-001')
-      page.locator('[data-status-control]').select_option('theory_completed')
+      page.locator('[data-status-control]').first.select_option('theory_completed')
       page.locator('[data-bookmark]').click()
       page.locator('[data-note]').fill('Мой ответ: первый пример')
       page.wait_for_timeout(800)
@@ -71,7 +71,7 @@ def main():
       page=browser.new_page()
       load(page,'lesson/01-001',persisted)
       page.wait_for_timeout(100)
-      assert page.locator('[data-status-control]').input_value()=='theory_completed'
+      assert page.locator('[data-status-control]').first.input_value()=='theory_completed'
       assert page.locator('[data-bookmark]').get_attribute('aria-pressed')=='true'
       assert page.locator('[data-note]').input_value()=='Мой ответ: первый пример'
       print('PASS: lesson status, bookmark and notes restored across HTML document loads')

@@ -1,4 +1,11 @@
-import { readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
 
@@ -18,6 +25,31 @@ async function writeAtomic(file, content) {
 }
 
 await writeAtomic(workerPath, await readFile("scripts/service-worker.js"));
+
+// Stable legacy URLs remain available; each new page references immutable bytes.
+const assetNames = new Map();
+await mkdir(path.join(root, "assets/versioned"), { recursive: true });
+for (const name of ["app.css", "app.js", "user-store.js"]) {
+  const content = await readFile(path.join(root, "assets", name));
+  const extension = path.extname(name);
+  const hash = createHash("sha256").update(content).digest("hex").slice(0, 16);
+  const versioned = `versioned/${name.slice(0, -extension.length)}.${hash}${extension}`;
+  await writeAtomic(path.join(root, "assets", versioned), content);
+  assetNames.set(name, versioned);
+}
+async function versionHtml(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) await versionHtml(file);
+    else if (entry.name.endsWith(".html")) {
+      let html = await readFile(file, "utf8");
+      for (const [name, versioned] of assetNames)
+        html = html.replaceAll(`assets/${name}"`, `assets/${versioned}"`);
+      await writeAtomic(file, html);
+    }
+  }
+}
+await versionHtml(root);
 
 const files = [];
 async function walk(directory) {

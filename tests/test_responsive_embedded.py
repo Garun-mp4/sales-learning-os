@@ -104,11 +104,15 @@ def main():
       page.set_viewport_size({'width':320,'height':900})
       render(page,'practice/01-P01')
       table=page.evaluate('''()=>{const table=document.querySelector('.article table');const wrapper=table?.parentElement;return {table:!!table,wrapped:wrapper?.classList.contains('table-wrap')||false,client:wrapper?.clientWidth||0,scroll:wrapper?.scrollWidth||0,overflow:getComputedStyle(wrapper||document.body).overflowX}}''')
-      assert table['table'] and table['wrapped'] and table['overflow']=='auto' and table['scroll']>table['client'],table
+      assert table['table'] and table['wrapped'] and table['scroll']<=table['client']+1,table
+      assert page.locator('.article td').first.evaluate('el=>el.getBoundingClientRect().width')>=200,'Mobile rubric must remain readable without sideways scrolling'
       wrapper=page.locator('.article .table-wrap').first
       assert wrapper.get_attribute('role')=='group' and wrapper.get_attribute('tabindex')=='0'
+      page.set_viewport_size({'width':768,'height':900})
       wrapper.focus()
       assert wrapper.evaluate('el=>document.activeElement===el'),'Wide tables must be keyboard-focusable'
+      assert wrapper.evaluate('el=>getComputedStyle(el).overflowX')=='auto'
+      page.set_viewport_size({'width':320,'height':900})
       render(page,'practice')
       row=page.locator('.entry-row').first
       layout=row.evaluate('''el=>{const box=s=>{const r=el.querySelector(s).getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,height:r.height}};return {title:box('.itext'),number:box('.number'),status:box('[data-topic-status]'),arrow:box('.ic-right')}}''')

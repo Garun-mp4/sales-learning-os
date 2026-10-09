@@ -43,16 +43,26 @@ async function useShortManifest(
         ) {
           const response = await nativeFetch(input, init);
           const original = await response.json();
+          const versionedAsset = (name: string, extension: string) => {
+            const resource = original.resources.find((item: { url: string }) =>
+              new RegExp(
+                `^assets/versioned/${name}\\.[a-f0-9]+\\.${extension}$`,
+              ).test(item.url),
+            );
+            return resource?.url || `assets/${name}.${extension}`;
+          };
           const resources = [
             "assets/offline-files.json",
-            "assets/app.css",
-            "assets/app.js",
-            "assets/user-store.js",
+            versionedAsset("app", "css"),
+            versionedAsset("app", "js"),
+            versionedAsset("user-store", "js"),
             "assets/client-index.json",
             "assets/search-index.json",
             "lesson/01-001/",
             "search/",
           ].map((resourceUrl) => ({ url: resourceUrl, bytes: 0 }));
+          if (mode.quotaPath === "assets/app.css")
+            mode.quotaPath = versionedAsset("app", "css");
           mode.manifestResourceCount = original.resources.length;
           localStorage.setItem(key, JSON.stringify(mode));
           return new Response(

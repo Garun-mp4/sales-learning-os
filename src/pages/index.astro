@@ -8,11 +8,11 @@ const editorialPending = all.filter(entry => entry.status !== 'verified').length
 <Shell title="Обзор" description="Изучайте продажи через 336 уроков, 72 практических задания, четыре уровня и сквозной итоговый проект." active="home">
   <div class="eyebrow">ПЕРСОНАЛЬНАЯ СИСТЕМА ОБУЧЕНИЯ</div><h1 class="h1">Продажи. От понимания — к практике.</h1>
   <p class="intro">Структурированная база знаний для работы с клиентами через переписку: 22 модуля, теория, упражнения и реальные проекты.</p>
-  <ProgressWidget />
   <section class="next-steps" aria-label="Следующие шаги обучения">
     <div class="dash-hero return-step" data-return-card hidden><div class="eyebrow">ПОСЛЕДНИЙ ОТКРЫТЫЙ МАТЕРИАЛ</div><h2 data-return-title>Ваш последний материал</h2><p>Вернитесь туда, где вы остановились.</p><a data-return class="btn" href="/lesson/01-001/">Вернуться к материалу →</a></div>
     <div class="dash-hero program-step"><div class="eyebrow">ПРОГРАММА · ПО ПОРЯДКУ</div><h2 data-program-title>Начните с основ продаж</h2><p data-program-description>Сначала разберите обязательные темы, затем закрепите их практикой. Продвинутые материалы доступны в любой момент.</p><a data-continue class="btn primary" href="/lesson/01-001/">Начать программу →</a></div>
   </section>
+  <ProgressWidget />
   <section class="home-resources" aria-label="Справочные материалы">
     <a href="/library/">Глоссарий, кейсы и шаблоны <span>Открыть справочники →</span></a>
     <a href="/editorial-review/">Готовность материалов <span>{editorialPending} документов ожидают рецензента →</span></a>
