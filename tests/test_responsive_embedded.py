@@ -30,7 +30,7 @@ def contrast(first,second):
 
 def render(page,route):
     html=(SITE/route/'index.html').read_text(encoding='utf-8')
-    html=re.sub(r'<link rel="stylesheet"[^>]*>','<style>'+CSS+'</style>',html)
+    html=re.sub(r'<link\b(?=[^>]*\brel=["\']stylesheet["\'])[^>]*>','<style>'+CSS+'</style>',html)
     html=re.sub(r'<script[^>]*\bsrc="[^"]+"[^>]*></script>','',html)
     page.set_content(html,wait_until='domcontentloaded')
 

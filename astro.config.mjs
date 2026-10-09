@@ -7,7 +7,7 @@ import remarkModuleReadingBody from "./src/lib/remark-module-reading-body.mjs";
 import rehypeWrapTables from "./src/lib/rehype-wrap-tables.mjs";
 export default defineConfig({
   output: "static",
-  site: process.env.SITE_URL || "http://localhost:4321", // set SITE_URL in production
+  site: process.env.SITE_URL || "https://sl-os.vercel.app",
   trailingSlash: "always",
   compressHTML: true,
   markdown: {

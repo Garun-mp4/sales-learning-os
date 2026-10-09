@@ -4,6 +4,7 @@ import argparse
 import json
 import pathlib
 import re
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
@@ -81,8 +82,25 @@ for path in html_files:
     if not robots or robots.get("content") != expected_robots:
         issues.append("Incorrect robots directive " + name)
     canonical = soup.select_one('link[rel="canonical"]')
-    if canonical and re.search(r"https?://(?:localhost|127\.0\.0\.1)(?::|/)", canonical.get("href", "")):
-        issues.append("Canonical URL points to a local development host " + name)
+    og_url = soup.select_one('meta[property="og:url"]')
+    route = "/" if name == "index.html" else "/" + name.removesuffix("index.html")
+    if private_utility:
+        if canonical or og_url:
+            issues.append("Private utility route must omit canonical and og:url " + name)
+    else:
+        if not canonical:
+            issues.append("Missing canonical URL " + name)
+        else:
+            canonical_href = canonical.get("href", "")
+            parsed_canonical = urlparse(canonical_href)
+            if parsed_canonical.scheme not in {"http", "https"} or not parsed_canonical.netloc:
+                issues.append("Canonical URL must be absolute " + name)
+            if re.search(r"(?:^|\.)(?:localhost|127\.0\.0\.1)(?::|$)", parsed_canonical.netloc):
+                issues.append("Canonical URL points to a local development host " + name)
+            if parsed_canonical.path != route:
+                issues.append(f"Canonical path mismatch in {name}: {parsed_canonical.path} != {route}")
+        if not og_url or (canonical and og_url.get("content") != canonical.get("href")):
+            issues.append("Open Graph URL must match the public canonical URL " + name)
     for anchor in soup.select("a[href]"):
         url = anchor.get("href", "")
         links += 1

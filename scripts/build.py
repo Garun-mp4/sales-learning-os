@@ -4,7 +4,7 @@ The full Markdown corpus is preserved as source and rendered into separate HTML 
 """
 from __future__ import annotations
 import collections, datetime, hashlib, html, json, os, pathlib, re, shutil, textwrap, unicodedata
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, urljoin
 import yaml
 from markdown_it import MarkdownIt
 from bs4 import BeautifulSoup
@@ -12,6 +12,7 @@ from jinja2 import Environment, BaseLoader, select_autoescape
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_OUT=ROOT/'dist-fallback';CONTENT=ROOT/'sales-knowledge-base';SOURCE=json.loads((ROOT/'src/generated/content-manifest.json').read_text(encoding='utf-8'))
+SITE_URL=os.environ.get('SITE_URL','https://sl-os.vercel.app').rstrip('/')
 ENTRIES=SOURCE['entries']; STAGES=SOURCE['stages']; SOURCES=SOURCE['sources']
 STAGE_GROUPS={s['id']:[] for s in STAGES}
 for k,e in ENTRIES.items():
@@ -281,6 +282,17 @@ def build_pages(output_dir=DEFAULT_OUT):
   if not source_dir.is_dir():raise FileNotFoundError(f'Required Sales OS {asset_dir} assets are missing: {source_dir}')
   shutil.copytree(source_dir,out/'assets'/asset_dir)
  def save(path,markup):
+  if path.endswith('.html') and path!='404.html':
+   route='/' if path=='index.html' else '/'+path[:-len('index.html')] if path.endswith('/index.html') else None
+   is_private=route is not None and any(route.startswith(f'/{section}/') for section in ('settings','bookmarks','review','search'))
+   if route is not None and not is_private:
+    canonical=urljoin(SITE_URL+'/',route.lstrip('/'))
+    soup=BeautifulSoup(markup,'html.parser')
+    if soup.head and not soup.head.select_one('link[rel="canonical"]'):
+     tag=soup.new_tag('link',rel='canonical',href=canonical);soup.head.append(tag)
+    if soup.head and not soup.head.select_one('meta[property="og:url"]'):
+     tag=soup.new_tag('meta',property='og:url',content=canonical);soup.head.append(tag)
+    markup=str(soup)
   full=out/path;full.parent.mkdir(parents=True,exist_ok=True);full.write_text(markup,encoding='utf-8')
  # Home
  st=f'<div class="eyebrow">ПЕРСОНАЛЬНАЯ СИСТЕМА ОБУЧЕНИЯ</div><h1 class="h1">Продажи. От понимания — к практике.</h1><p class="intro">Структурированная база знаний для работы с клиентами через переписку: 22 модуля, теория, упражнения и реальные проекты. Изучайте по порядку и сохраняйте свой прогресс.</p>'

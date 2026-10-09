@@ -16,7 +16,7 @@ SEARCH=json.loads((SITE/'assets/search-index.json').read_text(encoding='utf-8'))
 
 def load(page,route,seed=None,delayed_storage=False):
     html=(SITE/route/'index.html').read_text(encoding='utf-8')
-    html=re.sub(r'<link rel="stylesheet"[^>]*>', '<style>'+CSS+'</style>', html)
+    html=re.sub(r'<link\b(?=[^>]*\brel=["\']stylesheet["\'])[^>]*>', '<style>'+CSS+'</style>', html)
     html=re.sub(r'<script[^>]*\bsrc="[^"]+"[^>]*></script>', '', html)
     page.set_content(html,wait_until='domcontentloaded')
     page.evaluate('''(v)=>{

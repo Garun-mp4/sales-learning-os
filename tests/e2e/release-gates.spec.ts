@@ -127,6 +127,29 @@ test("Utility routes stay out of public indexing", async ({ page }) => {
   }
 });
 
+test("Public routes have production canonical and matching Open Graph URLs", async ({
+  page,
+}) => {
+  const siteUrl = process.env.SITE_URL || "https://sl-os.vercel.app";
+  for (const route of [
+    "/",
+    "/roadmap/",
+    "/lesson/01-001/",
+    "/final-project/",
+  ]) {
+    await page.goto(route);
+    const canonical = new URL(route, siteUrl).href;
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      canonical,
+    );
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      canonical,
+    );
+  }
+});
+
 test("Core routes reflow at 200 percent zoom equivalent without horizontal overflow", async ({
   page,
 }) => {
