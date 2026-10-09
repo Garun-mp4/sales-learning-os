@@ -11,6 +11,9 @@
 - Встроенная Chromium responsive suite прошла 175 репрезентативных представлений 35 маршрутов × 5 ширин, плюс 144 состояния всех 72 упражнений на 320/390 px; document-level overflow не выявлен. Таблицы остаются локально прокручиваемыми и имеют клавиатурно доступные области прокрутки.
 - Production build и browser smoke подтвердили загрузку локального шрифта, ассетов бренда, 481 статического маршрута и отсутствие pageerror на M5 screenshot matrix. `npm run check` завершился без ошибок и предупреждений; остались три существовавших deprecated hints `BeforeUnloadEvent.returnValue`.
 - M6 добавил production-preview matrix для `/search/` и `/settings/`: 2 страницы × 5 ширин × 2 темы = 20 кадров в [m6-search-offline/](screenshots/m6-search-offline/). Все размеры прошли проверку document-level overflow; отдельно просмотрены узкий mobile search/settings и широкий dark search/settings. Offline manager использует существующие control/border/surface tokens и явные ready/partial/quota/error states.
+- M7 добавил фактические production-preview снимки практики и очереди повтора: 2 маршрута × 5 ширин × 2 темы = 20 кадров в [m7-practice-data/](screenshots/m7-practice-data/). Структурированный редактор, self-review, конфликт черновиков и backup-центр сохраняют нейтральные поверхности, типографику и общие focus/control tokens.
+- M8 production preview сохранил 210 кадров: 21 representative route (15 маршрутов из исходной audit matrix и текущие справочные/editorial/review маршруты) × 5 ширин × 2 темы в [m8-release/](screenshots/m8-release/). Все маршруты дали HTTP 200, все кадры прошли проверку document-level overflow, browser pageerror не было; проверены home, roadmap, level, два модуля, два урока, две практики, источники, bookmarks, settings, final project, search, библиотеки и их разделы, editorial review и revisit queue.
+- Все 482 маршрута актуального manifest прошли production HTTP/H1 gate; 72 практики прошли отдельные responsive views при 320/390 px. Автоматизирован reflow на 640 CSS px как layout-эквивалент 200% от viewport 1280 px для home/practice/review/settings. Это не заявляется как проверка browser-native zoom.
 
 ### Сигналы детектора и исключения
 
@@ -18,9 +21,9 @@
 
 ### Остаётся проверить в M8
 
-- Ручной keyboard-only walkthrough и произношение интерфейса в NVDA на Windows.
-- Browser zoom до 200% и фактическое поведение при увеличенном системном тексте.
-- Повторный просмотр focus/hover/disabled/error/loading states и контраста компонентов по конкретным сценариям и обеим темам; существующая автоматическая проверка токенов не является полной WCAG-сертификацией.
-- Сквозной Vercel Preview smoke для финального commit. Ранее Vercel-интеграция возвращала 403; ограничения проекта не менялись.
+- Ручное чтение интерфейса NVDA на Windows: команда `Get-Command NVDA` и две стандартные папки установки не обнаружили доступный запуск. Автоматические role/name/focus и клавиатурные E2E проверки не заменяют реальную речь screen reader.
+- Browser-native zoom до 200% и фактическое поведение при увеличенном системном тексте. 640 CSS px reflow test — отдельная автоматическая проверка без заявления, что масштаб браузера был изменён.
+- Сквозной Vercel Preview smoke для финального commit; до push текущего итогового commit остаётся только ранее известный preview предыдущей версии.
+- Ни одна из автоматических проверок не является полной WCAG-сертификацией или проверкой сторонней лаборатории.
 
 Эти ручные и deployment-проверки — открытая часть release gate M8. Автоматические проверки и снимки страниц подтверждают только перечисленные размеры, маршруты и состояния и не заявляют независимую сертификацию WCAG.

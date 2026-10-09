@@ -151,3 +151,153 @@ test("Search and settings remain responsive in both themes", async ({
     }
   }
 });
+
+test("Practice editor and revisit queue stay readable across mobile, tablet and desktop", async ({
+  page,
+}) => {
+  const pagefind = await page.request.get("/pagefind/pagefind.js");
+  test.skip(
+    !pagefind.ok(),
+    "Responsive screenshots are captured from production builds",
+  );
+  const output = path.resolve("docs/screenshots/m7-practice-data");
+  await mkdir(output, { recursive: true });
+  await page.goto("/practice/01-P01/");
+  await page.evaluate(async () => {
+    await window.SalesOSUserStore.ready;
+    await window.SalesOSUserStore.updateState((current) => ({
+      ...current,
+      revisitQueue: {
+        ...current.revisitQueue,
+        "01-P01": {
+          entryId: "01-P01",
+          scheduledAt: Date.now(),
+          dueAt: Date.now() + 2 * 86400000,
+          prompt:
+            "Перед перечитыванием попробуйте вспомнить главное из задания.",
+          recallDraft: "",
+        },
+      },
+    }));
+  });
+  const widths = [320, 390, 768, 1024, 1440];
+  for (const route of ["practice/01-P01", "review"]) {
+    for (const theme of ["light", "dark"]) {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto(`/${route}/`);
+      await page.locator("[data-theme-select]").first().selectOption(theme);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      if (route === "review")
+        await expect(page.locator(".revisit-card")).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 900 });
+        const dimensions = await page.evaluate(() => ({
+          viewport: document.documentElement.clientWidth,
+          document: document.documentElement.scrollWidth,
+        }));
+        expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+        await page.screenshot({
+          path: path.join(
+            output,
+            `${route.replaceAll("/", "-")}-${theme}-${width}.png`,
+          ),
+          fullPage: true,
+          animations: "disabled",
+        });
+      }
+    }
+  }
+});
+
+test("All audited page families render across the release viewport and theme matrix", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const pagefind = await page.request.get("/pagefind/pagefind.js");
+  test.skip(!pagefind.ok(), "Screenshots are captured from production builds");
+
+  const output = path.resolve("docs/screenshots/m8-release");
+  await mkdir(output, { recursive: true });
+  const routes = [
+    ["home", "/"],
+    ["roadmap", "/roadmap/"],
+    ["level-2", "/level/2/"],
+    ["module-01", "/module/01-MODULE/"],
+    ["module-08", "/module/08-MODULE/"],
+    ["lesson-01", "/lesson/01-001/"],
+    ["lesson-14", "/lesson/14-003/"],
+    ["practice-index", "/practice/"],
+    ["practice-18", "/practice/18-P01/"],
+    ["sources", "/sources/"],
+    ["source-B01", "/source/B01/"],
+    ["bookmarks", "/bookmarks/"],
+    ["settings", "/settings/"],
+    ["final-project", "/final-project/"],
+    ["search", "/search/?q=возражения"],
+    ["library", "/library/"],
+    ["glossary", "/library/glossary/"],
+    ["cases", "/library/cases/"],
+    ["templates", "/library/templates/"],
+    ["editorial-review", "/editorial-review/"],
+    ["review", "/review/"],
+  ] as const;
+  const widths = [320, 390, 768, 1024, 1440];
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  for (const theme of ["light", "dark"]) {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/");
+    await page.locator("[data-theme-select]").first().selectOption(theme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.locator("#toast")).not.toHaveClass(/on/);
+    await page.evaluate(async () => {
+      await window.SalesOSUserStore.ready;
+      await window.SalesOSUserStore.replaceAll(
+        {
+          format: "sales-os-v3",
+          version: 3,
+          lessonStatuses: {},
+          practiceStatuses: {},
+          bookmarks: [],
+          practiceDrafts: {},
+          practiceAttempts: {},
+          revisitQueue: {},
+          revisitHistory: [],
+          noteMergeSources: {},
+          lastExport: null,
+          lastVisited: null,
+          legacyImported: false,
+        },
+        {},
+      );
+    });
+
+    for (const [name, route] of routes) {
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      const response = await page.goto(route);
+      expect(response?.status(), route).toBe(200);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await page.evaluate(() => document.fonts.ready);
+
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 900 });
+        const dimensions = await page.evaluate(() => ({
+          viewport: document.documentElement.clientWidth,
+          document: document.documentElement.scrollWidth,
+        }));
+        expect(
+          dimensions.document,
+          `${route} ${theme} ${width}px`,
+        ).toBeLessThanOrEqual(dimensions.viewport);
+        await page.screenshot({
+          path: path.join(output, `${name}-${theme}-${width}.png`),
+          fullPage: false,
+          animations: "disabled",
+        });
+      }
+    }
+  }
+  expect(pageErrors).toEqual([]);
+});

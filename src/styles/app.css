@@ -1866,3 +1866,353 @@ summary:focus-visible,
     max-width: 100%;
   }
 }
+
+/* M7: structured practice workspace, revisit queue and backup center. */
+.nav-count {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.revisit-schedule {
+  position: relative;
+}
+.revisit-schedule summary {
+  list-style: none;
+  cursor: pointer;
+}
+.revisit-schedule summary::-webkit-details-marker {
+  display: none;
+}
+.revisit-popover {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, calc(100vw - 40px));
+  padding: 14px;
+  display: grid;
+  gap: 9px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.revisit-popover select,
+.revisit-card select {
+  min-height: 44px;
+  padding: 7px 10px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+.revisit-popover p {
+  margin: 0;
+}
+.practice-workspace,
+.backup-center,
+.review-queue-group,
+.practice-history,
+.practice-draft-versions,
+.restore-points {
+  margin-block: 24px;
+  min-width: 0;
+}
+.practice-workspace {
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg2);
+}
+.practice-workspace > p {
+  max-width: 76ch;
+}
+.practice-workspace form {
+  display: grid;
+  gap: 14px;
+}
+.practice-workspace label,
+.practice-criterion > label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.practice-workspace textarea,
+.revisit-card textarea {
+  width: 100%;
+  min-height: 92px;
+  padding: 10px 12px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--strong);
+  border-radius: var(--radius-control);
+  resize: vertical;
+}
+.practice-criterion {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+}
+.practice-criterion > legend {
+  max-width: 100%;
+  padding: 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.practice-criterion > p {
+  margin: 6px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.criterion-number {
+  margin-right: 9px;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.self-review {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+}
+.self-review > legend {
+  width: 100%;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 550;
+}
+.review-choice {
+  min-height: 44px;
+  margin: 0 !important;
+  padding: 7px 10px;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg2);
+  cursor: pointer;
+  font-size: 12px !important;
+  font-weight: 450 !important;
+}
+.review-choice input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--fg);
+}
+.practice-form-actions,
+.data-dialog-actions,
+.revisit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.practice-form-actions [role="status"] {
+  color: var(--muted);
+  font-size: 12px;
+}
+.practice-conflict {
+  margin: 0;
+}
+.practice-conflict p {
+  margin-top: 0;
+}
+.practice-draft-versions,
+.restore-points,
+.practice-history {
+  padding-top: 18px;
+  border-top: 1px solid var(--border2);
+}
+.practice-draft-versions h3,
+.restore-points h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.draft-version,
+.restore-point {
+  min-width: 0;
+  padding: 10px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border2);
+}
+.practice-attempt {
+  margin: 8px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+}
+.practice-attempt summary {
+  min-height: 44px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 550;
+}
+.practice-attempt-content {
+  padding: 0 14px 14px;
+}
+.practice-attempt-content p {
+  overflow-wrap: anywhere;
+}
+.practice-attempt-content strong,
+.practice-attempt-content span {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.backup-center {
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg2);
+}
+.backup-center > .muted {
+  max-width: 78ch;
+}
+.backup-center .settings-row {
+  align-items: center;
+  gap: 16px;
+}
+.backup-last-export {
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.import-file {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.import-file input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.import-file:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.restore-points ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.review-queue {
+  margin-top: 24px;
+}
+.revisit-card {
+  min-width: 0;
+  padding: clamp(16px, 3vw, 22px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg2);
+}
+.revisit-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.revisit-title {
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.revisit-prompt {
+  margin: 12px 0;
+  max-width: 72ch;
+}
+.revisit-card label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.revisit-actions {
+  margin-top: 12px;
+}
+.data-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-width: 620px;
+  max-height: min(85dvh, 760px);
+  padding: 0;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+}
+.data-dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+.data-dialog-content {
+  max-height: min(85dvh, 760px);
+  padding: clamp(18px, 4vw, 28px);
+  overflow: auto;
+}
+.data-dialog h2 {
+  margin: 4px 0 12px;
+  font-size: clamp(20px, 3vw, 26px);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+.data-dialog ul {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+.import-choice {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border2);
+}
+.import-choice p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.data-dialog-actions {
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+@media (max-width: 768px) {
+  .practice-form-actions > .btn,
+  .backup-center .settings-row > button,
+  .backup-center .settings-row > label {
+    width: 100%;
+  }
+  .revisit-actions > .btn,
+  .revisit-actions > a,
+  .revisit-actions > select {
+    min-height: 44px;
+  }
+}
+@media (max-width: 520px) {
+  .data-dialog-actions > button {
+    width: 100%;
+  }
+  .review-choice {
+    width: 100%;
+  }
+}

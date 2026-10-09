@@ -18,7 +18,7 @@ const modulesWithContent = modules.map((module) => ({
 }));
 ---
 
-<Shell title="Готовность материалов" active="library">
+<Shell title="Готовность материалов" description={`Карта редакционного статуса ${all.length} материалов Sales OS с перечнем источников и документированных проверок.`} active="library">
   <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <a href="/library/">Справочники</a> › <span aria-current="page">Готовность материалов</span></nav>
   <PageHeading eyebrow="РЕДАКТОРСКАЯ ПРИЁМКА" title="Готовность материалов" description={`Проверяемая карта редакционного статуса ${all.length} основных материалов курса.`} />
   <section class="notice editorial-notice" aria-labelledby="editorial-status-title">

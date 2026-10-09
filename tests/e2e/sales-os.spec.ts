@@ -934,7 +934,10 @@ test("A quota failure during import aborts the entire replacement", async ({
       }),
     ),
   });
-  await expect(page.locator("#toast")).toContainText("Импорт не удался");
+  await page.locator("[data-import-replace]").click();
+  await expect(page.locator("#toast")).toContainText(
+    "Не удалось заменить данные",
+  );
   const state = await page.evaluate(async () =>
     window.SalesOSUserStore.getState(),
   );
@@ -996,6 +999,7 @@ test("Closing a tab during an active import preserves the previous database", as
       }),
     ),
   });
+  await page.locator("[data-import-replace]").click();
   await page.waitForFunction(() => window.__importStarted === true);
   await page.close({ runBeforeUnload: false });
 
@@ -1048,7 +1052,7 @@ test("A quota failure keeps progress temporary without changing the saved databa
     () =>
       new Promise<{ lessonStatuses: Record<string, string> }>(
         (resolve, reject) => {
-          const request = indexedDB.open("sales-os-personal", 2);
+          const request = indexedDB.open("sales-os-personal", 3);
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
             const transaction = request.result.transaction(
@@ -1065,4 +1069,347 @@ test("A quota failure keeps progress temporary without changing the saved databa
       ),
   );
   expect(persisted.lessonStatuses["01-001"]).toBeUndefined();
+});
+
+test("Structured practice drafts, rubric self-review and iteration history survive reload and export", async ({
+  page,
+}) => {
+  await page.goto("/practice/01-P01/");
+  const form = page.locator('[data-practice-form="01-P01"]');
+  await expect(form.locator("[data-practice-criterion]")).toHaveCount(5);
+  await form
+    .locator('[data-practice-answer="criterion-1"]')
+    .fill("Путь клиента от первого согласия до передачи результата.");
+  await form.locator('[data-practice-review="criterion-1"][value="2"]').check();
+  await form
+    .locator("[data-practice-next]")
+    .fill("Проверить неопределённые этапы по следующему диалогу.");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (await window.SalesOSUserStore.getState()).practiceDrafts["01-P01"]
+            ?.answers["criterion-1"],
+      ),
+    )
+    .toBe("Путь клиента от первого согласия до передачи результата.");
+  await page.reload();
+  await expect(
+    form.locator('[data-practice-answer="criterion-1"]'),
+  ).toHaveValue("Путь клиента от первого согласия до передачи результата.");
+  await expect(
+    form.locator('[data-practice-review="criterion-1"][value="2"]'),
+  ).toBeChecked();
+  await form.locator("[data-practice-save]").click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (await window.SalesOSUserStore.getState()).practiceAttempts["01-P01"]
+            ?.length || 0,
+      ),
+    )
+    .toBe(1);
+  await page.reload();
+  await expect(
+    page.locator("[data-practice-history-list] .practice-attempt"),
+  ).toHaveCount(1);
+
+  await page.goto("/settings/");
+  await page.evaluate(() => {
+    URL.createObjectURL = (blob) => {
+      window.__backupBlob = blob as Blob;
+      return "blob:m7-practice";
+    };
+    URL.revokeObjectURL = () => {};
+    HTMLAnchorElement.prototype.click = function () {
+      window.__downloadName = this.download;
+    };
+  });
+  await page.locator("[data-export]").click();
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__backupBlob)))
+    .toBe(true);
+  const backup = await page.evaluate(async () =>
+    JSON.parse(await window.__backupBlob!.text()),
+  );
+  expect(backup.format).toBe("sales-os-v3");
+  expect(backup.practiceDrafts["01-P01"].answers["criterion-1"]).toContain(
+    "Путь клиента",
+  );
+  expect(backup.practiceAttempts["01-P01"]).toHaveLength(1);
+  expect(page.locator("[data-backup-last-export]")).toContainText(
+    "Последний экспорт",
+  );
+});
+
+test("Revisit queue saves active recall locally, supports rescheduling and completion", async ({
+  page,
+}) => {
+  await page.goto("/lesson/01-001/");
+  await page.locator(".revisit-schedule summary").click();
+  await page.locator('[data-revisit-delay="01-001"]').selectOption("3");
+  await page.locator('[data-revisit-add="01-001"]').click();
+  await expect(page.locator('[data-revisit-status="01-001"]')).toContainText(
+    "Добавлено в очередь",
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (await window.SalesOSUserStore.getState()).revisitQueue["01-001"]
+            ?.dueAt || 0,
+      ),
+    )
+    .toBeGreaterThan(Date.now());
+
+  await page.goto("/review/");
+  const card = page.locator(".revisit-card");
+  await expect(card).toContainText("Обмен ценностью");
+  await card
+    .locator("textarea[data-recall-id]")
+    .fill("Ценность для клиента важнее описания технологии.");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (await window.SalesOSUserStore.getState()).revisitQueue["01-001"]
+            ?.recallDraft || "",
+      ),
+    )
+    .toContain("Ценность для клиента");
+  await card.locator("[data-review-delay]").selectOption("7");
+  await card.locator("[data-review-reschedule]").click();
+  await expect(page.locator("[data-review-upcoming-group]")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (await window.SalesOSUserStore.getState()).revisitQueue["01-001"]
+            ?.dueAt || 0,
+      ),
+    )
+    .toBeGreaterThan(Date.now() + 5 * 86400000);
+  await card.locator("[data-review-done]").click();
+  await expect(page.locator("[data-review-empty]")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (await window.SalesOSUserStore.getState()).revisitHistory.length,
+      ),
+    )
+    .toBe(1);
+  await page.reload();
+  await expect(page.locator("[data-review-empty]")).toBeVisible();
+});
+
+test("Concurrent practice edits preserve both draft versions", async ({
+  context,
+}) => {
+  const first = await context.newPage();
+  const second = await context.newPage();
+  await second.addInitScript(() => {
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    Object.defineProperty(window, "setTimeout", {
+      configurable: true,
+      value: (handler: TimerHandler, delay?: number, ...args: unknown[]) =>
+        Reflect.apply(nativeSetTimeout, window, [
+          handler,
+          delay === 450 ? 10000 : delay,
+          ...args,
+        ]),
+    });
+  });
+  await Promise.all([
+    first.goto("/practice/01-P01/"),
+    second.goto("/practice/01-P01/"),
+  ]);
+  const firstAnswer = first.locator('[data-practice-answer="criterion-1"]');
+  const secondAnswer = second.locator('[data-practice-answer="criterion-1"]');
+  await secondAnswer.fill("Черновик из второй вкладки");
+  await firstAnswer.fill("Черновик из первой вкладки");
+  await expect(first.locator("[data-practice-draft-status]")).toContainText(
+    "Черновик сохранён",
+  );
+  await expect(second.locator(".practice-conflict")).toBeVisible();
+  await second
+    .getByRole("button", { name: "Сохранить мой вариант отдельно" })
+    .click();
+  await expect(second.locator("[data-practice-draft-status]")).toHaveText(
+    "Оба черновика сохранены отдельно на этом устройстве",
+  );
+  const drafts = await second.evaluate(async () => {
+    const state = await window.SalesOSUserStore.getState();
+    return state.practiceDrafts["01-P01"];
+  });
+  expect(drafts.answers["criterion-1"]).toBe("Черновик из первой вкладки");
+  const versions = drafts.versions || [];
+  expect(versions).toHaveLength(1);
+  expect(versions[0].answers["criterion-1"]).toBe("Черновик из второй вкладки");
+  await first.close();
+  await second.close();
+});
+
+test("Backup preview merges without duplicate attempts or lost notes and restores replace", async ({
+  page,
+}) => {
+  await page.goto("/lesson/01-001/");
+  await page.evaluate(async () => {
+    await window.SalesOSUserStore.ready;
+    await window.SalesOSUserStore.replaceAll(
+      {
+        format: "sales-os-v3",
+        version: 3,
+        lessonStatuses: { "01-001": "theory_completed" },
+        practiceStatuses: {},
+        bookmarks: ["01-001"],
+        lastVisited: "01-001",
+        practiceDrafts: {},
+        practiceAttempts: {
+          "01-P01": [
+            {
+              id: "attempt-stable",
+              createdAt: 1000,
+              rubric: [
+                {
+                  id: "criterion-1",
+                  label: "Цель",
+                  description: "Проверить цель",
+                },
+                {
+                  id: "criterion-2",
+                  label: "Результат",
+                  description: "Проверить результат",
+                },
+                {
+                  id: "criterion-3",
+                  label: "Основания",
+                  description: "Проверить основания",
+                },
+              ],
+              answers: { "criterion-1": "Уникальная сохранённая итерация" },
+              selfReview: {},
+              nextStep: "",
+            },
+          ],
+        },
+        revisitQueue: {},
+        revisitHistory: [],
+      },
+      { "01-001": "Локальная заметка" },
+    );
+  });
+  await page.goto("/settings/");
+  const imported = {
+    format: "sales-os-v3",
+    version: 3,
+    lessonStatuses: { "02-001": "mastered" },
+    practiceStatuses: {},
+    bookmarks: ["02-001"],
+    lastVisited: "02-001",
+    practiceDrafts: {},
+    practiceAttempts: {
+      "01-P01": [
+        {
+          id: "attempt-stable",
+          createdAt: 1000,
+          rubric: [
+            { id: "criterion-1", label: "Цель", description: "Проверить цель" },
+            {
+              id: "criterion-2",
+              label: "Результат",
+              description: "Проверить результат",
+            },
+            {
+              id: "criterion-3",
+              label: "Основания",
+              description: "Проверить основания",
+            },
+          ],
+          answers: { "criterion-1": "Уникальная сохранённая итерация" },
+          selfReview: {},
+          nextStep: "",
+        },
+      ],
+    },
+    revisitQueue: {
+      "01-P01": {
+        entryId: "01-P01",
+        dueAt: Date.now() + 86400000,
+        scheduledAt: Date.now(),
+        prompt: "Вспомните главное",
+        recallDraft: "",
+      },
+    },
+    revisitHistory: [],
+    noteMergeSources: {},
+    notes: { "01-001": "Импортированная заметка" },
+  };
+  await page.locator("[data-import]").setInputFiles({
+    name: "merge.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(imported)),
+  });
+  await expect(page.locator("[data-import-dialog]")).toBeVisible();
+  await expect(page.locator("[data-import-preview]")).toContainText(
+    "Итерации ответов: 1",
+  );
+  await page.locator("[data-import-merge]").click();
+  await expect(page.locator("#toast")).toContainText("Данные объединены");
+  let merged = await page.evaluate(async () =>
+    window.SalesOSUserStore.getState(),
+  );
+  expect(merged.lessonStatuses).toMatchObject({
+    "01-001": "theory_completed",
+    "02-001": "mastered",
+  });
+  expect(merged.bookmarks).toEqual(
+    expect.arrayContaining(["01-001", "02-001"]),
+  );
+  expect(merged.practiceAttempts["01-P01"]).toHaveLength(1);
+  expect(
+    await page.evaluate(
+      async () => (await window.SalesOSUserStore.getNote("01-001")).record.text,
+    ),
+  ).toContain("Локальная заметка");
+  expect(
+    await page.evaluate(
+      async () => (await window.SalesOSUserStore.getNote("01-001")).record.text,
+    ),
+  ).toContain("Импортированная заметка");
+  await expect(
+    page.locator("[data-restore-points] [data-restore-id]"),
+  ).toHaveCount(2);
+
+  const replacement = {
+    format: "sales-os-v3",
+    version: 3,
+    lessonStatuses: {},
+    practiceStatuses: {},
+    bookmarks: [],
+    notes: {},
+  };
+  await page.locator("[data-import]").setInputFiles({
+    name: "replace.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(replacement)),
+  });
+  await page.locator("[data-import-replace]").click();
+  await expect(page.locator("#toast")).toContainText(
+    "Импорт заменил локальные данные",
+  );
+  merged = await page.evaluate(async () => window.SalesOSUserStore.getState());
+  expect(merged.lessonStatuses).toEqual({});
+  await page.locator("[data-restore-points] [data-restore-id]").first().click();
+  await page.locator("[data-restore-confirm]").click();
+  await expect(page.locator("#toast")).toContainText(
+    "Предыдущие данные восстановлены",
+  );
+  merged = await page.evaluate(async () => window.SalesOSUserStore.getState());
+  expect(merged.lessonStatuses).toMatchObject({
+    "01-001": "theory_completed",
+    "02-001": "mastered",
+  });
+  expect(merged.practiceAttempts["01-P01"]).toHaveLength(1);
 });

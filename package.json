@@ -15,10 +15,11 @@
     "build": "astro build --force && pagefind --site dist --output-subdir pagefind && node scripts/after-build.mjs",
     "preview": "astro preview",
     "check": "astro check",
-    "lint": "npm run prepare:content && node --check astro.config.mjs && node --check src/scripts/user-store.js && node --check src/scripts/app.js && node --check src/lib/remark-course-links.mjs && node --check src/lib/remark-module-reading-body.mjs && node --check src/lib/rehype-wrap-tables.mjs && node --check scripts/after-build.mjs && node tests/test_astro_source_integrity.mjs && node tests/test_module_body_plugin.mjs && prettier --check astro.config.mjs \"src/**/*.{css,js,ts,tsx}\" \"scripts/**/*.{js,mjs}\" \"tests/**/*.{js,mjs}\"",
+    "lint": "npm run prepare:content && node --check astro.config.mjs && node --check src/scripts/user-store.js && node --check src/scripts/app.js && node --check src/lib/remark-course-page-title.mjs && node --check src/lib/remark-course-links.mjs && node --check src/lib/remark-module-reading-body.mjs && node --check src/lib/rehype-wrap-tables.mjs && node --check scripts/after-build.mjs && node tests/test_astro_source_integrity.mjs && node tests/test_course_page_title_plugin.mjs && node tests/test_module_body_plugin.mjs && prettier --check astro.config.mjs \"src/**/*.{css,js,ts,tsx}\" \"scripts/**/*.{js,mjs}\" \"tests/**/*.{js,mjs}\"",
     "test": "python tests/test_static.py && python tests/test_browser_embedded.py && python tests/test_final_project_embedded.py",
     "test:e2e": "playwright test",
-    "test:preview": "playwright test tests/e2e/production-preview.spec.ts",
+    "test:preview": "playwright test tests/e2e/production-preview.spec.ts tests/e2e/release-gates.spec.ts",
+    "test:m7": "node tests/test_m7_practice.mjs",
     "test:static": "python tests/test_static.py",
     "build:fallback": "python scripts/audit.py && python scripts/build.py --out-dir dist-fallback",
     "precheck": "npm run prepare:content",
@@ -28,24 +29,18 @@
     "test:links": "node tests/test_remark_links.mjs",
     "test:embedded": "python tests/test_browser_embedded.py && python tests/test_user_data_embedded.py && python tests/test_responsive_embedded.py && python tests/test_final_project_embedded.py",
     "test:fallback": "npm run build:fallback && python tests/test_fallback.py",
-    "test:quality": "npm run prepare:brand && python -X warn_default_encoding -W error::EncodingWarning tests/test_brand_assets.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_m5_content.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_static.py && node tests/test_offline_worker.mjs && node tests/test_remark_links.mjs && node tests/test_markdown_tables.mjs && python -X warn_default_encoding -W error::EncodingWarning tests/test_browser_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_user_data_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_responsive_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_final_project_embedded.py && node tests/test_astro_source_integrity.mjs && node tests/test_module_body_plugin.mjs"
+    "test:quality": "npm run prepare:brand && python -X warn_default_encoding -W error::EncodingWarning tests/test_brand_assets.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_m5_content.py && node tests/test_m7_practice.mjs && python -X warn_default_encoding -W error::EncodingWarning tests/test_static.py && node tests/test_offline_worker.mjs && node tests/test_remark_links.mjs && node tests/test_markdown_tables.mjs && python -X warn_default_encoding -W error::EncodingWarning tests/test_browser_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_user_data_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_responsive_embedded.py && python -X warn_default_encoding -W error::EncodingWarning tests/test_final_project_embedded.py && node tests/test_astro_source_integrity.mjs && node tests/test_module_body_plugin.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.3.2",
-    "@astrojs/react": "7.0.1",
     "@tailwindcss/vite": "^4.0.0",
     "astro": "7.3.8",
-    "lucide-react": "^0.468.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.0"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
     "@playwright/test": "1.63.0",
     "@types/node": "^22.20.5",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "pagefind": "^1.3.0",
     "prettier": "^3.9.9",
     "typescript": "^5.5.0"

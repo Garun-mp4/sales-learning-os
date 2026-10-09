@@ -13,13 +13,22 @@ let contentIndex = null;
 let contentIndexPromise = null;
 let state = userStore.initialState;
 const noteEditors = new Map();
+const practiceEditors = new Map();
+let pendingImport = null;
+let pendingRestore = null;
 function defaultState() {
   return {
-    format: "sales-os-v2",
-    version: 2,
+    format: "sales-os-v3",
+    version: 3,
     lessonStatuses: {},
     practiceStatuses: {},
     bookmarks: [],
+    practiceDrafts: {},
+    practiceAttempts: {},
+    revisitQueue: {},
+    revisitHistory: [],
+    noteMergeSources: {},
+    lastExport: null,
     lastVisited: null,
     legacyImported: false,
   };
@@ -73,8 +82,20 @@ userStore.ready.then(({ state: loadedState, mode }) => {
   state = loadedState;
   renderUserState();
   updateStorageWarning(mode);
+  for (const editor of practiceEditors.values()) editor.receiveState(state);
+  renderReviewQueue();
+  renderBackupCenter();
 });
 userStore.subscribe(handleStoreMessage);
+userStore.subscribe((message) => {
+  if (
+    message.source !== userStore.clientId ||
+    (message.type !== "state" && message.type !== "replace") ||
+    !document.querySelector(".stat-grid [data-global-theory]")
+  )
+    return;
+  void refreshHomeProgress();
+});
 function escapeHtml(s) {
   return String(s).replace(
     /[&<>"']/g,
@@ -403,6 +424,21 @@ function updateProgress(idx) {
     el.classList.toggle("ok", isDone(e));
   }
   updateLearningNextSteps(idx);
+}
+let latestHomeProgressRefresh = 0;
+async function refreshHomeProgress() {
+  const request = ++latestHomeProgressRefresh;
+  try {
+    const [latestState, idx] = await Promise.all([
+      userStore.getState(),
+      getIndex(),
+    ]);
+    if (request !== latestHomeProgressRefresh) return;
+    state = latestState;
+    updateProgress(idx);
+  } catch {
+    // The home route keeps its last rendered progress when the public index is unavailable.
+  }
 }
 getIndex()
   .then((idx) => {
@@ -761,18 +797,672 @@ for (const el of document.querySelectorAll("[data-note]")) {
   const editor = createNoteEditor(el);
   if (editor) noteEditors.set(editor.id, editor);
 }
+function createPracticeClientId() {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+}
+function practiceDraftFromForm(form) {
+  const answers = Object.fromEntries(
+    [...form.querySelectorAll("[data-practice-answer]")].map((field) => [
+      field.dataset.practiceAnswer,
+      field.value,
+    ]),
+  );
+  const selfReview = Object.fromEntries(
+    [...form.querySelectorAll("[data-practice-review]:checked")].map(
+      (field) => [field.dataset.practiceReview, Number(field.value)],
+    ),
+  );
+  return {
+    answers,
+    selfReview,
+    nextStep: form.querySelector("[data-practice-next]")?.value || "",
+  };
+}
+function hydratePracticeForm(form, draft = {}) {
+  const answers = draft.answers || {};
+  for (const field of form.querySelectorAll("[data-practice-answer]"))
+    field.value = answers[field.dataset.practiceAnswer] || "";
+  const ratings = draft.selfReview || {};
+  for (const field of form.querySelectorAll("[data-practice-review]"))
+    field.checked =
+      String(ratings[field.dataset.practiceReview]) === field.value;
+  const nextStep = form.querySelector("[data-practice-next]");
+  if (nextStep) nextStep.value = draft.nextStep || "";
+}
+function createPracticeFormEditor(form) {
+  const id = form.dataset.practiceForm;
+  const workspace = form.closest(".practice-workspace");
+  const status = form.querySelector("[data-practice-draft-status]");
+  const versionsPanel = workspace?.querySelector("[data-practice-versions]");
+  const versionsList = workspace?.querySelector(
+    "[data-practice-versions-list]",
+  );
+  const historyList = workspace?.querySelector("[data-practice-history-list]");
+  const historyCount = workspace?.querySelector(
+    "[data-practice-history-count]",
+  );
+  if (!id || !workspace || !status || !historyList || !historyCount)
+    return null;
+  let dirty = false;
+  let timer = null;
+  let baseUpdatedAt = 0;
+  let conflictDraft = null;
+  let editVersion = 0;
+  let saving = null;
+  const conflictPanel = document.createElement("div");
+  conflictPanel.className = "notice practice-conflict";
+  conflictPanel.hidden = true;
+  conflictPanel.setAttribute("role", "group");
+  conflictPanel.setAttribute("aria-label", "Разрешение конфликта черновика");
+  const conflictText = document.createElement("p");
+  conflictText.textContent =
+    "В другой вкладке черновик изменился. Сохраните оба варианта или загрузите последнюю версию.";
+  const useRemote = document.createElement("button");
+  useRemote.type = "button";
+  useRemote.className = "btn smallbtn";
+  useRemote.textContent = "Загрузить сохранённый вариант";
+  const keepBoth = document.createElement("button");
+  keepBoth.type = "button";
+  keepBoth.className = "btn smallbtn";
+  keepBoth.textContent = "Сохранить мой вариант отдельно";
+  conflictPanel.append(conflictText, useRemote, keepBoth);
+  form.append(conflictPanel);
+
+  function renderVersions(draft) {
+    if (!versionsPanel || !versionsList) return;
+    versionsList.replaceChildren();
+    const versions = draft?.versions || [];
+    versionsPanel.hidden = versions.length === 0;
+    versions.forEach((version, index) => {
+      const row = document.createElement("div");
+      row.className = "draft-version";
+      const text = document.createElement("span");
+      text.textContent = `Вариант ${index + 1} · ${version.updatedAt ? formatTimestamp(version.updatedAt) : "дата не указана"}`;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn smallbtn";
+      button.textContent = "Открыть в форме";
+      button.addEventListener("click", () => {
+        hydratePracticeForm(form, version);
+        dirty = true;
+        editVersion++;
+        baseUpdatedAt = state.practiceDrafts?.[id]?.updatedAt || baseUpdatedAt;
+        status.textContent =
+          "Загружен сохранённый вариант — проверьте и сохраните";
+        scheduleSave();
+      });
+      row.append(text, button);
+      versionsList.append(row);
+    });
+  }
+
+  function renderHistory(attempts = []) {
+    historyList.replaceChildren();
+    historyCount.textContent = `${attempts.length} ${attempts.length === 1 ? "сохранено" : "сохранено"}`;
+    if (!attempts.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "Сохранённых итераций пока нет.";
+      historyList.append(empty);
+      return;
+    }
+    for (const [index, attempt] of [...attempts]
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .entries()) {
+      const details = document.createElement("details");
+      details.className = "practice-attempt";
+      const summary = document.createElement("summary");
+      summary.textContent = `Итерация ${attempts.length - index} · ${formatTimestamp(attempt.createdAt)}`;
+      const content = document.createElement("div");
+      content.className = "practice-attempt-content";
+      for (const criterion of attempt.rubric || []) {
+        const answer = document.createElement("p");
+        const label = document.createElement("strong");
+        label.textContent = criterion.label;
+        const body = document.createElement("span");
+        body.textContent =
+          attempt.answers?.[criterion.id] || "Ответ не записан.";
+        const rating = attempt.selfReview?.[criterion.id];
+        const self = document.createElement("span");
+        self.className = "small muted";
+        self.textContent =
+          rating === undefined
+            ? "Самопроверка не выбрана"
+            : ["Пока не выполнено", "Частично", "Выполнено по условию"][rating];
+        answer.append(
+          label,
+          document.createElement("br"),
+          body,
+          document.createElement("br"),
+          self,
+        );
+        content.append(answer);
+      }
+      if (attempt.nextStep) {
+        const next = document.createElement("p");
+        next.textContent = `Следующая итерация: ${attempt.nextStep}`;
+        content.append(next);
+      }
+      const restore = document.createElement("button");
+      restore.type = "button";
+      restore.className = "btn smallbtn";
+      restore.textContent = "Продолжить с этой версией";
+      restore.addEventListener("click", () => {
+        hydratePracticeForm(form, attempt);
+        dirty = true;
+        editVersion++;
+        status.textContent = "Исторический ответ загружен как новый черновик";
+        scheduleSave();
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      content.append(restore);
+      details.append(summary, content);
+      historyList.append(details);
+    }
+  }
+
+  function receiveState(nextState, replaced = false) {
+    const remote = nextState.practiceDrafts?.[id];
+    renderVersions(remote);
+    renderHistory(nextState.practiceAttempts?.[id] || []);
+    if (!dirty) {
+      hydratePracticeForm(form, remote);
+      baseUpdatedAt = remote?.updatedAt || 0;
+      status.textContent = remote?.updatedAt
+        ? `Черновик сохранён ${formatTimestamp(remote.updatedAt)}`
+        : "Черновик хранится только в этом браузере";
+      conflictDraft = null;
+      conflictPanel.hidden = true;
+      return;
+    }
+    if (
+      replaced ||
+      (remote &&
+        remote.writerId !== userStore.clientId &&
+        remote.updatedAt !== baseUpdatedAt)
+    ) {
+      conflictDraft = remote || {
+        answers: {},
+        selfReview: {},
+        nextStep: "",
+        updatedAt: 0,
+        writerId: "replaced",
+      };
+      conflictPanel.hidden = false;
+      status.textContent =
+        "Черновик обновлён в другой вкладке — выберите вариант";
+      clearTimeout(timer);
+    }
+  }
+
+  async function saveDraft() {
+    clearTimeout(timer);
+    if (!dirty) return true;
+    if (conflictDraft) return false;
+    if (saving) return saving;
+    const editAtStart = editVersion;
+    const candidate = {
+      ...practiceDraftFromForm(form),
+      updatedAt: Date.now(),
+      writerId: userStore.clientId,
+      versions: state.practiceDrafts?.[id]?.versions || [],
+    };
+    saving = userStore
+      .updateState((current) => {
+        const latest = current.practiceDrafts?.[id];
+        if (
+          latest &&
+          latest.updatedAt !== baseUpdatedAt &&
+          latest.writerId !== userStore.clientId
+        ) {
+          conflictDraft = latest;
+          return current;
+        }
+        return {
+          ...current,
+          practiceDrafts: { ...current.practiceDrafts, [id]: candidate },
+        };
+      })
+      .then((result) => {
+        state = result.state;
+        if (conflictDraft) {
+          conflictPanel.hidden = false;
+          status.textContent =
+            "Черновик изменён в другой вкладке — сохраните оба варианта";
+          return false;
+        }
+        baseUpdatedAt = candidate.updatedAt;
+        if (editVersion === editAtStart) {
+          dirty = false;
+          status.textContent = result.durable
+            ? `Черновик сохранён ${formatTimestamp(candidate.updatedAt)}`
+            : "Черновик доступен только во временной памяти";
+        } else {
+          status.textContent = "Сохраняются последние изменения…";
+          scheduleSave();
+        }
+        if (!result.durable)
+          updateStorageWarning(
+            result.mode,
+            "Черновик практики не сохранён надёжно. Скачайте резервную копию до выхода.",
+          );
+        return true;
+      })
+      .finally(() => {
+        saving = null;
+      });
+    return saving;
+  }
+
+  function scheduleSave() {
+    clearTimeout(timer);
+    timer = setTimeout(() => void saveDraft(), 450);
+  }
+
+  async function saveSeparateVersion() {
+    if (!conflictDraft) return;
+    const local = {
+      ...practiceDraftFromForm(form),
+      updatedAt: Date.now(),
+      writerId: userStore.clientId,
+    };
+    const result = await userStore.updateState((current) => {
+      const latest = current.practiceDrafts?.[id] || conflictDraft;
+      const versions = [...(latest.versions || [])];
+      if (
+        !versions.some(
+          (version) => JSON.stringify(version) === JSON.stringify(local),
+        )
+      )
+        versions.push(local);
+      return {
+        ...current,
+        practiceDrafts: {
+          ...current.practiceDrafts,
+          [id]: { ...latest, versions: versions.slice(-20) },
+        },
+      };
+    });
+    state = result.state;
+    dirty = false;
+    conflictDraft = null;
+    conflictPanel.hidden = true;
+    receiveState(state);
+    status.textContent = "Оба черновика сохранены отдельно на этом устройстве";
+  }
+
+  useRemote.addEventListener("click", () => {
+    const latest = state.practiceDrafts?.[id] || conflictDraft;
+    hydratePracticeForm(form, latest);
+    baseUpdatedAt = latest?.updatedAt || 0;
+    dirty = false;
+    conflictDraft = null;
+    conflictPanel.hidden = true;
+    status.textContent = "Загружен вариант из другой вкладки";
+  });
+  keepBoth.addEventListener("click", () =>
+    saveSeparateVersion().catch(() =>
+      toast("Не удалось сохранить оба черновика"),
+    ),
+  );
+  form.addEventListener("input", () => {
+    dirty = true;
+    editVersion++;
+    status.textContent = "Несохранённые изменения — сохраняем черновик…";
+    scheduleSave();
+  });
+  form.addEventListener("change", () => {
+    dirty = true;
+    editVersion++;
+    scheduleSave();
+  });
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!(await saveDraft())) return;
+    const snapshot = practiceDraftFromForm(form);
+    if (!Object.values(snapshot.answers).some((answer) => answer.trim())) {
+      status.textContent = "Сначала добавьте ответ хотя бы по одному критерию.";
+      form.querySelector("[data-practice-answer]")?.focus();
+      return;
+    }
+    const rubric = [...form.querySelectorAll("[data-practice-criterion]")].map(
+      (item) => ({
+        id: item.dataset.practiceCriterion,
+        label: item.dataset.practiceLabel,
+        description: item.dataset.practiceDescription,
+      }),
+    );
+    const attempt = {
+      id: createPracticeClientId(),
+      createdAt: Date.now(),
+      rubric,
+      ...snapshot,
+    };
+    const result = await userStore.updateState((current) => {
+      const history = current.practiceAttempts?.[id] || [];
+      const previous = history[history.length - 1];
+      const signature = (item) =>
+        JSON.stringify({
+          answers: item.answers,
+          selfReview: item.selfReview,
+          nextStep: item.nextStep || "",
+        });
+      if (previous && signature(previous) === signature(attempt))
+        return current;
+      return {
+        ...current,
+        practiceAttempts: {
+          ...current.practiceAttempts,
+          [id]: [...history, attempt],
+        },
+      };
+    });
+    state = result.state;
+    renderHistory(state.practiceAttempts?.[id] || []);
+    status.textContent = result.durable
+      ? "Итерация сохранена в истории на этом устройстве"
+      : "Итерация доступна только во временной памяти";
+    if (!result.durable)
+      updateStorageWarning(
+        result.mode,
+        "История практики не сохранена надёжно. Скачайте резервную копию до выхода.",
+      );
+  });
+  const editor = {
+    get dirty() {
+      return dirty;
+    },
+    saveDraft,
+    receiveState,
+  };
+  void userStore
+    .getState()
+    .then(receiveState)
+    .catch(() => {
+      status.textContent =
+        "Не удалось прочитать черновик из локального хранилища.";
+    });
+  return editor;
+}
+for (const form of document.querySelectorAll("[data-practice-form]")) {
+  const editor = createPracticeFormEditor(form);
+  if (editor) practiceEditors.set(form.dataset.practiceForm, editor);
+}
+const recallBuffers = new Map();
+const recallTimers = new Map();
+function renderRevisitItem(item, entry) {
+  const card = document.createElement("article");
+  card.className = "revisit-card";
+  const head = document.createElement("div");
+  head.className = "revisit-card-head";
+  const link = document.createElement("a");
+  link.className = "revisit-title";
+  link.href = hrefForLearningEntry(entry);
+  link.textContent = entry.title;
+  const due = document.createElement("span");
+  due.className = "small muted";
+  due.textContent = `Срок: ${formatTimestamp(item.dueAt)}`;
+  head.append(link, due);
+  const prompt = document.createElement("p");
+  prompt.className = "revisit-prompt";
+  prompt.textContent = item.prompt;
+  const label = document.createElement("label");
+  const fieldId = `recall-${entry.id}`;
+  label.htmlFor = fieldId;
+  label.textContent = "Что вы помните до перечитывания?";
+  const answer = document.createElement("textarea");
+  answer.id = fieldId;
+  answer.dataset.recallId = entry.id;
+  answer.rows = 3;
+  answer.maxLength = 10000;
+  answer.placeholder = "Сначала запишите то, что вспомнилось…";
+  answer.value = recallBuffers.get(entry.id)?.dirty
+    ? recallBuffers.get(entry.id).text
+    : item.recallDraft || "";
+  const actions = document.createElement("div");
+  actions.className = "revisit-actions";
+  const complete = document.createElement("button");
+  complete.type = "button";
+  complete.className = "btn smallbtn";
+  complete.dataset.reviewDone = entry.id;
+  complete.textContent = "Отметить просмотренным";
+  const linkButton = document.createElement("a");
+  linkButton.className = "btn smallbtn";
+  linkButton.href = hrefForLearningEntry(entry);
+  linkButton.textContent = "Открыть материал";
+  const delay = document.createElement("select");
+  delay.dataset.reviewDelay = entry.id;
+  delay.setAttribute("aria-label", `Отложить повторение: ${entry.title}`);
+  for (const [value, text] of [
+    ["1", "Завтра"],
+    ["3", "Через 3 дня"],
+    ["7", "Через неделю"],
+  ]) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = text;
+    delay.append(option);
+  }
+  const reschedule = document.createElement("button");
+  reschedule.type = "button";
+  reschedule.className = "btn smallbtn";
+  reschedule.dataset.reviewReschedule = entry.id;
+  reschedule.textContent = "Перенести";
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "btn smallbtn";
+  remove.dataset.reviewRemove = entry.id;
+  remove.textContent = "Убрать из очереди";
+  actions.append(linkButton, complete, delay, reschedule, remove);
+  card.append(head, prompt, label, answer, actions);
+  return card;
+}
+async function renderReviewQueue() {
+  const counter = document.querySelector("[data-review-count]");
+  const rootElement = document.querySelector("[data-review-queue]");
+  try {
+    const current = await userStore.getState();
+    state = current;
+    const items = Object.values(current.revisitQueue || {}).filter((item) =>
+      Number.isFinite(item.dueAt),
+    );
+    if (counter) {
+      const dueCount = items.filter((item) => item.dueAt <= Date.now()).length;
+      counter.textContent = String(dueCount);
+      counter.hidden = dueCount === 0;
+      counter.setAttribute("aria-label", `${dueCount} повтора пора выполнить`);
+    }
+    if (!rootElement) return;
+    const index = await getIndex();
+    const validItems = items.filter((item) => index.entries[item.entryId]);
+    const dueGroup = rootElement.querySelector("[data-review-due-group]");
+    const dueList = rootElement.querySelector("[data-review-due-list]");
+    const dueCount = rootElement.querySelector("[data-review-due-count]");
+    const upcomingGroup = rootElement.querySelector(
+      "[data-review-upcoming-group]",
+    );
+    const upcomingList = rootElement.querySelector(
+      "[data-review-upcoming-list]",
+    );
+    const empty = rootElement.querySelector("[data-review-empty]");
+    const error = rootElement.querySelector("[data-review-error]");
+    const due = validItems
+      .filter((item) => item.dueAt <= Date.now())
+      .sort((a, b) => a.dueAt - b.dueAt);
+    const upcoming = validItems
+      .filter((item) => item.dueAt > Date.now())
+      .sort((a, b) => a.dueAt - b.dueAt);
+    dueList.replaceChildren(
+      ...due.map((item) =>
+        renderRevisitItem(item, index.entries[item.entryId]),
+      ),
+    );
+    upcomingList.replaceChildren(
+      ...upcoming.map((item) =>
+        renderRevisitItem(item, index.entries[item.entryId]),
+      ),
+    );
+    dueGroup.hidden = due.length === 0;
+    dueCount.textContent = String(due.length);
+    upcomingGroup.hidden = upcoming.length === 0;
+    empty.hidden = validItems.length > 0;
+    error.hidden = true;
+    rootElement.setAttribute("aria-busy", "false");
+  } catch {
+    if (rootElement) {
+      rootElement.setAttribute("aria-busy", "false");
+      rootElement.querySelector("[data-review-error]").hidden = false;
+      rootElement.querySelector("[data-review-empty]").hidden = true;
+    }
+  }
+}
+async function saveRecallDraft(id, text) {
+  const result = await userStore.updateState((current) => {
+    const item = current.revisitQueue?.[id];
+    if (!item) return current;
+    return {
+      ...current,
+      revisitQueue: {
+        ...current.revisitQueue,
+        [id]: { ...item, recallDraft: text },
+      },
+    };
+  });
+  state = result.state;
+  const buffer = recallBuffers.get(id);
+  if (buffer) buffer.dirty = false;
+  if (!result.durable)
+    updateStorageWarning(result.mode, "Черновик повтора не сохранён надёжно.");
+}
+document
+  .querySelector("[data-review-queue]")
+  ?.addEventListener("input", (event) => {
+    const field = event.target.closest("[data-recall-id]");
+    if (!field) return;
+    const id = field.dataset.recallId;
+    recallBuffers.set(id, { text: field.value, dirty: true });
+    clearTimeout(recallTimers.get(id));
+    recallTimers.set(
+      id,
+      setTimeout(() => void saveRecallDraft(id, field.value), 450),
+    );
+  });
+document
+  .querySelector("[data-review-queue]")
+  ?.addEventListener("click", async (event) => {
+    const button =
+      event.target instanceof Element ? event.target.closest("button") : null;
+    const id =
+      button?.dataset.reviewDone ||
+      button?.dataset.reviewReschedule ||
+      button?.dataset.reviewRemove;
+    if (!id) return;
+    const pendingText = recallBuffers.get(id)?.text;
+    const result = await userStore.updateState((current) => {
+      const item = current.revisitQueue?.[id];
+      if (!item) return current;
+      const recallDraft = pendingText ?? item.recallDraft ?? "";
+      const queue = { ...current.revisitQueue };
+      if (button.dataset.reviewDone) {
+        delete queue[id];
+        return {
+          ...current,
+          revisitQueue: queue,
+          revisitHistory: [
+            ...current.revisitHistory,
+            { entryId: id, completedAt: Date.now(), recallDraft },
+          ].slice(-500),
+        };
+      }
+      if (button.dataset.reviewRemove) {
+        delete queue[id];
+        return { ...current, revisitQueue: queue };
+      }
+      const delay = Number(
+        rootElementQuery(button, "[data-review-delay]")?.value || 1,
+      );
+      queue[id] = {
+        ...item,
+        recallDraft,
+        scheduledAt: Date.now(),
+        dueAt: Date.now() + delay * 86400000,
+      };
+      return { ...current, revisitQueue: queue };
+    });
+    state = result.state;
+    recallBuffers.delete(id);
+    clearTimeout(recallTimers.get(id));
+    await renderReviewQueue();
+    toast(
+      button.dataset.reviewDone
+        ? "Повтор отмечен просмотренным"
+        : button.dataset.reviewReschedule
+          ? "Повтор перенесён"
+          : "Материал убран из очереди",
+    );
+  });
+function rootElementQuery(element, selector) {
+  return element.closest(".revisit-card")?.querySelector(selector);
+}
+for (const button of document.querySelectorAll("[data-revisit-add]")) {
+  button.addEventListener("click", async () => {
+    const id = button.dataset.revisitAdd;
+    const delay = Number(
+      document.querySelector(`[data-revisit-delay="${CSS.escape(id)}"]`)
+        ?.value || 1,
+    );
+    const prompt = `Перед перечитыванием попробуйте вспомнить главное из материала «${button.dataset.revisitTitle}».`;
+    const result = await userStore.updateState((current) => {
+      const existing = current.revisitQueue?.[id];
+      return {
+        ...current,
+        revisitQueue: {
+          ...current.revisitQueue,
+          [id]: {
+            entryId: id,
+            scheduledAt: Date.now(),
+            dueAt: Date.now() + delay * 86400000,
+            prompt,
+            recallDraft: existing?.recallDraft || "",
+          },
+        },
+      };
+    });
+    state = result.state;
+    const status = document.querySelector(
+      `[data-revisit-status="${CSS.escape(id)}"]`,
+    );
+    if (status)
+      status.textContent = result.durable
+        ? `Добавлено в очередь: ${formatTimestamp(result.state.revisitQueue[id].dueAt)}`
+        : "Добавлено только во временную память";
+    await renderReviewQueue();
+  });
+}
+document
+  .querySelector("[data-review-retry]")
+  ?.addEventListener("click", () => void renderReviewQueue());
 function cacheAndFlushNotes() {
   for (const editor of noteEditors.values()) {
     editor.cacheDraft();
     editor.flush();
   }
+  for (const editor of practiceEditors.values()) void editor.saveDraft();
 }
 window.addEventListener("pagehide", cacheAndFlushNotes);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") cacheAndFlushNotes();
 });
 window.addEventListener("beforeunload", (event) => {
-  if (![...noteEditors.values()].some((editor) => editor.dirty)) return;
+  if (
+    ![...noteEditors.values()].some((editor) => editor.dirty) &&
+    ![...practiceEditors.values()].some((editor) => editor.dirty)
+  )
+    return;
   cacheAndFlushNotes();
   event.preventDefault();
   event.returnValue = "";
@@ -782,6 +1472,10 @@ async function handleStoreMessage(message) {
   if (message.type === "state" || message.type === "replace") {
     state = message.state || (await userStore.getState());
     renderUserState();
+    for (const editor of practiceEditors.values())
+      editor.receiveState(state, message.type === "replace");
+    renderReviewQueue();
+    renderBackupCenter();
   }
   if (message.type === "note" && message.id) {
     const editor = noteEditors.get(message.id);
@@ -808,18 +1502,40 @@ async function downloadJSON(data, filename) {
   a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return b.size;
 }
 async function exportData() {
+  await Promise.all(
+    [...practiceEditors.values()].map((editor) => editor.saveDraft()),
+  );
   const exportedState = await userStore.getState();
   const notes = await userStore.getAllNotes();
   Object.assign(notes, userStore.getDrafts());
   for (const el of document.querySelectorAll("[data-note]"))
     notes[el.dataset.note] = el.value;
-  downloadJSON(
-    { ...exportedState, notes, exportedAt: new Date().toISOString() },
+  const exportedAt = Date.now();
+  const sizeBytes = await downloadJSON(
+    {
+      ...exportedState,
+      format: "sales-os-v3",
+      version: 3,
+      notes,
+      exportedAt: new Date(exportedAt).toISOString(),
+    },
     "sales-os-backup.json",
   );
-  toast("Резервная копия подготовлена");
+  const saved = await userStore.updateState((current) => ({
+    ...current,
+    lastExport: { exportedAt, sizeBytes },
+  }));
+  state = saved.state;
+  renderUserState();
+  renderBackupCenter();
+  toast(
+    saved.durable
+      ? "Резервная копия скачана"
+      : "Копия скачана; дата и размер остались только в этой вкладке",
+  );
 }
 function migrateLegacy(obj, idx) {
   const incoming = defaultState();
@@ -853,11 +1569,13 @@ function migrateLegacy(obj, idx) {
 function isRecord(v) {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
-function validateV2(obj, idx) {
+function validateBackupState(obj, idx) {
   if (
     !obj ||
-    obj.format !== "sales-os-v2" ||
-    obj.version !== 2 ||
+    !(
+      (obj.format === "sales-os-v2" && obj.version === 2) ||
+      (obj.format === "sales-os-v3" && obj.version === 3)
+    ) ||
     !isRecord(obj.lessonStatuses) ||
     !isRecord(obj.practiceStatuses) ||
     !Array.isArray(obj.bookmarks)
@@ -910,8 +1628,344 @@ function validateV2(obj, idx) {
       ? obj.lastVisited
       : null;
   next.legacyImported = obj.legacyImported === true;
+  if (obj.version === 3) {
+    next.practiceDrafts = validatePracticeDrafts(obj.practiceDrafts, idx);
+    next.practiceAttempts = validatePracticeAttempts(obj.practiceAttempts, idx);
+    next.revisitQueue = validateRevisitQueue(obj.revisitQueue, idx);
+    next.revisitHistory = validateRevisitHistory(obj.revisitHistory, idx);
+    next.noteMergeSources = validateNoteMergeSources(obj.noteMergeSources, idx);
+    next.lastExport = validateLastExport(obj.lastExport);
+  }
   return next;
 }
+function validatePracticeDrafts(raw, idx) {
+  if (raw === undefined) return {};
+  if (!isRecord(raw)) throw Error("Invalid practice drafts");
+  const drafts = {};
+  for (const [id, value] of Object.entries(raw)) {
+    if (
+      !Object.hasOwn(idx.entries, id) ||
+      idx.entries[id].kind !== "practice" ||
+      !isRecord(value)
+    )
+      throw Error("Invalid practice draft ID");
+    const validateTextMap = (map) => {
+      if (map === undefined) return {};
+      if (
+        !isRecord(map) ||
+        Object.entries(map).some(
+          ([key, text]) =>
+            !/^criterion-\d{1,2}$/.test(key) ||
+            typeof text !== "string" ||
+            text.length > 10000,
+        )
+      )
+        throw Error("Invalid practice draft text");
+      return { ...map };
+    };
+    const validateRatings = (map) => {
+      if (map === undefined) return {};
+      if (
+        !isRecord(map) ||
+        Object.entries(map).some(
+          ([key, rating]) =>
+            !/^criterion-\d{1,2}$/.test(key) || ![0, 1, 2].includes(rating),
+        )
+      )
+        throw Error("Invalid practice self-review");
+      return { ...map };
+    };
+    const versions = value.versions ?? [];
+    if (!Array.isArray(versions) || versions.length > 20)
+      throw Error("Invalid draft versions");
+    drafts[id] = {
+      answers: validateTextMap(value.answers),
+      selfReview: validateRatings(value.selfReview),
+      nextStep:
+        typeof value.nextStep === "string" && value.nextStep.length <= 10000
+          ? value.nextStep
+          : "",
+      updatedAt:
+        Number.isFinite(value.updatedAt) && value.updatedAt >= 0
+          ? value.updatedAt
+          : 0,
+      writerId:
+        typeof value.writerId === "string"
+          ? value.writerId.slice(0, 100)
+          : "imported",
+      versions: versions.map((version) => {
+        if (!isRecord(version)) throw Error("Invalid draft version");
+        return {
+          answers: validateTextMap(version.answers),
+          selfReview: validateRatings(version.selfReview),
+          nextStep:
+            typeof version.nextStep === "string" &&
+            version.nextStep.length <= 10000
+              ? version.nextStep
+              : "",
+          updatedAt:
+            Number.isFinite(version.updatedAt) && version.updatedAt >= 0
+              ? version.updatedAt
+              : 0,
+          writerId:
+            typeof version.writerId === "string"
+              ? version.writerId.slice(0, 100)
+              : "imported",
+        };
+      }),
+    };
+  }
+  return drafts;
+}
+function validatePracticeAttempts(raw, idx) {
+  if (raw === undefined) return {};
+  if (!isRecord(raw)) throw Error("Invalid practice attempts");
+  const attempts = {};
+  let count = 0;
+  let characters = 0;
+  for (const [id, list] of Object.entries(raw)) {
+    if (
+      !Object.hasOwn(idx.entries, id) ||
+      idx.entries[id].kind !== "practice" ||
+      !Array.isArray(list)
+    )
+      throw Error("Invalid practice attempt ID");
+    attempts[id] = list.map((attempt) => {
+      if (
+        !isRecord(attempt) ||
+        typeof attempt.id !== "string" ||
+        attempt.id.length > 100 ||
+        !Number.isFinite(attempt.createdAt) ||
+        !Array.isArray(attempt.rubric) ||
+        attempt.rubric.length < 3 ||
+        attempt.rubric.length > 30 ||
+        !isRecord(attempt.answers) ||
+        !isRecord(attempt.selfReview) ||
+        Object.values(attempt.answers).some(
+          (answer) => typeof answer !== "string" || answer.length > 10000,
+        ) ||
+        Object.entries(attempt.selfReview).some(
+          ([key, rating]) =>
+            !/^criterion-\d{1,2}$/.test(key) || ![0, 1, 2].includes(rating),
+        ) ||
+        (attempt.nextStep !== undefined &&
+          (typeof attempt.nextStep !== "string" ||
+            attempt.nextStep.length > 10000))
+      )
+        throw Error("Invalid practice attempt");
+      const rubric = attempt.rubric.map((criterion, index) => {
+        if (
+          !isRecord(criterion) ||
+          typeof criterion.label !== "string" ||
+          criterion.label.length > 500 ||
+          typeof criterion.description !== "string" ||
+          criterion.description.length > 2000
+        )
+          throw Error("Invalid rubric snapshot");
+        return {
+          id: `criterion-${index + 1}`,
+          label: criterion.label,
+          description: criterion.description,
+        };
+      });
+      characters += [
+        ...Object.values(attempt.answers),
+        attempt.nextStep || "",
+        ...rubric.map((x) => x.label + x.description),
+      ].reduce((sum, text) => sum + text.length, 0);
+      if (++count > 2000 || characters > 8000000)
+        throw Error("Backup too large");
+      return {
+        id: attempt.id,
+        createdAt: attempt.createdAt,
+        rubric,
+        answers: { ...attempt.answers },
+        selfReview: { ...attempt.selfReview },
+        nextStep: attempt.nextStep || "",
+      };
+    });
+  }
+  return attempts;
+}
+function validateRevisitQueue(raw, idx) {
+  if (raw === undefined) return {};
+  if (!isRecord(raw)) throw Error("Invalid revisit queue");
+  const queue = {};
+  for (const [id, item] of Object.entries(raw)) {
+    if (
+      !Object.hasOwn(idx.entries, id) ||
+      !["theory", "practice"].includes(idx.entries[id].kind) ||
+      !isRecord(item) ||
+      (item.entryId !== undefined && item.entryId !== id) ||
+      !Number.isFinite(item.dueAt) ||
+      item.dueAt <= 0 ||
+      (item.recallDraft !== undefined &&
+        (typeof item.recallDraft !== "string" ||
+          item.recallDraft.length > 10000)) ||
+      (item.prompt !== undefined &&
+        (typeof item.prompt !== "string" || item.prompt.length > 1000))
+    )
+      throw Error("Invalid revisit item");
+    queue[id] = {
+      entryId: id,
+      dueAt: item.dueAt,
+      scheduledAt: Number.isFinite(item.scheduledAt)
+        ? item.scheduledAt
+        : Date.now(),
+      prompt: item.prompt || "",
+      recallDraft: item.recallDraft || "",
+    };
+  }
+  return queue;
+}
+function validateRevisitHistory(raw, idx) {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw) || raw.length > 500)
+    throw Error("Invalid revisit history");
+  return raw.map((item) => {
+    if (
+      !isRecord(item) ||
+      !Object.hasOwn(idx.entries, item.entryId) ||
+      !["theory", "practice"].includes(idx.entries[item.entryId].kind) ||
+      !Number.isFinite(item.completedAt) ||
+      (item.recallDraft !== undefined &&
+        (typeof item.recallDraft !== "string" ||
+          item.recallDraft.length > 10000))
+    )
+      throw Error("Invalid revisit history item");
+    return {
+      entryId: item.entryId,
+      completedAt: item.completedAt,
+      recallDraft: item.recallDraft || "",
+    };
+  });
+}
+function validateNoteMergeSources(raw, idx) {
+  if (raw === undefined) return {};
+  if (!isRecord(raw)) throw Error("Invalid merged-note metadata");
+  const sources = {};
+  for (const [id, hashes] of Object.entries(raw)) {
+    if (
+      (!Object.hasOwn(idx.entries, id) && id !== "FINAL_PROJECT") ||
+      !Array.isArray(hashes) ||
+      hashes.length > 100 ||
+      hashes.some((hash) => typeof hash !== "string" || hash.length > 100)
+    )
+      throw Error("Invalid merged-note metadata");
+    sources[id] = [...new Set(hashes)];
+  }
+  return sources;
+}
+function validateLastExport(raw) {
+  if (raw === undefined || raw === null) return null;
+  if (
+    !isRecord(raw) ||
+    !Number.isFinite(raw.exportedAt) ||
+    raw.exportedAt <= 0 ||
+    !Number.isSafeInteger(raw.sizeBytes) ||
+    raw.sizeBytes < 0
+  )
+    throw Error("Invalid export metadata");
+  return { exportedAt: raw.exportedAt, sizeBytes: raw.sizeBytes };
+}
+function formatTimestamp(value) {
+  return new Intl.DateTimeFormat("ru-RU", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} МБ`;
+}
+function renderImportPreview(preview) {
+  const dialog = document.querySelector("[data-import-dialog]");
+  const meta = dialog?.querySelector("[data-import-file-meta]");
+  const list = dialog?.querySelector("[data-import-preview]");
+  if (!(meta instanceof HTMLElement) || !(list instanceof HTMLElement)) return;
+  const labels = [
+    ["Статусы уроков", preview.totals.lessons],
+    ["Статусы практик", preview.totals.practices],
+    ["Закладки", preview.totals.bookmarks],
+    ["Заметки", preview.totals.notes],
+    ["Итерации ответов", preview.totals.attempts],
+    ["Записи в очереди повтора", preview.totals.revisit],
+  ];
+  meta.textContent = `${preview.format} · ${formatBytes(preview.bytes)}${preview.exportedAt ? ` · экспортировано ${preview.exportedAt}` : ""}`;
+  list.replaceChildren();
+  for (const [label, count] of labels) {
+    const item = document.createElement("li");
+    item.textContent = `${label}: ${count}`;
+    list.append(item);
+  }
+}
+async function renderBackupCenter() {
+  const last = document.querySelector("[data-backup-last-export]");
+  if (last) {
+    last.textContent = state.lastExport
+      ? `Последний экспорт: ${formatTimestamp(state.lastExport.exportedAt)} · ${formatBytes(state.lastExport.sizeBytes)}`
+      : "Экспорт на этом устройстве ещё не выполнялся.";
+  }
+  const list = document.querySelector("[data-restore-points]");
+  const empty = document.querySelector("[data-restore-empty]");
+  if (!(list instanceof HTMLElement) || !(empty instanceof HTMLElement)) return;
+  try {
+    const points = await userStore.getRestorePoints();
+    list.replaceChildren();
+    for (const point of points) {
+      const item = document.createElement("li");
+      item.className = "restore-point";
+      const meta = document.createElement("span");
+      meta.textContent = `${formatTimestamp(point.createdAt)} · ${point.reason === "before-restore" ? "перед восстановлением" : "перед импортом"}`;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn smallbtn";
+      button.textContent = "Восстановить";
+      button.dataset.restoreId = point.id;
+      item.append(meta, button);
+      list.append(item);
+    }
+    empty.hidden = points.length > 0;
+    list.hidden = points.length === 0;
+  } catch {
+    empty.textContent = "Не удалось прочитать локальные точки восстановления.";
+    empty.hidden = false;
+  }
+}
+document
+  .querySelector("[data-restore-points]")
+  ?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-restore-id]");
+    if (!button) return;
+    pendingRestore = button.dataset.restoreId;
+    document.querySelector("[data-restore-dialog]")?.showModal();
+  });
+document
+  .querySelector("[data-restore-confirm]")
+  ?.addEventListener("click", async () => {
+    if (!pendingRestore) return;
+    try {
+      const result = await userStore.restoreBackup(pendingRestore);
+      state = result.state;
+      renderUserState();
+      document.querySelector("[data-restore-dialog]")?.close();
+      pendingRestore = null;
+      toast(
+        result.durable
+          ? "Предыдущие данные восстановлены"
+          : "Восстановлено только во временной памяти",
+      );
+      renderBackupCenter();
+      setTimeout(() => location.reload(), 500);
+    } catch (error) {
+      toast(
+        error instanceof Error
+          ? `Не удалось восстановить копию: ${error.message}`
+          : "Не удалось восстановить копию",
+      );
+    }
+  });
 function validateNotes(raw, idx) {
   if (raw === undefined) return {};
   if (!isRecord(raw)) throw Error("Invalid notes");
@@ -932,7 +1986,7 @@ function validateNotes(raw, idx) {
   }
   return notes;
 }
-async function importData(file) {
+async function prepareImport(file) {
   const obj = JSON.parse(await file.text());
   const idx = await getIndex();
   let next,
@@ -942,25 +1996,73 @@ async function importData(file) {
     next = result.incoming;
     notes = validateNotes(result.notes, idx);
   } else {
-    next = validateV2(obj, idx);
+    next = validateBackupState(obj, idx);
     notes = validateNotes(obj.notes, idx);
   }
-  if (
-    !confirm(
-      "Импорт заменит текущий прогресс и заметки, включая незавершённые изменения в открытой вкладке. Убедитесь, что скачали резервную копию. Продолжить?",
-    )
-  )
-    return;
-  const result = await userStore.replaceAll(next, notes);
+  const totals = {
+    lessons: Object.keys(next.lessonStatuses).length,
+    practices: Object.keys(next.practiceStatuses).length,
+    bookmarks: next.bookmarks.length,
+    notes: Object.keys(notes).length,
+    attempts: Object.values(next.practiceAttempts).reduce(
+      (sum, items) => sum + items.length,
+      0,
+    ),
+    revisit: Object.keys(next.revisitQueue).length,
+  };
+  const bytes = new TextEncoder().encode(JSON.stringify(obj)).byteLength;
+  if (bytes > 8_000_000) throw Error("Backup too large");
+  return {
+    state: next,
+    notes,
+    format: obj.format,
+    exportedAt: obj.exportedAt || null,
+    bytes,
+    totals,
+  };
+}
+function importWriteError(error, action) {
+  const detail = error instanceof Error ? error.message : "";
+  if (detail.includes("250 КБ")) return `${detail} Текущие данные не изменены.`;
+  if (/quota|storage|transaction|abort|хранилищ/i.test(detail))
+    return `Не удалось ${action} данные: браузер отказал в записи. Прежние сохранённые данные не изменены; проверьте свободное место и повторите попытку.`;
+  return `Не удалось ${action} данные. Прежние сохранённые данные не изменены; проверьте файл и повторите попытку.`;
+}
+async function applyImport(strategy) {
+  if (!pendingImport) return;
+  const preview = pendingImport;
+  pendingImport = null;
+  document.querySelector("[data-import-dialog]")?.close();
+  for (const editor of noteEditors.values()) editor.cacheDraft();
+  await Promise.all(
+    [...practiceEditors.values()].map((editor) => editor.saveDraft()),
+  );
+  const recoveryNotes = Object.fromEntries(
+    [...document.querySelectorAll("textarea[data-note]")].map((textarea) => [
+      textarea.dataset.note,
+      textarea.value,
+    ]),
+  );
+  const result = await userStore.replaceAll(preview.state, preview.notes, {
+    merge: strategy === "merge",
+    recoveryNotes,
+  });
   state = result.state;
   renderUserState();
   for (const editor of noteEditors.values()) {
     const { record } = await userStore.getNote(editor.id);
     editor.replaceFromImport(record);
   }
+  for (const editor of practiceEditors.values())
+    editor.receiveState(state, strategy === "replace");
+  await renderBackupCenter();
+  await renderReviewQueue();
   if (result.durable) {
-    toast("Импорт завершён и сохранён на этом устройстве");
-    setTimeout(() => location.reload(), 600);
+    toast(
+      strategy === "merge"
+        ? "Данные объединены; конфликтующие заметки сохранены отдельными блоками"
+        : "Импорт заменил локальные данные; предыдущая версия доступна в центре резервных копий",
+    );
   } else {
     updateStorageWarning(
       result.mode,
@@ -980,13 +2082,43 @@ document
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      await importData(file);
-    } catch {
+      pendingImport = await prepareImport(file);
+      renderImportPreview(pendingImport);
+      document.querySelector("[data-import-dialog]")?.showModal();
+    } catch (error) {
       toast(
-        "Импорт не удался. Прежние сохранённые данные не изменены; проверьте файл и свободное место.",
+        error instanceof Error
+          ? `Файл не принят: ${error.message}`
+          : "Файл не принят. Текущие данные не изменены.",
       );
     }
     e.target.value = "";
+  });
+document
+  .querySelector("[data-import-merge]")
+  ?.addEventListener("click", () =>
+    applyImport("merge").catch((error) =>
+      toast(importWriteError(error, "объединить")),
+    ),
+  );
+document
+  .querySelector("[data-import-replace]")
+  ?.addEventListener("click", () =>
+    applyImport("replace").catch((error) =>
+      toast(importWriteError(error, "заменить")),
+    ),
+  );
+document
+  .querySelector("[data-import-cancel]")
+  ?.addEventListener("click", () => {
+    pendingImport = null;
+    document.querySelector("[data-import-dialog]")?.close();
+  });
+document
+  .querySelector("[data-restore-cancel]")
+  ?.addEventListener("click", () => {
+    pendingRestore = null;
+    document.querySelector("[data-restore-dialog]")?.close();
   });
 // Public search indexes are static and local; private notes never leave this browser.
 const searchInput = document.querySelector("[data-search-input]");

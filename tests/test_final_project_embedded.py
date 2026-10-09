@@ -33,7 +33,7 @@ def main():
         upload_json(page, backup)
         assert get_state(page)['lessonStatuses']['01-001'] == 'theory_completed'
         assert page.evaluate("localStorage.getItem('sales-os-note-FINAL_PROJECT')") == notes
-        assert 'Импорт завершён и сохранён на этом устройстве' in page.locator('#toast').inner_text()
+        assert 'Импорт заменил локальные данные' in page.locator('#toast').inner_text()
         print('PASS: standalone final project note survives validated v2 import')
 
         # Prototype keys are not real lesson/answer IDs. Reject them instead of
@@ -44,7 +44,7 @@ def main():
             {'format':'sales-os-v2','version':2,'lessonStatuses':{},'practiceStatuses':{},
              'bookmarks':[],'notes':{'constructor':'should be rejected'}}]:
             upload_json(page, malicious)
-            assert 'Импорт не удался' in page.locator('#toast').inner_text()
+            assert 'Файл не принят' in page.locator('#toast').inner_text()
             assert page.evaluate("localStorage.getItem('sales-os-note-FINAL_PROJECT')") == notes
         print('PASS: inherited JavaScript property names rejected as backup IDs')
 

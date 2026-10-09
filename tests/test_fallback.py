@@ -45,4 +45,29 @@ commands = [
 for command in commands:
     print("+", " ".join(command), flush=True)
     subprocess.run(command, cwd=ROOT, env=environment, check=True)
+
+fallback = ROOT / "dist-fallback"
+review_page = (fallback / "review/index.html").read_text(encoding="utf-8")
+assert 'data-review-queue' in review_page
+assert 'data-review-due-list' in review_page and 'data-review-upcoming-list' in review_page
+settings_page = (fallback / "settings/index.html").read_text(encoding="utf-8")
+for selector in (
+    'data-backup-last-export',
+    'data-restore-points',
+    'data-import-dialog',
+    'data-import-merge',
+    'data-import-replace',
+    'data-restore-dialog',
+    'data-restore-confirm',
+):
+    assert selector in settings_page, f"Fallback settings missing {selector}"
+manifest = __import__("json").loads((ROOT / "src/generated/content-manifest.json").read_text(encoding="utf-8"))
+practice_entries = [entry for entry in manifest["entries"].values() if entry["kind"] == "practice"]
+assert len(practice_entries) == 72
+for entry in practice_entries:
+    document = fallback / "practice" / entry["id"] / "index.html"
+    markup = document.read_text(encoding="utf-8")
+    assert f'data-practice-form="{entry["id"]}"' in markup, f"Missing practice form for {entry['id']}"
+    assert markup.count('data-practice-criterion="criterion-') == 5, f"Incorrect rubric in {entry['id']}"
+    assert f'data-revisit-add="{entry["id"]}"' in markup, f"Missing revisit action for {entry['id']}"
 print("PASS: Python fallback output passed all static, browser, data, responsive and worker checks")

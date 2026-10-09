@@ -15,7 +15,7 @@ if (!library) throw new Error(`Unknown library: ${doc.data.id}`);
 const { Content } = await render(doc);
 ---
 
-<Shell title={library.title} active="library" libraryId={library.id} reading>
+<Shell title={library.title} description={library.description} active="library" libraryId={library.id} reading>
   <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <a href="/library/">Справочники</a> › <span aria-current="page">{library.title}</span></nav>
   <PageHeading eyebrow="СПРАВОЧНЫЙ МАТЕРИАЛ · РЕДАКЦИОННЫЙ ЧЕРНОВИК" title={library.title} description={library.description} />
   <article class="article library-content" data-pagefind-body data-search-id={library.id} data-search-level="extra" data-search-module="extra" data-search-kind="library" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]" data-template-copy={library.id === 'templates' ? '' : undefined}>

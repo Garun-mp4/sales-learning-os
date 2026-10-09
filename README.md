@@ -40,6 +40,10 @@ $env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:4321"
 npm run test:preview
 ```
 
+`test:preview` также обходит все маршруты собранного manifest, проверяет единственный H1 и SEO/privacy-метаданные, измеряет главную через Chromium Performance API и сохраняет 210 production screenshots для 21 representative route, пяти ширин и двух тем в `docs/screenshots/m8-release/`. Эти локальные transfer/load metrics не являются Lighthouse-оценкой или замером реального устройства.
+
+Чтобы включить этот production gate в полный Windows прогон, запустите preview в первом PowerShell-окне, затем во втором задайте `$env:SALES_OS_PREVIEW_URL = "http://127.0.0.1:4321"` и выполните `.\verify-windows.ps1 -RequirePreview`.
+
 ## Автономная Python-версия
 
 Python-версия пригодна для локального статического размещения и не требует Node.js:

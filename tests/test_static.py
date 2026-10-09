@@ -31,6 +31,7 @@ expected.update(
         "404.html",
         "roadmap/index.html",
         "practice/index.html",
+        "review/index.html",
         "sources/index.html",
         "search/index.html",
         "bookmarks/index.html",
@@ -59,6 +60,29 @@ for path in html_files:
         issues.append("Missing lang " + name)
     if not soup.select_one("main#main"):
         issues.append("Missing main " + name)
+    primary_headings = soup.select("main h1")
+    if len(primary_headings) != 1:
+        issues.append(f"Expected one primary heading in {name}: {len(primary_headings)}")
+    description = soup.select_one('meta[name="description"]')
+    if not description or len(description.get("content", "").strip()) < 30:
+        issues.append("Missing meaningful meta description " + name)
+    if not soup.select_one('meta[property="og:title"]') or not soup.select_one(
+        'meta[property="og:description"]'
+    ):
+        issues.append("Missing Open Graph title/description " + name)
+    robots = soup.select_one('meta[name="robots"]')
+    private_utility = name == "404.html" or name.split("/", 1)[0] in {
+        "settings",
+        "bookmarks",
+        "review",
+        "search",
+    }
+    expected_robots = "noindex, nofollow" if private_utility else "index, follow"
+    if not robots or robots.get("content") != expected_robots:
+        issues.append("Incorrect robots directive " + name)
+    canonical = soup.select_one('link[rel="canonical"]')
+    if canonical and re.search(r"https?://(?:localhost|127\.0\.0\.1)(?::|/)", canonical.get("href", "")):
+        issues.append("Canonical URL points to a local development host " + name)
     for anchor in soup.select("a[href]"):
         url = anchor.get("href", "")
         links += 1

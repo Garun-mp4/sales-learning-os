@@ -2,11 +2,22 @@
 import '../styles/tailwind.css';
 import { modules, stages } from '../lib/course';
 import Icon from '../components/Icon.astro';
-interface Props { title: string; active?: string; module?: string; documentId?: string; documentKind?: string; libraryId?: string; reading?: boolean }
-const {title, active, module, documentId, documentKind, libraryId, reading=false}=Astro.props;
+interface Props { title: string; description?: string; active?: string; module?: string; documentId?: string; documentKind?: string; libraryId?: string; reading?: boolean }
+const {title, description, active, module, documentId, documentKind, libraryId, reading=false}=Astro.props;
 const pathname = Astro.url.pathname;
+const privateUtility = /^\/(?:settings|bookmarks|review|search)(?:\/|$)/.test(pathname) || /^\/404(?:\.html|\/|$)/.test(pathname);
+const metaDescription = (description || (documentId
+  ? `${title} — ${documentKind === 'practice' ? 'практическое задание' : 'учебный материал'} модуля ${module}. Самостоятельное обучение продажам в Sales OS.`
+  : module
+    ? `${title} — учебный модуль Sales OS с уроками, практикой и связанными материалами.`
+    : `${title} — ${privateUtility ? 'личный раздел' : 'учебные материалы'} Sales OS для самостоятельного обучения продажам.`))
+  .replace(/\s+/g, ' ').trim().slice(0, 160);
+const canonicalHref = !privateUtility && Astro.site && !['localhost', '127.0.0.1'].includes(Astro.site.hostname)
+  ? new URL(pathname, Astro.site).href
+  : undefined;
 const currentSection = active ?? (
   pathname === '/' ? 'home' :
+  /^\/review\//.test(pathname) ? 'review' :
   /^\/(?:roadmap|level|module|lesson)\//.test(pathname) ? 'roadmap' :
   /^\/(?:practice|final-project)\//.test(pathname) ? 'practice' :
   /^\/(?:sources|source)\//.test(pathname) ? 'sources' :
@@ -20,7 +31,13 @@ const currentSection = active ?? (
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="description" content="Sales OS — изучение продаж через проверяемую теорию, практику и собственные проекты."/>
+  <meta name="description" content={metaDescription}/>
+  <meta name="robots" content={privateUtility ? 'noindex, nofollow' : 'index, follow'}/>
+  <meta property="og:title" content={`${title} · Sales OS`}/>
+  <meta property="og:description" content={metaDescription}/>
+  <meta property="og:type" content="website"/>
+  {canonicalHref&&<><link rel="canonical" href={canonicalHref}/><meta property="og:url" content={canonicalHref}/></>}
+  <meta name="twitter:card" content="summary"/>
   <meta name="theme-color" content="#ffffff" data-theme-color/>
   <title>{title} · Sales OS</title>
   <link rel="icon" type="image/png" href="/assets/brand/favicon-light.png" sizes="32x32" media="(prefers-color-scheme: light)"/>
@@ -45,6 +62,7 @@ const currentSection = active ?? (
         <a class:list={['nav-item',currentSection==='home'&&'active']} href="/" aria-label="Обзор" aria-current={currentSection==='home'?'page':undefined} title="Обзор"><Icon name="home"/><span>Обзор</span></a>
         <a class:list={['nav-item',currentSection==='roadmap'&&'active']} href="/roadmap/" aria-label="Roadmap" aria-current={currentSection==='roadmap'?'page':undefined} title="Roadmap"><Icon name="map"/><span>Roadmap</span></a>
         <a class:list={['nav-item',currentSection==='practice'&&'active']} href="/practice/" aria-label="Практика" aria-current={currentSection==='practice'?'page':undefined} title="Практика"><Icon name="practice"/><span>Практика</span></a>
+        <a class:list={['nav-item',currentSection==='review'&&'active']} href="/review/" aria-label="Очередь повтора" aria-current={currentSection==='review'?'page':undefined} title="Очередь повтора"><Icon name="clock"/><span>Очередь повтора</span><span class="nav-count" data-review-count hidden></span></a>
         <a class:list={['nav-item',currentSection==='search'&&'active']} href="/search/" aria-label="Поиск" aria-current={currentSection==='search'?'page':undefined} title="Поиск"><Icon name="search"/><span>Поиск</span></a>
         <a class:list={['nav-item',currentSection==='sources'&&'active']} href="/sources/" aria-label="Источники" aria-current={currentSection==='sources'?'page':undefined} title="Источники"><Icon name="library"/><span>Источники</span></a>
         <a class:list={['nav-item',currentSection==='library'&&'active']} href="/library/" aria-label="Справочные материалы" aria-current={currentSection==='library'?'page':undefined} title="Справочные материалы"><Icon name="book"/><span>Справочники</span></a>

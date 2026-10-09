@@ -81,6 +81,8 @@ for source in manifest["sources"]:
 final_markdown = (CONTENT / "FINAL_PROJECT.md").read_text(encoding="utf-8")
 final_html = MarkdownIt("default", {"html": False}).enable("table").render(final_markdown)
 final_soup = BeautifulSoup(final_html, "html.parser")
+if final_soup.h1:
+    final_soup.h1.decompose()
 for table in final_soup.select("table"):
     table.wrap(
         final_soup.new_tag(

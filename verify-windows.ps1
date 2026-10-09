@@ -1,4 +1,13 @@
-# Sales OS 2.0 — definitive local QA in a normal Windows + internet environment.
+param(
+    [string]$PreviewUrl = $env:SALES_OS_PREVIEW_URL,
+    [switch]$RequirePreview
+)
+
+# Sales OS 2.0 — reproducible local QA in a normal Windows + internet environment.
+# For the release gate, start `npm run preview -- --host 127.0.0.1 --port 4321 --strictPort`
+# in another terminal, then run this script with SALES_OS_PREVIEW_URL set to that URL.
+# Add -RequirePreview to fail if the production-preview gate was not run.
+# Example: $env:SALES_OS_PREVIEW_URL='http://127.0.0.1:4321'; .\verify-windows.ps1 -RequirePreview
 # Run from PowerShell: powershell -ExecutionPolicy Bypass -File .\verify-windows.ps1
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
@@ -38,7 +47,24 @@ try {
     RunChecked 'npm' @('run','test:quality')
     RunChecked 'npm' @('run','test:e2e')
     RunChecked 'npm' @('run','test:fallback')
-    Write-Host "`nALL SALES OS QUALITY GATES PASSED in this environment." -ForegroundColor Green
+    if ($PreviewUrl) {
+        $previousBaseUrl = $env:PLAYWRIGHT_BASE_URL
+        try {
+            $env:PLAYWRIGHT_BASE_URL = $PreviewUrl
+            RunChecked 'npm' @('run','test:preview')
+        } finally {
+            if ($null -eq $previousBaseUrl) {
+                Remove-Item Env:PLAYWRIGHT_BASE_URL -ErrorAction SilentlyContinue
+            } else {
+                $env:PLAYWRIGHT_BASE_URL = $previousBaseUrl
+            }
+        }
+    } elseif ($RequirePreview) {
+        throw 'Production preview URL required. Start `npm run preview -- --host 127.0.0.1 --port 4321 --strictPort` and set SALES_OS_PREVIEW_URL.'
+    } else {
+        Write-Host "`nProduction-preview release gate not run. Start `npm run preview -- --host 127.0.0.1 --port 4321 --strictPort` in another terminal and rerun with SALES_OS_PREVIEW_URL (or -RequirePreview)." -ForegroundColor Yellow
+    }
+    Write-Host "`nAll requested Sales OS gates passed in this environment." -ForegroundColor Green
     Write-Host "Report: $log" -ForegroundColor Green
 } catch {
     Write-Error "QA gate not passed: $_"

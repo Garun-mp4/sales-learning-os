@@ -4,6 +4,7 @@ import Shell from '../layouts/Shell.astro';
 import PageHeading from './PageHeading.astro';
 import EntryRow from './EntryRow.astro';
 import { entries,href,neighbor,relatedLibraries,sources } from '../lib/course';
+import { parsePracticeRubric } from '../lib/practice-rubric.mjs';
 interface Props { doc:CollectionEntry<'documents'> }
 const {doc}=Astro.props;const d=doc.data;const e=entries[d.id];
 if(!e||e.kind!==d.kind)throw Error(`Unknown learning document: ${d.id}`);
@@ -12,9 +13,11 @@ const related=d.related_practice.map(id=>entries[id]).filter(Boolean);
 const references=relatedLibraries(e);
 const {previous,next}=neighbor(e);
 const isPractice=d.kind==='practice';
+const practiceRubric=isPractice?parsePracticeRubric(doc.body):[];
+if(isPractice&&practiceRubric.length<3)throw Error(`Practice rubric missing for ${d.id}`);
 const tocHeadings=headings.filter(h=>h.depth===2||h.depth===3);
 ---
-<Shell title={d.title} module={d.module} documentId={d.id} documentKind={d.kind} reading>
+<Shell title={d.title} description={`${d.title} — ${isPractice?'практическое задание':'учебный материал'} модуля ${d.module}, ${d.group.toLowerCase()}. Самопроверка и ответы сохраняются на устройстве.`} module={d.module} documentId={d.id} documentKind={d.kind} reading>
   <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/roadmap/">Roadmap</a> › <a href={`/module/${d.module}-MODULE/`}>Модуль {d.module}</a> › <span aria-current="page">{d.id}</span></nav>
   <PageHeading eyebrow={`${isPractice?'ПРАКТИЧЕСКОЕ ЗАДАНИЕ':'УЧЕБНЫЙ МАТЕРИАЛ'} · ${d.id}`} title={d.title}>
     <div class="row wrap"><span class="badge warning">Редакционный черновик</span><span class="badge">{d.group}</span><span class="badge">{d.level==='required'?'Обязательный':'Продвинутый'} материал</span></div>
@@ -27,6 +30,7 @@ const tocHeadings=headings.filter(h=>h.depth===2||h.depth===3);
     </select>
     <button type="button" class="btn smallbtn" data-bookmark={d.id} aria-pressed="false">☆ В закладки</button>
     <a class="btn smallbtn" href={`/module/${d.module}-MODULE/`}>К модулю</a>
+    <details class="revisit-schedule"><summary class="btn smallbtn">Вернуться позже</summary><div class="revisit-popover"><label for={`revisit-delay-${d.id}`}>Показать снова</label><select id={`revisit-delay-${d.id}`} data-revisit-delay={d.id}><option value="1">Завтра</option><option value="3">Через 3 дня</option><option value="7">Через неделю</option></select><button type="button" class="btn smallbtn" data-revisit-add={d.id} data-revisit-title={d.title}>Добавить в очередь</button><p class="small muted" data-revisit-status={d.id} role="status" aria-live="polite"></p></div></details>
   </div>
   {tocHeadings.length>0&&<details class="toc-disclosure"><summary>Содержание материала<span aria-hidden="true">⌄</span></summary><nav class="toc" aria-label="Содержание материала">{tocHeadings.map(h=><a class={h.depth===3?'depth3':'depth2'} href={`#${h.slug}`}>{h.text}</a>)}</nav></details>}
   <div class="reader-grid"><div class="reader">
@@ -34,8 +38,29 @@ const tocHeadings=headings.filter(h=>h.depth===2||h.depth===3);
     {references.length>0&&<section class="library-references" aria-labelledby="related-library-title"><div class="section-head"><h2 class="h2" id="related-library-title">Справка по теме</h2></div><div class="library-reference-list">{references.map(reference=><a class="library-reference" href={`/library/${reference.id}/`}><span class="badge">Справочник</span><strong>{reference.title}</strong><span class="small muted">Открыть →</span></a>)}</div></section>}
     <div class="source-chips">{d.sources.filter(id=>sources.some(s=>s.id===id)).map(id=><a class="badge" href={`/source/${id}/`}>{id} · источник</a>)}</div>
     {!isPractice&&related.length>0&&<section class="module-section"><h2 class="h2">Связанная практика</h2><div class="stack">{related.map(x=><EntryRow entry={x}/>)}</div></section>}
-    {isPractice&&<div class="notice">Проверка самостоятельная: отметка «Выполнено» не является независимой оценкой.</div>}
-    <div class="editbox"><strong>{isPractice?'Мой ответ на задание':'Мои заметки по теме'}</strong><p class="hint">Сохраняется только на устройстве. Не публикуйте персональные данные заказчиков.</p><textarea data-note={d.id} aria-label={isPractice?'Ответ на задание':'Заметки по уроку'} placeholder="Ваши выводы, ответ или ссылка на рабочий документ..."></textarea><div class="hint" data-save-hint>Сохранение на устройстве</div></div>
+    {isPractice&&<div class="notice">Самопроверка помогает выбрать следующую итерацию, но не выставляет итоговую оценку и не является независимой аттестацией.</div>}
+    {isPractice&&<section class="practice-workspace" aria-labelledby={`practice-workspace-${d.id}`}>
+      <div class="section-head"><div><span class="eyebrow">ЛИЧНАЯ ПРАКТИКА</span><h2 class="h2" id={`practice-workspace-${d.id}`}>Ответ и следующая итерация</h2></div></div>
+      <p class="muted">Ответьте по критериям самого задания. Черновик хранится только в этом браузере; в каждой итерации сохраняется снимок ответа и самооценки.</p>
+      <form data-practice-form={d.id} data-practice-title={d.title}>
+        {practiceRubric.map((criterion,index)=><fieldset class="practice-criterion" data-practice-criterion={criterion.id} data-practice-label={criterion.label} data-practice-description={criterion.description}>
+          <legend><span class="criterion-number">{String(index+1).padStart(2,'0')}</span>{criterion.label}</legend>
+          <p>{criterion.description}</p>
+          <label for={`answer-${d.id}-${criterion.id}`}>Мой ответ</label>
+          <textarea id={`answer-${d.id}-${criterion.id}`} data-practice-answer={criterion.id} rows="3" maxlength="10000" placeholder="Запишите наблюдаемый результат, основания и оставшиеся вопросы…"></textarea>
+          <fieldset class="self-review" aria-label={`Самопроверка: ${criterion.label}`}>
+            <legend>Самопроверка по критерию</legend>
+            {['Пока не выполнено','Частично','Выполнено по условию'].map((label,value)=><label class="review-choice"><input type="radio" name={`review-${d.id}-${criterion.id}`} value={value} data-practice-review={criterion.id}/><span>{label}</span></label>)}
+          </fieldset>
+        </fieldset>)}
+        <label for={`next-step-${d.id}`}>Что проверить или улучшить в следующей итерации?</label>
+        <textarea id={`next-step-${d.id}`} data-practice-next rows="3" maxlength="10000" placeholder="Один конкретный следующий шаг…"></textarea>
+        <div class="practice-form-actions"><button class="btn primary" type="submit" data-practice-save>Сохранить итерацию</button><span data-practice-draft-status role="status" aria-live="polite">Черновик загрузится из этого браузера</span></div>
+      </form>
+      <section class="practice-draft-versions" data-practice-versions hidden aria-labelledby={`draft-versions-${d.id}`}><h3 id={`draft-versions-${d.id}`}>Другие черновики из объединённых копий</h3><div data-practice-versions-list></div></section>
+      <section class="practice-history" aria-labelledby={`practice-history-${d.id}`}><div class="section-head"><h3 class="h2" id={`practice-history-${d.id}`}>История итераций</h3><span class="small muted" data-practice-history-count>0 сохранено</span></div><div data-practice-history-list><p class="muted">Сохранённых итераций пока нет.</p></div></section>
+    </section>}
+    <div class="editbox"><strong>{isPractice?'Дополнительная заметка к заданию':'Мои заметки по теме'}</strong><p class="hint">Сохраняется только на устройстве. Не публикуйте персональные данные заказчиков.</p><textarea data-note={d.id} aria-label={isPractice?'Дополнительная заметка к заданию':'Заметки по уроку'} placeholder="Ваши выводы, ответ или ссылка на рабочий документ..."></textarea><div class="hint" data-save-hint>Сохранение на устройстве</div></div>
     <nav class="navprevnext" aria-label="Соседние материалы">
       {previous&&<a href={href(previous)}>← Предыдущий материал<strong>{previous.title}</strong></a>}
       {next&&<a href={href(next)}>Следующий материал →<strong>{next.title}</strong></a>}

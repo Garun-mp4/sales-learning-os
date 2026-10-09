@@ -1,9 +1,10 @@
 /* IndexedDB-first local storage for Sales OS user data. */
 (() => {
   const DB_NAME = "sales-os-personal";
-  const DB_VERSION = 2;
+  const DB_VERSION = 3;
   const STATE_STORE = "app-state";
   const NOTES_STORE = "notes";
+  const RESTORE_STORE = "restore-points";
   const STATE_KEY = "current";
   const GENERATION_KEY = "generation";
   const LOCAL_SNAPSHOT_KEY = "sales-os-local-v2";
@@ -22,6 +23,7 @@
   let noteCache = new Map();
   let pendingNotes = new Map();
   let generation = 0;
+  let memoryRestorePoints = [];
   let channel = null;
 
   function createClientId() {
@@ -34,11 +36,17 @@
 
   function defaultState() {
     return {
-      format: "sales-os-v2",
-      version: 2,
+      format: "sales-os-v3",
+      version: 3,
       lessonStatuses: {},
       practiceStatuses: {},
       bookmarks: [],
+      practiceDrafts: {},
+      practiceAttempts: {},
+      revisitQueue: {},
+      revisitHistory: [],
+      noteMergeSources: {},
+      lastExport: null,
       lastVisited: null,
       legacyImported: false,
     };
@@ -66,10 +74,192 @@
     state.bookmarks = Array.isArray(value.bookmarks)
       ? [...new Set(value.bookmarks.filter((item) => typeof item === "string"))]
       : [];
+    state.practiceDrafts = normalizePracticeDrafts(value.practiceDrafts);
+    state.practiceAttempts = normalizePracticeAttempts(value.practiceAttempts);
+    state.revisitQueue = normalizeRevisitQueue(value.revisitQueue);
+    state.revisitHistory = Array.isArray(value.revisitHistory)
+      ? value.revisitHistory
+          .filter(isRecord)
+          .slice(-500)
+          .map((item) => ({
+            entryId: safeText(item.entryId, 100),
+            completedAt: safeTimestamp(item.completedAt),
+            recallDraft: safeText(item.recallDraft, 10000),
+          }))
+      : [];
+    state.noteMergeSources = normalizeNoteMergeSources(value.noteMergeSources);
+    state.lastExport = normalizeLastExport(value.lastExport);
     state.lastVisited =
       typeof value.lastVisited === "string" ? value.lastVisited : null;
     state.legacyImported = value.legacyImported === true;
     return state;
+  }
+
+  function normalizePracticeDrafts(value) {
+    const drafts = {};
+    for (const [id, draft] of Object.entries(safeObject(value))) {
+      if (!isRecord(draft)) continue;
+      drafts[id] = {
+        answers: normalizeStringMap(draft.answers),
+        selfReview: normalizeReviewMap(draft.selfReview),
+        nextStep: safeText(draft.nextStep, 10000),
+        updatedAt: safeTimestamp(draft.updatedAt),
+        writerId:
+          typeof draft.writerId === "string" ? draft.writerId : "legacy",
+        versions: Array.isArray(draft.versions)
+          ? draft.versions
+              .filter(isRecord)
+              .slice(0, 20)
+              .map(normalizePracticeDraftVersion)
+          : [],
+      };
+    }
+    return drafts;
+  }
+
+  function normalizePracticeAttempts(value) {
+    const attempts = {};
+    for (const [id, records] of Object.entries(safeObject(value))) {
+      if (!Array.isArray(records)) continue;
+      attempts[id] = records.flatMap((record) => {
+        if (!isRecord(record) || typeof record.id !== "string") return [];
+        return [
+          {
+            id: record.id,
+            createdAt: safeTimestamp(record.createdAt),
+            rubric: Array.isArray(record.rubric)
+              ? record.rubric
+                  .filter(isRecord)
+                  .slice(0, 30)
+                  .map((item, index) => ({
+                    id: safeText(item.id, 80) || `criterion-${index + 1}`,
+                    label: safeText(item.label, 500),
+                    description: safeText(item.description, 2000),
+                  }))
+              : [],
+            answers: normalizeStringMap(record.answers),
+            selfReview: normalizeReviewMap(record.selfReview),
+            nextStep: safeText(record.nextStep, 10000),
+          },
+        ];
+      });
+    }
+    return attempts;
+  }
+
+  function normalizeRevisitQueue(value) {
+    const queue = {};
+    for (const [id, item] of Object.entries(safeObject(value))) {
+      if (!isRecord(item)) continue;
+      const dueAt = safeTimestamp(item.dueAt);
+      if (!dueAt) continue;
+      queue[id] = {
+        entryId: typeof item.entryId === "string" ? item.entryId : id,
+        dueAt,
+        scheduledAt: safeTimestamp(item.scheduledAt) || Date.now(),
+        prompt: safeText(item.prompt, 1000),
+        recallDraft: safeText(item.recallDraft, 10000),
+      };
+    }
+    return queue;
+  }
+
+  function normalizeNoteMergeSources(value) {
+    return Object.fromEntries(
+      Object.entries(safeObject(value)).map(([id, hashes]) => [
+        id,
+        Array.isArray(hashes)
+          ? [
+              ...new Set(hashes.filter((hash) => typeof hash === "string")),
+            ].slice(-100)
+          : [],
+      ]),
+    );
+  }
+
+  function normalizeLastExport(value) {
+    if (!isRecord(value)) return null;
+    return {
+      exportedAt: safeTimestamp(value.exportedAt),
+      sizeBytes:
+        Number.isSafeInteger(value.sizeBytes) && value.sizeBytes >= 0
+          ? value.sizeBytes
+          : 0,
+    };
+  }
+
+  function normalizeStringMap(value) {
+    return Object.fromEntries(
+      Object.entries(safeObject(value))
+        .filter(([, text]) => typeof text === "string")
+        .map(([key, text]) => [key, text.slice(0, 10000)]),
+    );
+  }
+
+  function normalizePracticeDraftVersion(value) {
+    return {
+      answers: normalizeStringMap(value.answers),
+      selfReview: normalizeReviewMap(value.selfReview),
+      nextStep: safeText(value.nextStep, 10000),
+      updatedAt: safeTimestamp(value.updatedAt),
+      writerId: typeof value.writerId === "string" ? value.writerId : "legacy",
+    };
+  }
+
+  function normalizeReviewMap(value) {
+    return Object.fromEntries(
+      Object.entries(safeObject(value)).filter(([, rating]) =>
+        [0, 1, 2].includes(rating),
+      ),
+    );
+  }
+
+  function safeText(value, maxLength) {
+    return typeof value === "string" ? value.slice(0, maxLength) : "";
+  }
+
+  function safeTimestamp(value) {
+    if (typeof value === "number" && Number.isFinite(value) && value > 0)
+      return value;
+    if (typeof value === "string") {
+      const parsed = Date.parse(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return 0;
+  }
+
+  function isRestorePoint(value) {
+    return (
+      isRecord(value) &&
+      typeof value.id === "string" &&
+      value.id.length > 0 &&
+      isRecord(value.snapshot) &&
+      isRecord(value.snapshot.state) &&
+      isRecord(value.snapshot.notes)
+    );
+  }
+
+  function normalizeRestorePoints(value) {
+    if (!Array.isArray(value)) return [];
+    return value
+      .filter(isRestorePoint)
+      .slice(-10)
+      .map((point) => ({
+        id: point.id,
+        createdAt: safeTimestamp(point.createdAt) || Date.now(),
+        reason:
+          point.reason === "before-restore"
+            ? "before-restore"
+            : "before-import",
+        snapshot: {
+          state: normalizeState(point.snapshot.state),
+          notes: Object.fromEntries(
+            Object.entries(point.snapshot.notes).filter(
+              ([, text]) => typeof text === "string",
+            ),
+          ),
+        },
+      }));
   }
 
   function cloneState(value) {
@@ -151,6 +341,7 @@
     const data = {
       state: defaultState(),
       notes: new Map(),
+      restorePoints: [],
       generation: 0,
       hasSnapshot: false,
       storage,
@@ -166,6 +357,7 @@
           Number.isSafeInteger(snapshot.generation) && snapshot.generation >= 0
             ? snapshot.generation
             : 0;
+        data.restorePoints = normalizeRestorePoints(snapshot.restorePoints);
         if (isRecord(snapshot.notes)) {
           for (const [id, note] of Object.entries(snapshot.notes))
             data.notes.set(id, normalizeNote(note));
@@ -226,6 +418,8 @@
           db.createObjectStore(STATE_STORE);
         if (!db.objectStoreNames.contains(NOTES_STORE))
           db.createObjectStore(NOTES_STORE);
+        if (!db.objectStoreNames.contains(RESTORE_STORE))
+          db.createObjectStore(RESTORE_STORE, { keyPath: "id" });
       };
       request.onblocked = () => {
         if (settled) return;
@@ -314,6 +508,7 @@
       generation: data.generation,
       state: normalizeState(data.state),
       notes: Object.fromEntries(data.notes),
+      restorePoints: normalizeRestorePoints(data.restorePoints),
     };
     storage.setItem(LOCAL_SNAPSHOT_KEY, JSON.stringify(snapshot));
   }
@@ -478,7 +673,7 @@
 
     await runTransaction(
       db,
-      [STATE_STORE, NOTES_STORE],
+      [STATE_STORE, NOTES_STORE, RESTORE_STORE],
       "readwrite",
       (transaction, _setResult, abort) => {
         const stateStore = transaction.objectStore(STATE_STORE);
@@ -542,6 +737,15 @@
           finishMigration();
         };
         cursorRequest.onerror = () => abort(cursorRequest.error);
+
+        const restoreStore = transaction.objectStore(RESTORE_STORE);
+        for (const point of legacy.restorePoints) {
+          try {
+            restoreStore.put(point);
+          } catch (error) {
+            abort(error);
+          }
+        }
       },
     );
 
@@ -560,6 +764,7 @@
     stateCache = data.state;
     stateCachePending = false;
     noteCache = data.notes;
+    memoryRestorePoints = data.restorePoints;
     pendingNotes = new Map();
     generation = data.generation;
     storageMode = data.storage ? "localStorage" : "memory";
@@ -970,85 +1175,355 @@
     }
   }
 
-  async function replaceAll(nextState, nextNotes) {
+  function fingerprintText(value) {
+    let hash = 2166136261;
+    for (let index = 0; index < value.length; index++) {
+      hash ^= value.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `${value.length}-${(hash >>> 0).toString(16)}`;
+  }
+
+  function samePracticeDraft(left, right) {
+    return (
+      JSON.stringify({
+        answers: left.answers,
+        selfReview: left.selfReview,
+        nextStep: left.nextStep,
+      }) ===
+      JSON.stringify({
+        answers: right.answers,
+        selfReview: right.selfReview,
+        nextStep: right.nextStep,
+      })
+    );
+  }
+
+  function mergeStates(currentValue, incomingValue) {
+    const current = normalizeState(currentValue);
+    const incoming = normalizeState(incomingValue);
+    const merged = normalizeState(current);
+    const statusRanks = {
+      not_started: 0,
+      in_progress: 1,
+      theory_completed: 2,
+      self_reviewed: 2,
+      completed: 3,
+      mastered: 3,
+    };
+    for (const field of ["lessonStatuses", "practiceStatuses"]) {
+      for (const [id, status] of Object.entries(incoming[field])) {
+        if (
+          (statusRanks[status] ?? -1) > (statusRanks[merged[field][id]] ?? -1)
+        )
+          merged[field][id] = status;
+      }
+    }
+    merged.bookmarks = [
+      ...new Set([...current.bookmarks, ...incoming.bookmarks]),
+    ];
+    for (const [id, imported] of Object.entries(incoming.practiceDrafts)) {
+      const local = merged.practiceDrafts[id];
+      if (!local) {
+        merged.practiceDrafts[id] = imported;
+        continue;
+      }
+      const versions = [...local.versions, ...imported.versions];
+      if (!samePracticeDraft(local, imported)) {
+        const older = local.updatedAt <= imported.updatedAt ? local : imported;
+        versions.push(normalizePracticeDraftVersion(older));
+      }
+      const seen = new Set();
+      merged.practiceDrafts[id] = {
+        ...(local.updatedAt > imported.updatedAt ? local : imported),
+        versions: versions
+          .filter((version) => {
+            const key = fingerprintText(JSON.stringify(version));
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .slice(-20),
+      };
+    }
+    for (const [id, attempts] of Object.entries(incoming.practiceAttempts)) {
+      const known = new Map(
+        (merged.practiceAttempts[id] || []).map((attempt) => [
+          attempt.id,
+          attempt,
+        ]),
+      );
+      for (const attempt of attempts)
+        if (!known.has(attempt.id)) known.set(attempt.id, attempt);
+      merged.practiceAttempts[id] = [...known.values()].sort(
+        (a, b) => a.createdAt - b.createdAt,
+      );
+    }
+    for (const [id, imported] of Object.entries(incoming.revisitQueue)) {
+      const local = merged.revisitQueue[id];
+      if (!local || imported.dueAt < local.dueAt)
+        merged.revisitQueue[id] = imported;
+    }
+    const history = new Map(
+      [...current.revisitHistory, ...incoming.revisitHistory].map((item) => [
+        `${item.entryId}:${item.completedAt}:${fingerprintText(item.recallDraft)}`,
+        item,
+      ]),
+    );
+    merged.revisitHistory = [...history.values()]
+      .sort((a, b) => a.completedAt - b.completedAt)
+      .slice(-500);
+    for (const [id, hashes] of Object.entries(incoming.noteMergeSources)) {
+      merged.noteMergeSources[id] = [
+        ...new Set([...(merged.noteMergeSources[id] || []), ...hashes]),
+      ].slice(-100);
+    }
+    merged.lastExport =
+      !current.lastExport ||
+      incoming.lastExport?.exportedAt > current.lastExport.exportedAt
+        ? incoming.lastExport
+        : current.lastExport;
+    merged.lastVisited = current.lastVisited || incoming.lastVisited;
+    merged.legacyImported = current.legacyImported || incoming.legacyImported;
+    return normalizeState(merged);
+  }
+
+  function mergeNoteTexts(currentState, currentNotes, incomingNotes) {
+    const mergedState = normalizeState(currentState);
+    const mergedNotes = new Map(currentNotes);
+    const now = new Date().toLocaleDateString("ru-RU");
+    for (const [id, incomingValue] of Object.entries(incomingNotes)) {
+      const incoming = String(incomingValue);
+      const current = mergedNotes.get(id)?.text || "";
+      if (!incoming || incoming === current || current.includes(incoming))
+        continue;
+      const fingerprint = fingerprintText(incoming);
+      const known = mergedState.noteMergeSources[id] || [];
+      if (known.includes(fingerprint)) continue;
+      const combined =
+        !current || incoming.includes(current)
+          ? incoming
+          : `${current}\n\n---\n\n[Вариант из импортированной копии · ${now}]\n\n${incoming}`;
+      if (combined.length > 250000)
+        throw new Error(
+          `Заметка ${id} после объединения превысит допустимый размер 250 КБ. Объединение отменено без изменений.`,
+        );
+      mergedNotes.set(id, {
+        text: combined,
+        revision: (mergedNotes.get(id)?.revision || 0) + 1,
+        updatedAt: Date.now(),
+        writerId: clientId,
+        generation,
+      });
+      mergedState.noteMergeSources[id] = [
+        ...new Set([...known, fingerprint]),
+      ].slice(-100);
+    }
+    return { state: normalizeState(mergedState), notes: mergedNotes };
+  }
+
+  function createRestorePoint(state, notes, reason) {
+    const noteEntries =
+      notes instanceof Map ? [...notes] : Object.entries(safeObject(notes));
+    return {
+      id: createClientId(),
+      createdAt: Date.now(),
+      reason: reason === "before-restore" ? "before-restore" : "before-import",
+      snapshot: {
+        state: normalizeState(state),
+        notes: Object.fromEntries(
+          noteEntries.map(([id, note]) => [
+            id,
+            typeof note === "string" ? note : note.text,
+          ]),
+        ),
+      },
+    };
+  }
+
+  function importNotesToMap(values, currentNotes, nextGeneration) {
+    return new Map(
+      Object.entries(values).map(([id, text]) => [
+        id,
+        {
+          text: String(text),
+          revision: (currentNotes.get(id)?.revision || 0) + 1,
+          updatedAt: Date.now(),
+          writerId: clientId,
+          generation: nextGeneration,
+        },
+      ]),
+    );
+  }
+
+  async function replaceAll(nextState, nextNotes, options = {}) {
     await ready;
-    const state = normalizeState(nextState);
-    const entries = Object.entries(nextNotes).map(([id, text]) => [
-      id,
-      String(text),
-    ]);
+    const incomingState = normalizeState(nextState);
+    const incomingNotes = Object.fromEntries(
+      Object.entries(safeObject(nextNotes)).filter(
+        ([, text]) => typeof text === "string",
+      ),
+    );
     const nextGeneration = generation + 1;
 
     if (storageMode === "indexeddb" && database) {
-      const importedNotes = new Map();
-      await runTransaction(
+      let committedState = incomingState;
+      let committedNotes = new Map();
+      let restorePoint;
+      const result = await runTransaction(
         database,
-        [STATE_STORE, NOTES_STORE],
+        [STATE_STORE, NOTES_STORE, RESTORE_STORE],
         "readwrite",
-        (tx, _setResult, abort) => {
-          try {
-            const stateStore = tx.objectStore(STATE_STORE);
-            stateStore.put(state, STATE_KEY);
-            stateStore.put(nextGeneration, GENERATION_KEY);
-            const store = tx.objectStore(NOTES_STORE);
-            store.clear();
-            for (const [id, text] of entries) {
-              const record = {
-                text,
-                revision: 1,
-                updatedAt: Date.now(),
-                writerId: clientId,
-                generation: nextGeneration,
+        (tx, setResult, abort) => {
+          const stateStore = tx.objectStore(STATE_STORE);
+          const noteStore = tx.objectStore(NOTES_STORE);
+          let currentState = defaultState();
+          const currentNotes = new Map();
+          let stateReady = false;
+          let notesReady = false;
+          const finish = () => {
+            if (!stateReady || !notesReady) return;
+            try {
+              const recoveryNotes = Object.fromEntries(
+                [...currentNotes].map(([id, record]) => [id, record.text]),
+              );
+              Object.assign(recoveryNotes, options.recoveryNotes || {});
+              restorePoint = createRestorePoint(
+                currentState,
+                recoveryNotes,
+                options.reason,
+              );
+              const baseState = options.merge
+                ? mergeStates(currentState, incomingState)
+                : incomingState;
+              const mergeResult = options.merge
+                ? mergeNoteTexts(baseState, currentNotes, incomingNotes)
+                : {
+                    state: baseState,
+                    notes: importNotesToMap(
+                      incomingNotes,
+                      currentNotes,
+                      nextGeneration,
+                    ),
+                  };
+              committedState = mergeResult.state;
+              committedNotes = importNotesToMap(
+                Object.fromEntries(
+                  [...mergeResult.notes].map(([id, note]) => [id, note.text]),
+                ),
+                currentNotes,
+                nextGeneration,
+              );
+              const restoreStore = tx.objectStore(RESTORE_STORE);
+              restoreStore.put(restorePoint);
+              const pointsRequest = restoreStore.getAll();
+              pointsRequest.onsuccess = () => {
+                const points = pointsRequest.result.sort(
+                  (a, b) => a.createdAt - b.createdAt,
+                );
+                for (const oldPoint of points.slice(
+                  0,
+                  Math.max(0, points.length - 10),
+                ))
+                  restoreStore.delete(oldPoint.id);
               };
-              importedNotes.set(id, record);
-              store.put(record, id);
+              pointsRequest.onerror = () => abort(pointsRequest.error);
+
+              stateStore.put(committedState, STATE_KEY);
+              stateStore.put(nextGeneration, GENERATION_KEY);
+              noteStore.clear();
+              for (const [id, record] of committedNotes)
+                noteStore.put(record, id);
+              setResult({ state: committedState });
+            } catch (error) {
+              abort(error);
             }
-          } catch (error) {
-            abort(error);
-          }
+          };
+          const stateRequest = stateStore.get(STATE_KEY);
+          stateRequest.onsuccess = () => {
+            currentState = normalizeState(stateRequest.result);
+            stateReady = true;
+            finish();
+          };
+          stateRequest.onerror = () => abort(stateRequest.error);
+          const cursorRequest = noteStore.openCursor();
+          cursorRequest.onsuccess = () => {
+            const cursor = cursorRequest.result;
+            if (cursor) {
+              currentNotes.set(String(cursor.key), normalizeNote(cursor.value));
+              cursor.continue();
+              return;
+            }
+            notesReady = true;
+            finish();
+          };
+          cursorRequest.onerror = () => abort(cursorRequest.error);
         },
       );
-      stateCache = state;
-      noteCache = importedNotes;
+      committedState = normalizeState(result.state);
+      stateCache = committedState;
+      noteCache = committedNotes;
       pendingNotes = new Map();
       generation = nextGeneration;
+      if (restorePoint)
+        memoryRestorePoints = [...memoryRestorePoints, restorePoint].slice(-10);
       clearLegacyNotes();
-      for (const [id, record] of importedNotes) mirrorNote(id, record);
-      const storage = localStorageOrNull();
-      if (storage) {
-        try {
-          for (let index = storage.length - 1; index >= 0; index--) {
-            const key = storage.key(index);
-            if (key?.startsWith(DRAFT_PREFIX)) storage.removeItem(key);
-          }
-        } catch {
-          // The committed database replacement remains authoritative.
-        }
-      }
-      mirrorState(state);
+      for (const [id, record] of committedNotes) mirrorNote(id, record);
+      clearSavedDrafts();
+      mirrorState(committedState);
       dispatch({ type: "replace" });
-      return { state: cloneState(state), durable: true, mode: storageMode };
+      return {
+        state: cloneState(committedState),
+        durable: true,
+        mode: storageMode,
+      };
     }
 
     if (storageMode === "localStorage") {
       return withFallbackLock(() => {
         const current = readLocalData();
-        const importedNotes = new Map(
-          entries.map(([id, text]) => [
-            id,
-            {
-              text,
-              revision: (current.notes.get(id)?.revision || 0) + 1,
-              updatedAt: Date.now(),
-              writerId: clientId,
-              generation: nextGeneration,
-            },
-          ]),
+        const currentState = stateCachePending
+          ? cloneState(stateCache)
+          : current.state;
+        const availableNotes = new Map(current.notes);
+        for (const [id, record] of pendingNotes) availableNotes.set(id, record);
+        const recoveryNotes = Object.fromEntries(
+          [...availableNotes].map(([id, record]) => [id, record.text]),
+        );
+        Object.assign(recoveryNotes, options.recoveryNotes || {});
+        const restorePoint = createRestorePoint(
+          currentState,
+          recoveryNotes,
+          options.reason,
+        );
+        const baseState = options.merge
+          ? mergeStates(currentState, incomingState)
+          : incomingState;
+        const mergeResult = options.merge
+          ? mergeNoteTexts(baseState, availableNotes, incomingNotes)
+          : {
+              state: baseState,
+              notes: importNotesToMap(
+                incomingNotes,
+                availableNotes,
+                nextGeneration,
+              ),
+            };
+        const importedNotes = importNotesToMap(
+          Object.fromEntries(
+            [...mergeResult.notes].map(([id, note]) => [id, note.text]),
+          ),
+          availableNotes,
+          nextGeneration,
+        );
+        const restorePoints = [...current.restorePoints, restorePoint].slice(
+          -10,
         );
         try {
           writeLocalSnapshot(current.storage, {
-            state,
+            state: mergeResult.state,
             notes: importedNotes,
+            restorePoints,
             generation: nextGeneration,
           });
         } catch (error) {
@@ -1056,30 +1531,134 @@
             `Cannot atomically replace local data within browser storage limits: ${error.message}`,
           );
         }
-        stateCache = state;
+        stateCache = mergeResult.state;
         stateCachePending = false;
         noteCache = importedNotes;
         pendingNotes = new Map();
         generation = nextGeneration;
+        memoryRestorePoints = restorePoints;
         clearLegacyNotes();
         for (const [id, record] of importedNotes) mirrorNote(id, record);
-        mirrorState(state);
+        clearSavedDrafts();
+        mirrorState(mergeResult.state);
         dispatch({ type: "replace" });
-        return { state: cloneState(state), durable: true, mode: storageMode };
+        return {
+          state: cloneState(mergeResult.state),
+          durable: true,
+          mode: storageMode,
+        };
       });
     }
 
-    stateCache = state;
-    stateCachePending = true;
-    noteCache = new Map(
-      entries.map(([id, text]) => [
-        id,
-        { ...emptyNote(text), generation: nextGeneration },
-      ]),
+    const baseState = options.merge
+      ? mergeStates(stateCache, incomingState)
+      : incomingState;
+    const availableNotes = new Map(noteCache);
+    for (const [id, record] of pendingNotes) availableNotes.set(id, record);
+    const mergeResult = options.merge
+      ? mergeNoteTexts(baseState, availableNotes, incomingNotes)
+      : {
+          state: baseState,
+          notes: importNotesToMap(
+            incomingNotes,
+            availableNotes,
+            nextGeneration,
+          ),
+        };
+    const recoveryPoint = createRestorePoint(
+      stateCache,
+      availableNotes,
+      options.reason,
     );
+    const importedNotes = importNotesToMap(
+      Object.fromEntries(
+        [...mergeResult.notes].map(([id, note]) => [id, note.text]),
+      ),
+      availableNotes,
+      nextGeneration,
+    );
+    stateCache = mergeResult.state;
+    stateCachePending = true;
+    noteCache = importedNotes;
+    pendingNotes = new Map();
     generation = nextGeneration;
-    dispatch({ type: "replace", state: cloneState(state) });
-    return { state: cloneState(state), durable: false, mode: "memory" };
+    memoryRestorePoints = [...memoryRestorePoints, recoveryPoint].slice(-10);
+    dispatch({ type: "replace", state: cloneState(stateCache) });
+    return { state: cloneState(stateCache), durable: false, mode: "memory" };
+  }
+
+  async function getRestorePoints() {
+    await ready;
+    if (storageMode === "indexeddb" && database) {
+      return runTransaction(
+        database,
+        RESTORE_STORE,
+        "readonly",
+        (tx, setResult, abort) => {
+          const request = tx.objectStore(RESTORE_STORE).getAll();
+          request.onsuccess = () =>
+            setResult(
+              request.result
+                .filter(isRestorePoint)
+                .sort((a, b) => b.createdAt - a.createdAt)
+                .map(({ id, createdAt, reason }) => ({
+                  id,
+                  createdAt,
+                  reason,
+                })),
+            );
+          request.onerror = () => abort(request.error);
+        },
+      );
+    }
+    const points =
+      storageMode === "localStorage"
+        ? readLocalData().restorePoints
+        : memoryRestorePoints;
+    return normalizeRestorePoints(points)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map(({ id, createdAt, reason }) => ({ id, createdAt, reason }));
+  }
+
+  async function restoreBackup(id) {
+    await ready;
+    let point = null;
+    if (storageMode === "indexeddb" && database) {
+      point = await runTransaction(
+        database,
+        RESTORE_STORE,
+        "readonly",
+        (tx, setResult, abort) => {
+          const request = tx.objectStore(RESTORE_STORE).get(id);
+          request.onsuccess = () => setResult(request.result || null);
+          request.onerror = () => abort(request.error);
+        },
+      );
+    } else {
+      point =
+        normalizeRestorePoints(
+          storageMode === "localStorage"
+            ? readLocalData().restorePoints
+            : memoryRestorePoints,
+        ).find((item) => item.id === id) || null;
+    }
+    if (!isRestorePoint(point)) throw new Error("Restore point is unavailable");
+    return replaceAll(point.snapshot.state, point.snapshot.notes, {
+      reason: "before-restore",
+    });
+  }
+
+  function clearSavedDrafts() {
+    const storage = localStorageOrNull();
+    if (!storage) return;
+    try {
+      for (let index = storage.length - 1; index >= 0; index--) {
+        const key = storage.key(index);
+        if (key?.startsWith(DRAFT_PREFIX)) storage.removeItem(key);
+      }
+    } catch {
+      // Committed state and notes remain authoritative if draft cleanup is blocked.
+    }
   }
 
   function readTheme() {
@@ -1133,6 +1712,8 @@
     cacheDraft,
     clearDraft,
     replaceAll,
+    getRestorePoints,
+    restoreBackup,
     readTheme,
     writeTheme,
     subscribe,

@@ -2,7 +2,7 @@
 import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';import {sources} from '../../lib/course';
 const kinds={BOOKS:'Книги',VIDEOS:'Видео',COURSES:'Курсы',STUDIES:'Исследования',GUIDES_AND_LAWS:'Справочники и правила'};
 ---
-<Shell title="Источники" active="sources"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <span aria-current="page">Источники</span></nav>
+<Shell title="Источники" description="Каталог книг, исследований, курсов, видео, справочников и правил, рекомендованных к материалам Sales OS." active="sources"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <span aria-current="page">Источники</span></nav>
 <PageHeading eyebrow="БИБЛИОТЕКА" title="Источники знаний" description="Книги, исследования, открытые курсы и видео из Markdown-каталога. Самостоятельная редакционная проверка не завершена."/>
 {Object.entries(kinds).map(([kind,title])=><section><div class="section-head"><h2 class="h2">{title}</h2><span class="badge">{sources.filter(s=>s.type===kind).length}</span></div><div class="grid">{sources.filter(s=>s.type===kind).map(s=><a class="card" href={`/source/${s.id}/`}><div class="card-n">{s.id}</div><h3>{s.title}</h3><p>{s.description||s.author}</p><span class="small muted">Подробнее →</span></a>)}</div></section>)}
 </Shell>

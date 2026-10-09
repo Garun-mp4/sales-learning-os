@@ -12,7 +12,7 @@ const moduleDocs=await getCollection('documents',doc=>doc.data.id===entry.id&&do
 if(moduleDocs.length!==1)throw new Error(`Expected one integration chapter for ${entry.id}`);
 const {Content}=await render(moduleDocs[0]);
 ---
-<Shell title={entry.title} module={entry.module}>
+<Shell title={entry.title} description={entry.description} module={entry.module}>
   <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/roadmap/">Roadmap</a> › <a href={`/level/${entry.stage}/`}>{stage?.title}</a> › <span aria-current="page">{entry.title}</span></nav>
   <PageHeading eyebrow={`МОДУЛЬ ${entry.module} · УРОВЕНЬ ${entry.stage}`} title={entry.title} description={entry.description}>
     <div class="row wrap"><span class="badge warning">Редакционный черновик</span><span class="badge">{theory.length} тем</span><span class="badge">{practice.length} практик</span><span class="badge">{entry.time}</span></div>

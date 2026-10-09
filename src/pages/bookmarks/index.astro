@@ -1,6 +1,6 @@
 ---
 import Shell from '../../layouts/Shell.astro';import PageHeading from '../../components/PageHeading.astro';
 ---
-<Shell title="Закладки" active="bookmarks"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <span aria-current="page">Закладки</span></nav>
+<Shell title="Закладки" description="Сохранённые уроки и задания, доступные только в локальном хранилище этого браузера." active="bookmarks"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Обзор</a> › <span aria-current="page">Закладки</span></nav>
 <PageHeading eyebrow="ЛИЧНАЯ БИБЛИОТЕКА" title="Закладки" description="Сохранённые уроки и задания. Все записи остаются в браузере."/>
 <section data-bookmark-results role="region" aria-label="Закладки" aria-busy="true"><div class="notice" data-bookmark-status role="status" aria-live="polite" aria-atomic="true">Загрузка закладок…</div><div class="stack" data-bookmark-list></div></section></Shell>

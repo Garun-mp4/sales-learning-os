@@ -48,7 +48,10 @@ def get_state(page):
 def upload_json(page,obj):
     page.locator('[data-import]').set_input_files(files=[{
       'name':'user-progress.json','mimeType':'application/json','buffer':json.dumps(obj,ensure_ascii=False).encode('utf8')
-    }]);page.wait_for_timeout(250)
+    }]);page.wait_for_timeout(100)
+    if page.locator('[data-import-dialog][open]').count():
+      page.locator('[data-import-replace]').click()
+    page.wait_for_timeout(250)
 
 def main():
     with sync_playwright() as p:
@@ -82,7 +85,7 @@ def main():
         'practiceStatuses':{},'bookmarks':[],'notes':{'01-001':'invalid'}}
       upload_json(page,invalid)
       assert get_state(page)['lessonStatuses']['01-001']=='theory_completed'
-      assert 'Импорт не удался' in page.locator('#toast').inner_text()
+      assert 'Файл не принят' in page.locator('#toast').inner_text()
       print('PASS: tampered backup is rejected before changing current progress')
 
       # A v2 import replaces old notes and doesn't duplicate notes in localStorage state.
@@ -120,11 +123,12 @@ def main():
       page.locator('[data-export]').click()
       page.wait_for_timeout(200)
       saved_backup=page.evaluate('''async()=>JSON.parse(await window.__downloadedBackup.text())''')
-      assert saved_backup['format']=='sales-os-v2'
+      assert saved_backup['format']=='sales-os-v3'
       assert saved_backup['notes']['01-MODULE']=='Историческая заметка к модулю 01'
       assert saved_backup['lessonStatuses']['01-001']=='theory_completed'
       assert page.evaluate('window.__downloadName')=='sales-os-backup.json'
-      print('PASS: backup export includes imported notes and statuses with a valid filename')
+      assert saved_backup['version']==3
+      print('PASS: v3 backup export includes imported notes and statuses with a valid filename')
 
       # Preserve clean state on broken JSON, bogus IDs and forbidden module bookmarks.
       for bad in [
