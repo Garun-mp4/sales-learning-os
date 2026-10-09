@@ -19,7 +19,7 @@ const {previous,next}=neighbor(e);
 const isPractice=d.kind==='practice';
 const practiceRubric=isPractice?parsePracticeRubric(doc.body):[];
 if(isPractice&&practiceRubric.length<3)throw Error(`Practice rubric missing for ${d.id}`);
-const tocHeadings=[...headings.filter(h=>h.depth===2||h.depth===3),...(isPractice?[{depth:2,slug:`workspace-${d.id}`,text:'Мой ответ'},{depth:2,slug:`history-${d.id}`,text:'История итераций'}]:[])];
+const tocHeadings=[...headings.filter(h=>h.depth===2||h.depth===3),...(isPractice?[{depth:2,slug:`workspace-${d.id}`,text:'Мой ответ'},{depth:2,slug:`history-${d.id}`,text:'История итераций'},{depth:2,slug:`feedback-${d.id}`,text:'Подсказки и разбор'},{depth:2,slug:`comparison-${d.id}`,text:'Сравнение итераций'}]:[])];
 ---
 <Shell title={d.title} description={`${d.title} — ${isPractice?'практическое задание':'учебный материал'} модуля ${d.module}, ${d.group.toLowerCase()}. Самопроверка и ответы сохраняются на устройстве.`} module={d.module} documentId={d.id} documentKind={d.kind} reading>
   <nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/roadmap/">Roadmap</a> › <a href={`/module/${d.module}-MODULE/`}>Модуль {d.module}</a> › <span aria-current="page">{d.id}</span></nav>

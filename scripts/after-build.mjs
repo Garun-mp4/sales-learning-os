@@ -29,7 +29,12 @@ await writeAtomic(workerPath, await readFile("scripts/service-worker.js"));
 // Stable legacy URLs remain available; each new page references immutable bytes.
 const assetNames = new Map();
 await mkdir(path.join(root, "assets/versioned"), { recursive: true });
-for (const name of ["app.css", "app.js", "user-store.js"]) {
+for (const name of [
+  "app.css",
+  "app.js",
+  "user-store.js",
+  "practice-feedback.js",
+]) {
   const content = await readFile(path.join(root, "assets", name));
   const extension = path.extname(name);
   const hash = createHash("sha256").update(content).digest("hex").slice(0, 16);

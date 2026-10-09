@@ -11,11 +11,13 @@ playwright-report/
 /src/generated/content-manifest.json
 /src/generated/client-index.json
 /src/generated/final-project.html
+/src/generated/practice-feedback.json
 __pycache__/
 *.py[cod]
 *.log
 /public/assets/app.css
 /public/assets/app.js
+/public/assets/practice-feedback.js
 /public/assets/user-store.js
 /public/assets/client-index.json
 /public/assets/search-index.json

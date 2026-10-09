@@ -231,6 +231,99 @@ summary:focus-visible,
   flex-shrink: 0;
   stroke-width: 1.7;
 }
+
+/* Practice feedback stays readable alongside the existing local editor. */
+.practice-feedback,
+.practice-comparison {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+.feedback-disclosure,
+.feedback-example {
+  border-bottom: 1px solid var(--border);
+}
+.feedback-disclosure > summary,
+.feedback-example > summary {
+  padding: 14px 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.feedback-disclosure > summary:hover,
+.feedback-example > summary:hover {
+  color: var(--accent);
+}
+.feedback-body {
+  padding: 4px 4px 20px;
+}
+.feedback-body h4,
+.comparison-row > h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 24px 0 10px;
+}
+.feedback-hints > details > p {
+  padding: 0 4px 14px;
+}
+.feedback-answer,
+.comparison-answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.feedback-rubric dt {
+  font-weight: 600;
+  margin-top: 16px;
+}
+.feedback-rubric dd {
+  margin: 6px 0 0;
+  line-height: 1.65;
+}
+.comparison-controls,
+.comparison-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.comparison-controls label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.comparison-controls select {
+  width: 100%;
+  min-width: 0;
+}
+.comparison-controls[hidden] {
+  display: none;
+}
+.comparison-row {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin-top: 24px;
+}
+.comparison-column {
+  min-width: 0;
+}
+.comparison-column h5 {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 4px 0 14px;
+}
+.comparison-label {
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .comparison-controls,
+  .comparison-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .comparison-column + .comparison-column {
+    border-top: 1px dashed var(--border);
+    padding-top: 16px;
+  }
+}
 .nav-item span:nth-child(2) {
   white-space: nowrap;
   overflow: hidden;
@@ -1897,8 +1990,8 @@ summary:focus-visible,
     padding-inline: 6px;
   }
   .topbar .theme-picker-trigger {
-    width: 108px;
-    max-width: 108px;
+    width: 88px;
+    max-width: 88px;
     padding-inline: 6px;
     font-size: 11px;
     gap: 4px;

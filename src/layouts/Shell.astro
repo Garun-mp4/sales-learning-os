@@ -101,5 +101,6 @@ const currentSection = active ?? (
   <template id="ui-row-chevron"><Icon name="chevron"/></template>
   <script src="/assets/user-store.js" defer is:inline></script>
   <script src="/assets/app.js" defer is:inline></script>
+  {(documentKind==='practice'||pathname==='/final-project/')&&<script src="/assets/practice-feedback.js" defer is:inline></script>}
 </body>
 </html>

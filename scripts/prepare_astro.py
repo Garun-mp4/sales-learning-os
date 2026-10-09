@@ -8,6 +8,7 @@ import re
 
 from bs4 import BeautifulSoup
 from markdown_it import MarkdownIt
+from practice_feedback import load_guides, render_feedback
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CONTENT = ROOT / "sales-knowledge-base"
@@ -29,11 +30,14 @@ def write_if_changed(path: pathlib.Path, content: bytes) -> None:
 
 manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
 entries = manifest["entries"]
+guides = load_guides(entries)
 search_index = []
 for entry in entries.values():
     raw = (CONTENT / entry["path"]).read_text(encoding="utf-8").split("---", 2)[2]
     raw = re.sub(r"^## (?:\d+\. )?(?:Материалы для углубления|Источники для проверки[^\n]*|Рекомендуемые материалы)[\s\S]*?(?=^## |\Z)", "", raw, flags=re.M)
     text = re.sub(r"\[([^]]+)\]\([^)]*\)", r"\1", raw)
+    if entry["id"] in guides:
+        text += " " + BeautifulSoup(render_feedback(entry["id"], guides), "html.parser").select_one(".practice-feedback").get_text(" ", strip=True)
     route_kind = {"module": "module", "theory": "lesson", "practice": "practice"}[entry["kind"]]
     search_index.append(
         {
@@ -101,6 +105,9 @@ write_if_changed(
     str(final_soup).encode("utf-8"),
 )
 
+write_if_changed(ROOT / 'src/generated/practice-feedback.json', json.dumps({id: render_feedback(id, guides) for id, entry in entries.items() if entry['kind'] == 'practice'} | {'FINAL_PROJECT': render_feedback('FINAL_PROJECT', guides)}, ensure_ascii=False).encode('utf-8'))
+write_if_changed(ASSETS / 'practice-feedback.js', (ROOT / 'src/scripts/practice-feedback.js').read_bytes())
+
 app_js = (ROOT / "src/scripts/app.js").read_bytes()
 user_store_js = (ROOT / "src/scripts/user-store.js").read_bytes()
 app_css = (ROOT / "src/styles/app.css").read_bytes()
@@ -127,6 +134,7 @@ urls = {
     "editorial-review/",
     "settings/",
     "assets/app.js",
+    "assets/practice-feedback.js",
     "assets/user-store.js",
     "assets/app.css",
     "assets/client-index.json",

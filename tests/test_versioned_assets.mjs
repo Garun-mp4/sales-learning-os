@@ -21,7 +21,12 @@ try {
       path.join(cwd, "src/generated/content-manifest.json"),
       JSON.stringify({ entries: {} }),
     );
-    for (const name of ["app.css", "app.js", "user-store.js"])
+    for (const name of [
+      "app.css",
+      "app.js",
+      "user-store.js",
+      "practice-feedback.js",
+    ])
       await writeFile(
         path.join(cwd, "dist/assets", name),
         name === "user-store.js" ? "shared storage bytes" : version + name,
