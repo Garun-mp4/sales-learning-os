@@ -9,6 +9,6 @@ if(!rendered.trim())throw Error('Final project renderer missing after prepare:co
 ---
 <Shell title="Итоговый проект" active="practice"><nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/practice/">Практика</a> › <span aria-current="page">Итоговый проект</span></nav>
 <PageHeading eyebrow="СКВОЗНАЯ ПРАКТИКА" title="От первого клиента до сделки" description="Практический маршрут для применения знаний на собственных проектах."/>
-<article class="article" set:html={rendered}></article>
+<article class="article" data-pagefind-body data-search-id="FINAL_PROJECT" data-search-level="extra" data-search-module="extra" data-search-kind="final_project" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]" set:html={rendered}></article>
 <div class="editbox"><strong>Мой итоговый проект</strong><textarea data-note="FINAL_PROJECT" aria-label="Заметки итогового проекта" placeholder="Цели, результаты, ссылки на документы и выводы..."></textarea><p class="hint" data-save-hint>Данные остаются в браузере</p></div>
 </Shell>

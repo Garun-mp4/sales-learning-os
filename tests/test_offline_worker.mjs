@@ -1,10 +1,9 @@
-/** Service worker behavior using Node VM with simulated fetch/CacheStorage.
- * No real-browser offline assertion is implied by these tests.
- */
+/** Validate generated offline manifests and the service worker's ready-pack gate. */
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
-import { runInNewContext } from "node:vm";
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import { runInNewContext } from "node:vm";
 
 const site = path.resolve(process.argv[2] ?? "dist");
 const sourceManifest = JSON.parse(
@@ -13,134 +12,235 @@ const sourceManifest = JSON.parse(
 const manifest = JSON.parse(
   readFileSync(path.join(site, "assets/offline-files.json"), "utf8"),
 );
+const markerUrl = "http://test.local/__sales-os-offline-ready__";
+
+assert.equal(manifest.schemaVersion, 2);
+assert.match(manifest.version, /^[a-f0-9]{12}$/i);
+assert.equal(manifest.urls.length, manifest.resources.length);
+assert.deepEqual(
+  manifest.urls,
+  manifest.resources.map((resource) => resource.url),
+  "Legacy URL list and sized resources must stay in sync",
+);
+assert.equal(new Set(manifest.urls).size, manifest.urls.length);
+assert.equal(manifest.modules.length, 22);
+assert.ok(manifest.estimatedBytes > 0);
+assert.ok(manifest.urls.includes("assets/offline-files.json"));
 assert.ok(
-  manifest.urls.length > Object.keys(sourceManifest.entries).length,
-  "The offline manifest should list every course page and support asset",
+  !manifest.urls.includes("sw.js"),
+  "The running worker is managed by the browser",
 );
-assert.equal(
-  new Set(manifest.urls).size,
-  manifest.urls.length,
-  "The manifest must not contain duplicates",
-);
-for (const url of manifest.urls) {
+
+for (const resource of manifest.resources) {
+  const url = resource.url;
   assert.ok(!url.startsWith("/"), `Expected relative canonical URL: ${url}`);
   assert.ok(
     !url.includes("\\"),
-    `Expected URL separators to use forward slashes: ${url}`,
+    `Expected web separators, not Windows paths: ${url}`,
   );
-  assert.ok(!url.endsWith("index.html"), `Non-canonical URL: ${url}`);
-  const segments = url.split("/").filter(Boolean);
-  const file =
-    url.endsWith("/") || url === ""
-      ? path.join(site, ...segments, "index.html")
-      : path.join(site, ...segments);
-  assert.ok(existsSync(file), `Offline resource missing: ${url}`);
-}
-for (const [id, entry] of Object.entries(sourceManifest.entries)) {
-  const kind = { module: "module", theory: "lesson", practice: "practice" }[
-    entry.kind
-  ];
   assert.ok(
-    manifest.urls.includes(`${kind}/${id}/`),
-    `Course route missing from offline manifest: ${id}`,
+    !url.split("/").includes(".."),
+    `Path traversal in offline manifest: ${url}`,
+  );
+  assert.ok(
+    !url.toLowerCase().includes("dist"),
+    `Build directory leaked into manifest: ${url}`,
+  );
+  assert.ok(
+    !url.endsWith("index.html"),
+    `Expected canonical route URL: ${url}`,
+  );
+  const segments = url.split("/").filter(Boolean);
+  const output =
+    url === "assets/offline-files.json"
+      ? path.join(site, ...segments)
+      : url.endsWith("/") || url === ""
+        ? path.join(site, ...segments, "index.html")
+        : path.join(site, ...segments);
+  assert.ok(statSync(output).isFile(), `Offline resource missing: ${url}`);
+  if (url !== "assets/offline-files.json")
+    assert.equal(
+      resource.bytes,
+      statSync(output).size,
+      `Resource size is stale: ${url}`,
+    );
+}
+
+for (const [id, entry] of Object.entries(sourceManifest.entries)) {
+  const routeKind = {
+    module: "module",
+    theory: "lesson",
+    practice: "practice",
+  }[entry.kind];
+  assert.ok(
+    manifest.urls.includes(`${routeKind}/${id}/`),
+    `Course route missing: ${id}`,
   );
 }
+for (const source of sourceManifest.sources)
+  assert.ok(
+    manifest.urls.includes(`source/${source.id}/`),
+    `Source route missing: ${source.id}`,
+  );
+for (const module of manifest.modules)
+  assert.ok(
+    manifest.urls.includes(module.url),
+    `Module route missing: ${module.id}`,
+  );
+
+function collectFiles(directory, relative = "") {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const name = relative ? `${relative}/${entry.name}` : entry.name;
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) return collectFiles(absolute, name);
+    if (name === "assets/offline-files.json") return [];
+    return [{ name, absolute }];
+  });
+}
+const fingerprint = createHash("sha256");
+for (const file of collectFiles(site).sort((left, right) =>
+  left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+))
+  fingerprint
+    .update(file.name)
+    .update("\0")
+    .update(readFileSync(file.absolute))
+    .update("\0");
+assert.equal(
+  manifest.version,
+  fingerprint.digest("hex").slice(0, 12),
+  "Offline version must fingerprint actual rendered resources and the service worker",
+);
 console.log(
-  `PASS: manifest has ${manifest.urls.length} unique canonical URLs, all exist`,
+  `PASS: ${manifest.resources.length} canonical Windows/POSIX-safe offline resources, ${manifest.modules.length} modules, ${manifest.estimatedBytes} estimated bytes, output fingerprint ${manifest.version}`,
 );
 
 const registrations = {};
-const version = manifest.version;
+const currentVersion = manifest.version;
+const readyBody = (version, installedAt) => ({
+  ok: true,
+  json: async () => ({ version, installedAt }),
+});
+const response = (body, status = 200) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  body,
+});
 const storage = new Map([
   [
-    "sales-os-offline-previous",
+    "sales-os-offline-incomplete",
     new Map([
-      ["http://test.local/lesson/01-001/", { status: 200, body: "stored old" }],
+      ["http://test.local/lesson/01-001/", response("unsafe partial")],
+      ["http://test.local/lesson/02-001/", response("unsafe partial")],
     ]),
   ],
   [
-    `sales-os-offline-${version}`,
+    "sales-os-offline-previous",
     new Map([
-      ["http://test.local/lesson/01-001/", { status: 200, body: "stored new" }],
+      [markerUrl, readyBody("previous", 10)],
+      ["http://test.local/lesson/01-001/", response("stored previous")],
+    ]),
+  ],
+  [
+    `sales-os-offline-${currentVersion}`,
+    new Map([
+      [markerUrl, readyBody(currentVersion, 20)],
+      ["http://test.local/lesson/01-001/", response("stored current")],
     ]),
   ],
 ]);
 let online = true;
-let networkResponse = { ok: true, status: 200, body: "fresh network" };
+let networkResponse = response("fresh network");
 let errorSent = false;
-const ctx = {
+const context = {
   self: {
     location: { origin: "http://test.local" },
+    registration: { scope: "http://test.local/" },
     clients: { claim: async () => {} },
     skipWaiting: () => {},
     addEventListener(type, handler) {
       registrations[type] = handler;
     },
   },
-  location: { origin: "http://test.local" },
   caches: {
     keys: async () => [...storage.keys()],
     open: async (name) => ({
-      match: async (req) => storage.get(name)?.get(req.url) || null,
+      match: async (key) =>
+        storage.get(name)?.get(typeof key === "string" ? key : key.url) || null,
     }),
   },
   fetch: async () => {
-    if (!online) throw Error("offline");
+    if (!online) throw new Error("offline");
     return networkResponse;
   },
   Response: {
     error: () => {
       errorSent = true;
-      return { status: 0, body: "network error" };
+      return response("network error", 0);
     },
   },
   URL,
 };
-runInNewContext(readFileSync(path.join(site, "sw.js"), "utf8"), ctx);
+runInNewContext(readFileSync(path.join(site, "sw.js"), "utf8"), context);
 assert.equal(typeof registrations.fetch, "function");
-function respond(url, method = "GET") {
-  let response;
+
+function request(url, { method = "GET", headers = {} } = {}) {
+  const normalizedHeaders = Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  return {
+    url,
+    method,
+    headers: { get: (key) => normalizedHeaders[key.toLowerCase()] || null },
+  };
+}
+/** @returns {Promise<any> | undefined} */
+function respond(url, options) {
+  let result;
   registrations.fetch({
-    request: { url, method },
-    respondWith(p) {
-      response = p;
+    request: request(url, options),
+    respondWith(value) {
+      result = value;
     },
   });
-  return response;
+  return result;
 }
+
+assert.equal(respond("https://outside.invalid/resource"), undefined);
+assert.equal(respond("http://test.local/api", { method: "POST" }), undefined);
 assert.equal(
-  respond("http://elsewhere.invalid/test"),
+  respond("http://test.local/lesson/01-001/", {
+    headers: { "X-SalesOS-Offline-Install": "1" },
+  }),
   undefined,
-  "Cross-origin requests must be untouched",
+  "Installer requests must bypass stale offline fallback",
 );
 assert.equal(
-  respond("http://test.local/api", "POST"),
-  undefined,
-  "Non-GET requests must be untouched",
+  (await respond("http://test.local/lesson/01-001/")).body,
+  "fresh network",
 );
-const onlineResp = await Promise.resolve(
-  respond("http://test.local/lesson/01-001/"),
-);
-assert.equal(onlineResp.body, "fresh network");
+networkResponse = response("not found", 404);
+assert.equal((await respond("http://test.local/lesson/01-001/")).status, 404);
+
 online = false;
-const offlineResp = await Promise.resolve(
-  respond("http://test.local/lesson/01-001/"),
-);
-assert.equal(offlineResp.body, "stored new");
-storage.get(`sales-os-offline-${version}`).clear();
-const oldResp = await Promise.resolve(
-  respond("http://test.local/lesson/01-001/"),
+networkResponse = response("server error", 503);
+const offlineResponse = await respond(
+  "http://test.local/lesson/01-001/?q=local&personal=text",
 );
 assert.equal(
-  oldResp.body,
-  "stored old",
-  "Worker must find older cache after an app update",
+  offlineResponse.body,
+  "stored current",
+  "Newest completed pack should serve a cache hit and ignore query state",
 );
-const missingResp = await Promise.resolve(
-  respond("http://test.local/lesson/02-001/"),
+storage
+  .get(`sales-os-offline-${currentVersion}`)
+  .delete("http://test.local/lesson/01-001/");
+assert.equal(
+  (await respond("http://test.local/lesson/01-001/")).body,
+  "stored previous",
 );
-assert.equal(missingResp.status, 0);
+assert.equal((await respond("http://test.local/lesson/02-001/")).status, 0);
 assert.equal(errorSent, true);
 console.log(
-  "PASS: worker same-origin GET, network-first, cached fallback, old cache fallback, missing resource",
+  "PASS: worker bypasses installer fetches, preserves real 404s, and serves only completed packs newest-first",
 );

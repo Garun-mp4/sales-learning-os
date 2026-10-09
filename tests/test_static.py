@@ -118,8 +118,32 @@ if not search_index_path.is_file():
     issues.append("Missing search index")
 else:
     page_indexes = json.loads(search_index_path.read_text(encoding="utf8"))
-if len(page_indexes) != len(entries) + 3:
-    issues.append(f"Search count mismatch: {len(page_indexes)}/{len(entries) + 3}")
+sources = manifest.get("sources", [])
+expected_search_count = len(entries) + 3 + 1 + len(sources)
+if len(page_indexes) != expected_search_count:
+    issues.append(f"Search count mismatch: {len(page_indexes)}/{expected_search_count}")
+search_by_id = {item.get("id"): item for item in page_indexes}
+if len(search_by_id) != len(page_indexes):
+    issues.append("Search index contains duplicate document IDs")
+for item in page_indexes:
+    if not all(isinstance(item.get(key), str) and item[key] for key in ("id", "kind", "level", "module", "title", "url")):
+        issues.append(f"Search entry has incomplete shared metadata: {item.get('id')}")
+        break
+    if item["url"].startswith(("/", "\\")) or "\\" in item["url"] or ".." in item["url"].split("/"):
+        issues.append(f"Search entry has a non-relative URL: {item['id']} · {item['url']}")
+for identifier, entry in entries.items():
+    item = search_by_id.get(identifier, {})
+    route = {"module": "module", "theory": "lesson", "practice": "practice"}[entry["kind"]]
+    if item.get("url") != f"{route}/{identifier}/" or item.get("module") != entry["module"] or item.get("level") != entry["level"] or item.get("kind") != entry["kind"]:
+        issues.append(f"Search metadata differs from the course manifest: {identifier}")
+        break
+extra_search = {item.get("kind") for item in page_indexes if item.get("level") == "extra"}
+if not {"final_project", "library", "source"}.issubset(extra_search):
+    issues.append("Search index omits the final project, libraries, or source cards")
+if search_by_id.get("FINAL_PROJECT", {}).get("url") != "final-project/":
+    issues.append("Search index has no link to the final project")
+if {item.get("id") for item in page_indexes if item.get("kind") == "source"} != {source["id"] for source in sources}:
+    issues.append("Search index does not include every source card")
 library_index = {item.get("id"): item for item in page_indexes if item.get("kind") == "library"}
 if set(library_index) != {"glossary", "cases", "templates"}:
     issues.append("Search index does not include all three course libraries")
@@ -129,6 +153,31 @@ for identifier in library_index:
         issues.append("Library missing searchable body " + identifier)
     if len(library.select("h1")) != 1:
         issues.append("Library must have exactly one h1 " + identifier)
+    article = library.select_one("article[data-pagefind-body]")
+    if not article or not all(
+        f"{name}[data-search-{name}]" in article.get("data-pagefind-filter", "")
+        for name in ("level", "module", "kind")
+    ):
+        issues.append("Library Pagefind filter metadata is missing " + identifier)
+for source in sources:
+    source_path = DIST / "source" / source["id"] / "index.html"
+    if not source_path.is_file():
+        issues.append("Source search record has no route " + source["id"])
+        continue
+    source_page = BeautifulSoup(source_path.read_text(encoding="utf8"), "html.parser")
+    source_article = source_page.select_one("article[data-pagefind-body]")
+    if not source_article or not all(
+        f"{name}[data-search-{name}]" in source_article.get("data-pagefind-filter", "")
+        for name in ("level", "module", "kind")
+    ):
+        issues.append("Source Pagefind filter metadata is missing " + source["id"])
+final_project = BeautifulSoup((DIST / "final-project/index.html").read_text(encoding="utf8"), "html.parser")
+final_article = final_project.select_one("article[data-pagefind-body]")
+if not final_article or not all(
+    f"{name}[data-search-{name}]" in final_article.get("data-pagefind-filter", "")
+    for name in ("level", "module", "kind")
+):
+    issues.append("Final project is not tagged in the Pagefind corpus")
 if "data-template-copy" not in (DIST / "library/templates/index.html").read_text(encoding="utf8"):
     issues.append("Template library does not expose copy controls")
 for document_id, library_id in (("06-002", "templates"), ("08-001", "cases"), ("16-001", "glossary")):

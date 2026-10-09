@@ -468,18 +468,82 @@ test("Search distinguishes no results from a recoverable load error", async ({
   await results.locator("[data-search-retry]").click();
   await expect(results.locator('[role="alert"]')).toHaveCount(0);
   await expect(page.locator("[data-search-status]")).toContainText(
-    "Введите слово или фразу для поиска",
+    "Введите запрос, выберите фильтр",
   );
   expect(pageErrors).toEqual([]);
   await page.locator("[data-search-input]").fill("zzzz-sales-os-no-match");
   await expect(page.locator("[data-search-status]")).toContainText(
-    "Совпадений не найдено.",
+    "Совпадений в материалах нет.",
   );
   await expect(results.locator('[role="alert"]')).toHaveCount(0);
 });
 test("Search shows real documents", async ({ page }) => {
   await page.goto("/search/?q=возражения");
   await expect(page.locator("[data-search-results] a").first()).toBeVisible();
+  await expect(page).toHaveURL(/\/search\/$/);
+});
+test("Search filters cover modules, sources and the final project", async ({
+  page,
+}) => {
+  await page.route("**/pagefind/pagefind.js", (route) => route.abort());
+  await page.goto("/search/");
+  await page.locator("[data-search-level]").selectOption("required");
+  await page.locator("[data-search-module]").selectOption("01");
+  await page.locator("[data-search-kind]").selectOption("practice");
+  const practices = page.locator("[data-search-results] a[href*='/practice/']");
+  await expect(practices.first()).toBeVisible();
+  const practiceUrls = await practices.evaluateAll((links) =>
+    links.map((link) => (link as HTMLAnchorElement).getAttribute("href")),
+  );
+  expect(
+    practiceUrls.every((url) => /\/practice\/01-P\d{2}\/$/.test(url || "")),
+  ).toBe(true);
+
+  await page.locator("[data-search-level]").selectOption("extra");
+  await page.locator("[data-search-module]").selectOption("extra");
+  await page.locator("[data-search-kind]").selectOption("final_project");
+  await expect(
+    page.locator("[data-search-results] a[href='/final-project/']"),
+  ).toBeVisible();
+
+  await page.locator("[data-search-kind]").selectOption("source");
+  await page
+    .locator("[data-search-input]")
+    .fill("Sales Enablement Certification");
+  await expect(
+    page.locator("[data-search-results] a[href='/source/C07/']"),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/search\/$/);
+});
+test("Personal notes and bookmarks are searchable only in the local browser", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await page.route("**/pagefind/pagefind.js", (route) => route.abort());
+  await page.goto("/lesson/01-001/");
+  await page
+    .locator("textarea[data-note]")
+    .fill("закрытая заметка клиента Северный маяк");
+  await page.locator("[data-bookmark]").click();
+  await page.waitForTimeout(650);
+  await page.goto("/search/");
+  await page.locator("[data-search-input]").fill("Северный маяк");
+  await expect(page.locator("[data-search-results] a")).toHaveCount(0);
+  await page.locator("[data-search-private]").check();
+  const localResult = page.locator(".search-private-result a");
+  await expect(localResult).toContainText(
+    "закрытая заметка клиента Северный маяк",
+  );
+  await expect(page).toHaveURL(/\/search\/$/);
+  expect(
+    requests.some((url) => decodeURIComponent(url).includes("Северный маяк")),
+  ).toBe(false);
+
+  await page.locator("[data-search-input]").fill("Обмен ценностью");
+  await expect(page.locator(".search-private-result a")).toContainText(
+    "закладка",
+  );
 });
 test("Bookmarks distinguish a recoverable index error from an empty list", async ({
   page,

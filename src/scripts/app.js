@@ -988,19 +988,37 @@ document
     }
     e.target.value = "";
   });
-// Search index is loaded only on the search screen. Nothing from lessons is sent to a server.
+// Public search indexes are static and local; private notes never leave this browser.
 const searchInput = document.querySelector("[data-search-input]");
 if (searchInput) {
   const params = new URLSearchParams(location.search);
   searchInput.value = params.get("q") || "";
   const resultRoot = document.querySelector("[data-search-results]");
   const searchStatus = document.querySelector("[data-search-status]");
+  const levelFilter = document.querySelector("[data-search-level]");
+  const moduleFilter = document.querySelector("[data-search-module]");
+  const kindFilter = document.querySelector("[data-search-kind]");
+  const privateToggle = document.querySelector("[data-search-private]");
+  const filterControls = [
+    { key: "level", control: levelFilter },
+    { key: "module", control: moduleFilter },
+    { key: "kind", control: kindFilter },
+  ].flatMap((item) =>
+    item.control instanceof HTMLSelectElement ? [item] : [],
+  );
+  const filters = filterControls.map((item) => item.control);
+  for (const { key, control } of filterControls) {
+    if ([...control.options].some((option) => option.value === params.get(key)))
+      control.value = params.get(key);
+  }
   let pagefind = null,
     searchIndex = [],
     fallbackLoaded = false,
     searchReady = false,
     serial = 0,
     lastTimer;
+  // Remove the incoming query immediately; a phrase can itself contain a note.
+  history.replaceState(null, "", location.pathname);
   const normalized = (s) =>
     s
       .toLocaleLowerCase("ru")
@@ -1012,7 +1030,26 @@ if (searchInput) {
     const response = await fetch(root + "assets/search-index.json");
     if (!response.ok) throw new Error("Search index request failed");
     const items = await response.json();
-    if (!Array.isArray(items)) throw new Error("Invalid search index");
+    if (
+      !Array.isArray(items) ||
+      items.some(
+        (item) =>
+          typeof item.id !== "string" ||
+          typeof item.title !== "string" ||
+          typeof item.text !== "string" ||
+          typeof item.url !== "string" ||
+          !["required", "advanced", "extra"].includes(item.level) ||
+          ![
+            "theory",
+            "practice",
+            "module",
+            "final_project",
+            "library",
+            "source",
+          ].includes(item.kind),
+      )
+    )
+      throw new Error("Invalid search index");
     searchIndex = items.map((item) => ({
       ...item,
       _title: normalized(item.title),
@@ -1045,6 +1082,7 @@ if (searchInput) {
       try {
         pagefind = await import(root + "pagefind/pagefind.js");
         await pagefind.init();
+        await pagefind.filters();
       } catch {
         pagefind = null;
       }
@@ -1062,99 +1100,225 @@ if (searchInput) {
     searchStatus.setAttribute("aria-busy", "true");
     const query = searchInput.value.trim(),
       text = normalized(query);
-    history.replaceState(
-      null,
-      "",
-      location.pathname + (text ? "?q=" + encodeURIComponent(query) : ""),
+    // Search state stays in the page, not in a request URL or browser history.
+    history.replaceState(null, "", location.pathname);
+    const selectedFilters = Object.fromEntries(
+      filterControls
+        .filter(({ control }) => control.value)
+        .map(({ key, control }) => [key, control.value]),
     );
-    if (!text) {
+    const hasFilters = Object.keys(selectedFilters).length > 0;
+    const includePrivate = Boolean(privateToggle?.checked);
+    if (!text && !hasFilters && !includePrivate) {
       searchStatus.textContent =
-        "Введите слово или фразу для поиска по материалам.";
+        "Введите запрос, выберите фильтр или включите поиск по своим записям.";
       resultRoot.innerHTML = "";
       resultRoot.setAttribute("aria-busy", "false");
       searchStatus.setAttribute("aria-busy", "false");
       return;
     }
+    let publicItems = [],
+      publicCount = 0,
+      privateItems = [],
+      privateError = false;
     if (pagefind) {
       try {
-        const match = await pagefind.search(query),
-          hits = await Promise.all(
-            match.results.slice(0, 60).map((r) => r.data()),
-          );
-        if (mine !== serial) return;
-        const html = hits
-          .filter((d) => d.url?.startsWith("/"))
-          .map(
-            (d) =>
-              `<a class="item" href="${escapeHtml(d.url)}"><div class="itext"><div class="ititle">${escapeHtml(d.meta?.title || d.url)}</div><div class="isub">${escapeHtml(d.excerpt?.replace(/<[^>]*>/g, "").slice(0, 180) || "Материал курса")}</div></div><span class="ic-right">→</span></a>`,
-          )
-          .join("");
-        searchStatus.textContent = match.results.length
-          ? `Найдено: ${match.results.length}${match.results.length > 60 ? " (показаны первые 60)" : ""}`
-          : "Найдено: 0. Совпадений не найдено.";
-        resultRoot.innerHTML = html;
-        resultRoot.setAttribute("aria-busy", "false");
-        searchStatus.setAttribute("aria-busy", "false");
-        return;
+        const match = await pagefind.search(text ? query : null, {
+          filters: hasFilters ? selectedFilters : undefined,
+        });
+        publicCount = match.results.length;
+        const hits = await Promise.all(
+          match.results.slice(0, 60).map((result) => result.data()),
+        );
+        publicItems = hits
+          .filter((item) => item.url?.startsWith("/"))
+          .map((item) => ({
+            id: item.meta?.id || "",
+            title: item.meta?.title || item.url,
+            url: item.url,
+            kind: item.meta?.kind || "module",
+            module: item.meta?.module || "extra",
+            level: item.meta?.level || "extra",
+            excerpt:
+              item.plain_excerpt ||
+              item.excerpt?.replace(/<[^>]*>/g, "") ||
+              "Материал курса",
+          }));
       } catch {
         pagefind = null;
         try {
           await loadFallbackIndex();
-          if (mine === serial) return search();
-          return;
         } catch {
           if (mine === serial) showSearchError();
           return;
         }
       }
     }
-    const terms = text.split(" ");
-    const matches = searchIndex
-      .map((item) => {
-        const title = item._title,
-          body = item._body;
-        let score = terms.reduce(
-          (v, t) =>
-            v + (title.includes(t) ? 20 : 0) + (body.includes(t) ? 2 : 0),
-          0,
-        );
-        if (!terms.every((t) => title.includes(t) || body.includes(t)))
-          score = 0;
-        return { ...item, score };
-      })
-      .filter((x) => x.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 60);
+    if (!pagefind) {
+      const terms = text ? text.split(" ") : [];
+      const matches = searchIndex
+        .map((item) => {
+          const title = item._title,
+            body = item._body;
+          const matchesQuery =
+            !terms.length ||
+            terms.every((term) => title.includes(term) || body.includes(term));
+          const matchesFilters = Object.entries(selectedFilters).every(
+            ([key, value]) => item[key] === value,
+          );
+          const score =
+            matchesQuery && matchesFilters
+              ? terms.reduce(
+                  (total, term) =>
+                    total +
+                    (title.includes(term) ? 20 : 0) +
+                    (body.includes(term) ? 2 : 0),
+                  0,
+                )
+              : 0;
+          return { ...item, score };
+        })
+        .filter(
+          (item) =>
+            item.score > 0 ||
+            (!text &&
+              Object.keys(selectedFilters).length &&
+              Object.entries(selectedFilters).every(
+                ([key, value]) => item[key] === value,
+              )),
+        )
+        .sort((left, right) => right.score - left.score);
+      publicCount = matches.length;
+      publicItems = matches
+        .slice(0, 60)
+        .map((item) => ({ ...item, excerpt: item.text.slice(0, 180) }));
+    }
+
+    if (includePrivate) {
+      try {
+        const [index, savedState, savedNotes] = await Promise.all([
+          getIndex(),
+          userStore.getState(),
+          userStore.getAllNotes(),
+        ]);
+        const notes = { ...savedNotes, ...userStore.getDrafts() };
+        const entries = index.entries || {};
+        const ids = new Set([
+          ...savedState.bookmarks,
+          ...Object.keys(notes).filter((id) => notes[id]?.trim()),
+        ]);
+        const localRecords = [...ids]
+          .map((id) => {
+            const entry = entries[id];
+            const finalProject = id === "FINAL_PROJECT";
+            if (!entry && !finalProject) return null;
+            return {
+              id,
+              title: finalProject
+                ? "От первого клиента до сделки"
+                : entry.title,
+              kind: finalProject ? "final_project" : entry.kind,
+              module: finalProject ? "extra" : entry.module,
+              level: finalProject ? "extra" : entry.level,
+              url: finalProject
+                ? "final-project/"
+                : { theory: "lesson", practice: "practice", module: "module" }[
+                    entry.kind
+                  ] +
+                  "/" +
+                  encodeURIComponent(id) +
+                  "/",
+              note: notes[id] || "",
+              bookmarked: savedState.bookmarks.includes(id),
+            };
+          })
+          .filter(Boolean)
+          .filter((item) =>
+            Object.entries(selectedFilters).every(
+              ([key, value]) => item[key] === value,
+            ),
+          )
+          .filter((item) => {
+            if (!text) return true;
+            const haystack = normalized(
+              `${item.title} ${item.note} ${item.bookmarked ? "закладка" : ""}`,
+            );
+            return text.split(" ").every((term) => haystack.includes(term));
+          })
+          .map((item) => ({
+            ...item,
+            excerpt: item.note
+              ? item.note.slice(0, 180)
+              : "Сохранено в закладках на этом устройстве",
+          }))
+          .slice(0, 60);
+        privateItems = localRecords;
+      } catch {
+        privateError = true;
+      }
+    }
     if (mine !== serial) return;
-    const html = matches
-      .map((item) => {
-        const route =
-          {
-            theory: "lesson",
-            practice: "practice",
-            module: "module",
-            library: "library",
-          }[item.kind] || "module";
-        const kindLabel =
-          {
-            theory: "Теория",
-            practice: "Практика",
-            module: "Модуль",
-            library: "Справочник",
-          }[item.kind] || "Материал";
-        return `<a class="item" href="${root}${route}/${encodeURIComponent(item.id)}/"><span class="number">${escapeHtml(item.id)}</span><div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${kindLabel}${item.kind === "library" ? "" : ` · ${escapeHtml(item.module)}`}</div></div><span class="ic-right">→</span></a>`;
-      })
-      .join("");
-    searchStatus.textContent = matches.length
-      ? `Найдено: ${matches.length}${matches.length === 60 ? " (показаны первые 60)" : ""}`
-      : "Найдено: 0. Совпадений не найдено.";
-    resultRoot.innerHTML = html;
+    const kindLabels = {
+      theory: "Теория",
+      practice: "Практика",
+      module: "Глава модуля",
+      final_project: "Итоговый проект",
+      library: "Справочник",
+      source: "Источник",
+    };
+    const renderItems = (items, privateResults = false) =>
+      items
+        .map((item) => {
+          const href = item.url.startsWith("/")
+            ? `${root}${item.url.slice(1)}`
+            : `${root}${item.url}`;
+          const id = item.id
+            ? `<span class="number">${escapeHtml(item.id)}</span>`
+            : "";
+          const module =
+            item.module && item.module !== "extra"
+              ? ` · модуль ${escapeHtml(item.module)}`
+              : "";
+          const kind =
+            privateResults && item.bookmarked
+              ? `${kindLabels[item.kind] || "Материал"} · закладка`
+              : (kindLabels[item.kind] || "Материал") + module;
+          return `<a class="item" href="${escapeHtml(href)}">${id}<div class="itext"><div class="ititle">${escapeHtml(item.title)}</div><div class="isub">${escapeHtml(kind)} · ${escapeHtml(item.excerpt || "Материал курса")}</div></div><span class="ic-right">→</span></a>`;
+        })
+        .join("");
+    const publicHtml = publicItems.length
+      ? `<section aria-label="Материалы курса">${publicItems.map((item) => renderItems([item])).join("")}</section>`
+      : "";
+    const privateHtml = privateItems.length
+      ? `<section class="search-private-result" aria-label="Личные записи"><h2 class="h2">На этом устройстве</h2>${renderItems(privateItems, true)}</section>`
+      : "";
+    resultRoot.innerHTML = publicHtml + privateHtml;
+    const publicSummary = publicCount
+      ? `Материалов: ${publicCount}${publicCount > 60 ? " (первые 60)" : ""}`
+      : "Совпадений в материалах нет.";
+    const privateSummary = includePrivate
+      ? privateError
+        ? " Не удалось прочитать личные записи; они не отправлялись в запрос."
+        : ` Личных совпадений: ${privateItems.length}${privateItems.length === 60 ? "+" : ""}.`
+      : "";
+    searchStatus.textContent = `${publicSummary}${privateSummary}`;
     resultRoot.setAttribute("aria-busy", "false");
     searchStatus.setAttribute("aria-busy", "false");
   }
   searchInput.addEventListener("input", () => {
     clearTimeout(lastTimer);
     lastTimer = setTimeout(search, 180);
+  });
+  filters.forEach((control) =>
+    control.addEventListener("change", () => void search()),
+  );
+  privateToggle?.addEventListener("change", () => void search());
+  window.addEventListener("popstate", () => {
+    const current = new URLSearchParams(location.search);
+    searchInput.value = current.get("q") || "";
+    for (const { key, control } of filterControls)
+      control.value = current.get(key) || "";
+    void search();
   });
   void initializeSearch();
 }
@@ -1226,52 +1390,566 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 }
 const offlineBtn = document.querySelector("[data-offline-install]");
 if (offlineBtn) {
-  offlineBtn.addEventListener("click", async () => {
-    if (!("caches" in window)) {
-      toast("В этом браузере офлайн-кэш недоступен");
-      return;
+  const status = document.querySelector("[data-offline-status]");
+  const summary = document.querySelector("[data-offline-summary]");
+  const meta = document.querySelector("[data-offline-meta]");
+  const progress = document.querySelector("[data-offline-progress]");
+  const cancelButton = document.querySelector("[data-offline-cancel]");
+  const clearButton = document.querySelector("[data-offline-clear]");
+  const storageStatus = document.querySelector("[data-offline-storage]");
+  const moduleSummary = document.querySelector("[data-offline-module-summary]");
+  const moduleList = document.querySelector("[data-offline-modules]");
+  const failuresSection = document.querySelector("[data-offline-failures]");
+  const failuresList = failuresSection?.querySelector("ul");
+  const stateKey = "sales-os-offline-state-v2";
+  const cachePrefix = "sales-os-offline-";
+  const readyMarker = "__sales-os-offline-ready__";
+  const installHeader = "x-salesos-offline-install";
+  let manifest = null;
+  let activeController = null;
+  let savedState = null;
+  let readyPack = null;
+  const baseUrl = new URL(root, location.href);
+  if (!baseUrl.pathname.endsWith("/")) baseUrl.pathname += "/";
+
+  function formatBytes(value) {
+    if (!Number.isFinite(value) || value < 0) return "объём уточняется";
+    if (value < 1024) return `${value} Б`;
+    const units = ["КБ", "МБ", "ГБ"];
+    let amount = value / 1024,
+      unit = 0;
+    while (amount >= 1024 && unit < units.length - 1) {
+      amount /= 1024;
+      unit++;
     }
-    offlineBtn.disabled = true;
-    const status = document.querySelector("[data-offline-status]");
+    return `≈ ${new Intl.NumberFormat("ru", { maximumFractionDigits: 1 }).format(amount)} ${units[unit]}`;
+  }
+
+  function resolveOfflineUrl(path) {
+    if (
+      typeof path !== "string" ||
+      path.startsWith("/") ||
+      path.includes("\\") ||
+      /[?#]/.test(path)
+    )
+      throw new Error("В манифесте найден недопустимый путь");
+    for (const segment of path.split("/")) {
+      let decoded;
+      try {
+        decoded = decodeURIComponent(segment);
+      } catch {
+        throw new Error("В манифесте найден некорректный URL");
+      }
+      if (
+        decoded === "." ||
+        decoded === ".." ||
+        decoded.includes("/") ||
+        decoded.includes("\\")
+      )
+        throw new Error("Путь офлайн-ресурса выходит за каталог приложения");
+    }
+    const url = new URL(path, baseUrl);
+    if (
+      url.origin !== baseUrl.origin ||
+      !url.pathname.startsWith(baseUrl.pathname)
+    )
+      throw new Error("Офлайн-ресурс находится вне приложения");
+    return url;
+  }
+
+  function markerUrl() {
+    return new URL(readyMarker, baseUrl).href;
+  }
+
+  function readSavedState() {
     try {
-      const list = await (
-        await fetch(root + "assets/offline-files.json")
-      ).json();
-      const cache = await caches.open("sales-os-offline-" + list.version);
-      let count = 0;
-      for (let i = 0; i < list.urls.length; i += 6) {
-        await Promise.all(
-          list.urls.slice(i, i + 6).map(async (path) => {
+      const value = JSON.parse(localStorage.getItem(stateKey) || "null");
+      return value && typeof value === "object" ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function persistState(value) {
+    savedState = { ...value, updatedAt: new Date().toISOString() };
+    try {
+      localStorage.setItem(stateKey, JSON.stringify(savedState));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function loadManifest() {
+    const response = await fetch(root + "assets/offline-files.json", {
+      cache: "no-cache",
+    });
+    if (!response.ok)
+      throw new Error(`Манифест недоступен: HTTP ${response.status}`);
+    const value = await response.json();
+    if (
+      value?.schemaVersion !== 2 ||
+      !/^[a-f0-9]{12}$/i.test(value.version || "") ||
+      !Array.isArray(value.resources) ||
+      !Array.isArray(value.modules)
+    )
+      throw new Error("Формат офлайн-манифеста не поддерживается");
+    const paths = new Set();
+    for (const resource of value.resources) {
+      if (
+        !resource ||
+        typeof resource.url !== "string" ||
+        !Number.isFinite(resource.bytes) ||
+        resource.bytes < 0 ||
+        paths.has(resource.url)
+      )
+        throw new Error("Список ресурсов содержит ошибку");
+      resolveOfflineUrl(resource.url);
+      paths.add(resource.url);
+    }
+    if (
+      !paths.has("assets/offline-files.json") ||
+      value.urls?.length !== value.resources.length
+    )
+      throw new Error("Офлайн-манифест неполный");
+    return value;
+  }
+
+  async function findReadyPack() {
+    if (!("caches" in window)) return null;
+    const names = (await caches.keys()).filter((name) =>
+      name.startsWith(cachePrefix),
+    );
+    const packs = await Promise.all(
+      names.map(async (name) => {
+        const cache = await caches.open(name);
+        const marker = await cache.match(markerUrl());
+        if (!marker?.ok) return null;
+        try {
+          const value = await marker.json();
+          if (
+            value.version !== name.slice(cachePrefix.length) ||
+            !Number.isFinite(value.installedAt)
+          )
+            return null;
+          return { ...value, cacheName: name };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    return (
+      packs
+        .filter(Boolean)
+        .sort((left, right) => right.installedAt - left.installedAt)[0] || null
+    );
+  }
+
+  function renderFailures(failures = []) {
+    if (!failuresSection || !failuresList) return;
+    failuresList.replaceChildren();
+    failuresSection.hidden = failures.length === 0;
+    for (const failure of failures) {
+      const item = document.createElement("li");
+      item.textContent = failure.reason
+        ? `${failure.url} — ${failure.reason}`
+        : failure.url;
+      failuresList.append(item);
+    }
+  }
+
+  function updateModuleList() {
+    if (!manifest || !moduleList) return;
+    moduleSummary.textContent = `В пакете ${manifest.modules.length} модулей, итоговый проект, 3 справочника и ${manifest.resources.filter((item) => item.url.startsWith("source/")).length} карточки источников`;
+    moduleList.replaceChildren();
+    for (const module of manifest.modules) {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = root + module.url;
+      link.textContent = `${module.id} · ${module.title}`;
+      item.append(link);
+      moduleList.append(item);
+    }
+  }
+
+  async function updateStorageEstimate() {
+    if (!storageStatus) return;
+    try {
+      if (!navigator.storage?.estimate) throw new Error("unavailable");
+      const estimate = await navigator.storage.estimate();
+      const used = Number.isFinite(estimate.usage)
+        ? `Занято на этом сайте: ${formatBytes(estimate.usage)}`
+        : "";
+      const quota = Number.isFinite(estimate.quota)
+        ? `из ${formatBytes(estimate.quota)}`
+        : "";
+      storageStatus.textContent = [used, quota].filter(Boolean).join(" ");
+      if (
+        manifest &&
+        Number.isFinite(estimate.quota) &&
+        Number.isFinite(estimate.usage)
+      ) {
+        const remaining = Math.max(0, estimate.quota - estimate.usage);
+        if (manifest.estimatedBytes > remaining)
+          storageStatus.textContent += ` · браузер может не вместить пакет (${formatBytes(manifest.estimatedBytes)} ожидается)`;
+      }
+    } catch {
+      storageStatus.textContent =
+        "Браузер не сообщает оценку свободного места; фактический объём уточнится во время загрузки.";
+    }
+  }
+
+  function setManagerState(state, message, count, total) {
+    if (!status || !summary) return;
+    status.textContent = message;
+    summary.dataset.state = state;
+    clearButton.disabled =
+      activeController !== null || (!readyPack && !savedState);
+    offlineBtn.disabled =
+      activeController !== null ||
+      !manifest ||
+      !("caches" in window) ||
+      !("serviceWorker" in navigator);
+    offlineBtn.textContent = [
+      "partial",
+      "cancelled",
+      "quota",
+      "error",
+      "update",
+    ].includes(state)
+      ? "Продолжить или повторить загрузку"
+      : state === "ready"
+        ? "Обновить офлайн-пакет"
+        : "Загрузить офлайн-пакет";
+    if (progress) {
+      progress.max = Math.max(1, total || manifest?.resources.length || 1);
+      progress.value = Math.min(count || 0, progress.max);
+      progress.hidden = activeController === null;
+      progress.setAttribute(
+        "aria-valuetext",
+        `${progress.value} из ${progress.max}`,
+      );
+    }
+    meta.textContent = manifest
+      ? `Версия ${manifest.version} · ${manifest.resources.length} ресурсов · ${formatBytes(manifest.estimatedBytes)}`
+      : "";
+    cancelButton.hidden = activeController === null;
+    renderFailures(savedState?.failures || []);
+  }
+
+  async function refreshOfflineManager() {
+    savedState = readSavedState();
+    try {
+      manifest = await loadManifest();
+      updateModuleList();
+      readyPack = await findReadyPack();
+      const stateMatches = savedState?.version === manifest.version;
+      if (readyPack?.version === manifest.version) {
+        setManagerState(
+          "ready",
+          `Пакет установлен ${new Date(readyPack.installedAt).toLocaleString("ru-RU")}. Все заявленные ресурсы подтверждены.`,
+          manifest.resources.length,
+          manifest.resources.length,
+        );
+      } else if (
+        stateMatches &&
+        ["partial", "cancelled", "quota", "error"].includes(savedState.state)
+      ) {
+        const messages = {
+          partial: `Пакет загружен частично: ${savedState.cached || 0} из ${manifest.resources.length}. Повтор продолжит с недостающих ресурсов.`,
+          cancelled: `Загрузка отменена: ${savedState.cached || 0} из ${manifest.resources.length} ресурсов сохранено. Пакет неполный.`,
+          quota: `Недостаточно места в хранилище браузера: ${savedState.cached || 0} из ${manifest.resources.length} ресурсов сохранено.`,
+          error: "Не удалось подготовить офлайн-пакет. Повторите попытку.",
+        };
+        const previous = readyPack
+          ? ` Установленная версия ${readyPack.version} пока доступна офлайн.`
+          : "";
+        setManagerState(
+          savedState.state,
+          messages[savedState.state] + previous,
+          savedState.cached || 0,
+          manifest.resources.length,
+        );
+      } else if (readyPack) {
+        setManagerState(
+          "update",
+          `Доступна новая версия ${manifest.version}; сохранённый пакет версии ${readyPack.version} пока доступен офлайн.`,
+          savedState?.cached || 0,
+          manifest.resources.length,
+        );
+      } else {
+        setManagerState(
+          "empty",
+          "Офлайн-пакет ещё не установлен.",
+          0,
+          manifest.resources.length,
+        );
+      }
+    } catch (error) {
+      manifest = null;
+      readyPack = await findReadyPack().catch(() => null);
+      const message = readyPack
+        ? `Пакет версии ${readyPack.version} сохранён; сведения о новой версии сейчас недоступны.`
+        : `Не удалось проверить офлайн-пакет: ${error.message}. Повторите загрузку страницы.`;
+      setManagerState(
+        readyPack ? "ready" : "error",
+        message,
+        savedState?.cached || 0,
+        savedState?.total || 1,
+      );
+    }
+    await updateStorageEstimate();
+  }
+
+  function resourceBytes(response, fallback = 0) {
+    const header = Number(response.headers.get("content-length"));
+    return Number.isFinite(header) && header > 0
+      ? Promise.resolve(header)
+      : response
+          .clone()
+          .arrayBuffer()
+          .then((buffer) => buffer.byteLength)
+          .catch(() => fallback);
+  }
+
+  async function installOfflinePack() {
+    if (activeController) return;
+    if (!manifest) {
+      await refreshOfflineManager();
+      if (!manifest) return;
+    }
+    try {
+      await navigator.serviceWorker.ready;
+      const controller = new AbortController();
+      activeController = controller;
+      const currentManifest = manifest;
+      const resources = currentManifest.resources;
+      const cacheName = cachePrefix + currentManifest.version;
+      const cache = await caches.open(cacheName);
+      const failures = [];
+      let cached = 0,
+        bytesSaved = 0,
+        processed = 0;
+      progress.hidden = false;
+      progress.max = Math.max(1, resources.length);
+      progress.value = 0;
+      cancelButton.hidden = false;
+      offlineBtn.disabled = true;
+      clearButton.disabled = true;
+      summary.dataset.state = "installing";
+      status.textContent = `Проверка ресурсов: 0 из ${resources.length}…`;
+      savedState = {
+        version: currentManifest.version,
+        state: "installing",
+        cached: 0,
+        total: resources.length,
+        failures: [],
+      };
+
+      const missing = [];
+      for (const resource of resources) {
+        if (controller.signal.aborted) break;
+        const url = resolveOfflineUrl(resource.url);
+        const existing = await cache.match(url.href);
+        if (existing?.ok) {
+          cached++;
+          bytesSaved += await resourceBytes(existing, resource.bytes);
+        } else {
+          missing.push(resource);
+        }
+        processed++;
+        if (processed % 40 === 0 || processed === resources.length) {
+          progress.value = processed;
+          status.textContent = `Проверка сохранённых файлов: ${processed} из ${resources.length}…`;
+        }
+      }
+
+      for (
+        let offset = 0;
+        offset < missing.length && !controller.signal.aborted;
+        offset += 4
+      ) {
+        const batch = missing.slice(offset, offset + 4);
+        const outcomes = await Promise.all(
+          batch.map(async (resource) => {
+            const url = resolveOfflineUrl(resource.url);
             try {
-              const r = await fetch(root + path, { cache: "reload" });
-              if (!r.ok) throw Error("HTTP " + r.status);
-              await cache.put(root + path, r);
-              count++;
-            } catch {}
+              const response = await fetch(url.href, {
+                cache: "reload",
+                headers: { [installHeader]: "1" },
+                signal: controller.signal,
+              });
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const byteCount = await resourceBytes(response, resource.bytes);
+              await cache.put(url.href, response);
+              return { ok: true, bytes: byteCount };
+            } catch (error) {
+              if (controller.signal.aborted || error.name === "AbortError")
+                return { cancelled: true };
+              const reason =
+                error.name === "QuotaExceededError"
+                  ? "Недостаточно места в хранилище браузера"
+                  : error.message || "Ошибка сети";
+              failures.push({ url: resource.url, reason });
+              return { ok: false, quota: error.name === "QuotaExceededError" };
+            }
           }),
         );
-        status.textContent = `Сохранено ${count} из ${list.urls.length} страниц и ресурсов`;
+        cached += outcomes.filter((result) => result.ok).length;
+        bytesSaved += outcomes.reduce(
+          (total, result) => total + (result.bytes || 0),
+          0,
+        );
+        processed += batch.length;
+        progress.value = Math.min(processed, resources.length);
+        status.textContent = `Сохранено ${cached} из ${resources.length} · получено ${formatBytes(bytesSaved)}`;
+        persistState({
+          version: currentManifest.version,
+          state: "partial",
+          cached,
+          total: resources.length,
+          bytes: bytesSaved,
+          failures,
+        });
       }
-      status.textContent +=
-        count === list.urls.length
-          ? " · Готово к офлайн-чтению"
-          : " · Часть ресурсов недоступна";
-      toast("Офлайн-пакет обработан");
-    } catch {
-      status.textContent = "Не удалось подготовить офлайн-пакет";
+
+      if (controller.signal.aborted) {
+        persistState({
+          version: currentManifest.version,
+          state: "cancelled",
+          cached,
+          total: resources.length,
+          bytes: bytesSaved,
+          failures,
+        });
+        readyPack = await findReadyPack();
+        setManagerState(
+          "cancelled",
+          `Загрузка отменена: ${cached} из ${resources.length} ресурсов сохранено. Пакет неполный.`,
+          cached,
+          resources.length,
+        );
+        toast(
+          "Офлайн-загрузка отменена; сохранённую часть можно продолжить позже",
+        );
+        return;
+      }
+
+      if (failures.length) {
+        const quotaExceeded = failures.some((failure) =>
+          failure.reason.includes("места"),
+        );
+        const saved = persistState({
+          version: currentManifest.version,
+          state: quotaExceeded ? "quota" : "partial",
+          cached,
+          total: resources.length,
+          bytes: bytesSaved,
+          failures,
+        });
+        readyPack = await findReadyPack();
+        const message = quotaExceeded
+          ? `Недостаточно места: ${cached} из ${resources.length} ресурсов сохранено. Освободите место и повторите.`
+          : `Пакет неполный: ${cached} из ${resources.length} ресурсов сохранено. Ошибки перечислены ниже.`;
+        setManagerState(
+          quotaExceeded ? "quota" : "partial",
+          message + (saved ? "" : " Статус останется до закрытия страницы."),
+          cached,
+          resources.length,
+        );
+        toast(
+          quotaExceeded
+            ? "Офлайн-пакет не поместился в хранилище"
+            : "Часть офлайн-ресурсов не загрузилась",
+        );
+        return;
+      }
+
+      const installedAt = Date.now();
+      const marker = new Response(
+        JSON.stringify({
+          version: currentManifest.version,
+          installedAt,
+          resourceCount: resources.length,
+          bytes: bytesSaved,
+        }),
+        { headers: { "content-type": "application/json" } },
+      );
+      await cache.put(markerUrl(), marker);
+      for (const oldCache of await caches.keys()) {
+        if (oldCache.startsWith(cachePrefix) && oldCache !== cacheName)
+          await caches.delete(oldCache);
+      }
+      const saved = persistState({
+        version: currentManifest.version,
+        state: "ready",
+        cached,
+        total: resources.length,
+        bytes: bytesSaved,
+        failures: [],
+        installedAt,
+      });
+      readyPack = await findReadyPack();
+      setManagerState(
+        "ready",
+        `Пакет установлен ${new Date(installedAt).toLocaleString("ru-RU")}. Сохранено ${cached} из ${resources.length} ресурсов (${formatBytes(bytesSaved)}).${saved ? "" : " Статус подтверждён браузерным кэшем."}`,
+        cached,
+        resources.length,
+      );
+      toast("Офлайн-пакет готов к работе без сети");
+    } catch (error) {
+      const isQuota = error.name === "QuotaExceededError";
+      persistState({
+        version: manifest?.version || "",
+        state: isQuota ? "quota" : "error",
+        cached: 0,
+        total: manifest?.resources.length || 0,
+        failures: [
+          {
+            url: "Пакет",
+            reason: isQuota
+              ? "Недостаточно места в хранилище браузера"
+              : error.message || "Ошибка установки",
+          },
+        ],
+      });
+      setManagerState(
+        isQuota ? "quota" : "error",
+        isQuota
+          ? "Браузеру не хватило места. Освободите место и повторите."
+          : `Не удалось завершить установку: ${error.message}. Повторите попытку.`,
+        0,
+        manifest?.resources.length || 1,
+      );
     } finally {
-      offlineBtn.disabled = false;
+      activeController = null;
+      cancelButton.hidden = true;
+      offlineBtn.disabled =
+        !manifest || !("caches" in window) || !("serviceWorker" in navigator);
+      clearButton.disabled = !readyPack && !savedState;
+      if (progress) progress.hidden = true;
+      await refreshOfflineManager();
     }
+  }
+
+  offlineBtn.addEventListener("click", () => void installOfflinePack());
+  cancelButton?.addEventListener("click", () => activeController?.abort());
+  clearButton?.addEventListener("click", async () => {
+    if (!("caches" in window) || activeController) return;
+    for (const name of await caches.keys())
+      if (name.startsWith(cachePrefix)) await caches.delete(name);
+    try {
+      localStorage.removeItem(stateKey);
+    } catch {
+      savedState = null;
+    }
+    readyPack = null;
+    savedState = null;
+    await refreshOfflineManager();
+    toast("Офлайн-пакеты Sales OS удалены. Личные записи сохранены.");
   });
+  void refreshOfflineManager();
 }
-document
-  .querySelector("[data-offline-clear]")
-  ?.addEventListener("click", async () => {
-    if (!("caches" in window)) return;
-    for (const key of await caches.keys())
-      if (key.startsWith("sales-os-")) await caches.delete(key);
-    toast("Кэш приложения очищен. Личные записи сохранены.");
-  });
 
 const templateLibrary = document.querySelector("[data-template-copy]");
 if (templateLibrary) {

@@ -7,6 +7,14 @@ import Shell from '../../layouts/Shell.astro';import PageHeading from '../../com
 <div class="settings-row"><div><strong>Резервная копия</strong><p>Экспорт всех статусов, заметок и закладок</p></div><button class="btn" data-export>Экспортировать JSON</button></div>
 <div class="settings-row"><div><strong>Импорт данных</strong><p>Поддерживается экспорт прежнего Sales OS v1 и новой версии</p></div><label class="btn">Выбрать JSON<input data-import type="file" accept=".json,application/json" style="width:1px;position:absolute;opacity:0"/></label></div>
 <div class="notice">Миграция: чтобы перенести отметки из старого index.html, сначала экспортируйте JSON из него, затем импортируйте на этой странице. Импорт не даёт автоматического подтверждения мастерства.</div>
-<div class="settings-row"><div><strong>Сохранить материалы офлайн</strong><p>Для HTTPS или localhost; загружает страницы и поиск в кэш</p><p data-offline-status>Пакет ещё не установлен</p></div><button class="btn primary" data-offline-install>Загрузить офлайн-пакет</button></div>
-<div class="settings-row"><div><strong>Очистить офлайн-кэш</strong><p>Заметки, статусы и закладки не удаляются</p></div><button class="btn" data-offline-clear>Удалить кэш</button></div>
+<section class="offline-manager" aria-labelledby="offline-title">
+  <div class="section-head"><h2 class="h2" id="offline-title">Офлайн-пакет</h2></div>
+  <p class="muted">Полный учебный корпус сохраняется в кэш этого браузера. Установка продолжается после ошибки с повтором недостающих файлов; личные записи остаются в локальном хранилище.</p>
+  <div class="offline-summary" data-offline-summary aria-live="polite"><span data-offline-status>Проверяем доступность пакета…</span><span data-offline-meta></span></div>
+  <progress class="offline-progress" data-offline-progress max="1" value="0" aria-label="Загрузка офлайн-пакета" hidden></progress>
+  <div class="offline-actions"><button class="btn primary" type="button" data-offline-install disabled>Загрузить офлайн-пакет</button><button class="btn" type="button" data-offline-cancel hidden>Отменить загрузку</button><button class="btn" type="button" data-offline-clear disabled>Удалить офлайн-пакет</button></div>
+  <p class="small muted" data-offline-storage></p>
+  <details class="offline-modules"><summary data-offline-module-summary>Состав пакета</summary><ul data-offline-modules></ul></details>
+  <section class="offline-failures" data-offline-failures hidden aria-labelledby="offline-failures-title"><h3 id="offline-failures-title">Недоступные ресурсы</h3><p>Пакет неполный. Повтор загрузки проверит и добавит только отсутствующие материалы.</p><ul></ul></section>
+</section>
 </Shell>

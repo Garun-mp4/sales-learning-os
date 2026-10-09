@@ -1,7 +1,11 @@
 import { readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
+
 const root = path.resolve("dist");
+const offlineManifestPath = path.join(root, "assets/offline-files.json");
+const workerPath = path.join(root, "sw.js");
+
 async function writeAtomic(file, content) {
   const temporary = `${file}.tmp`;
   try {
@@ -12,40 +16,76 @@ async function writeAtomic(file, content) {
     throw error;
   }
 }
-let urls = [];
-async function walk(dir) {
-  for (const ent of await readdir(dir, { withFileTypes: true })) {
-    const p = path.join(dir, ent.name);
-    if (ent.isDirectory()) await walk(p);
-    else if (ent.isFile() && !p.endsWith("sw.js"))
-      urls.push(path.relative(root, p).split(path.sep).join("/"));
+
+await writeAtomic(workerPath, await readFile("scripts/service-worker.js"));
+
+const files = [];
+async function walk(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await walk(absolute);
+    } else if (entry.isFile()) {
+      const relative = path.relative(root, absolute).split(path.sep).join("/");
+      if (relative !== "assets/offline-files.json") {
+        files.push({ relative, absolute, content: await readFile(absolute) });
+      }
+    }
   }
 }
 await walk(root);
-const version = createHash("sha256")
-  .update(await readFile("src/scripts/app.js"))
-  .update(await readFile("src/scripts/user-store.js"))
-  .update(await readFile("src/generated/content-manifest.json"))
-  .digest("hex")
-  .slice(0, 12);
-urls = [
-  ...new Set(
-    urls
-      .filter((u) => !u.endsWith("offline-files.json"))
-      .map((u) =>
-        u.endsWith("index.html") ? u.slice(0, -"index.html".length) : u,
-      ),
-  ),
-].sort();
-await writeAtomic(
-  path.join(root, "assets/offline-files.json"),
-  JSON.stringify({ version, urls }, null, 0),
+
+const fingerprint = createHash("sha256");
+const resources = [];
+for (const file of files.sort((left, right) =>
+  left.relative < right.relative ? -1 : left.relative > right.relative ? 1 : 0,
+)) {
+  fingerprint
+    .update(file.relative)
+    .update("\0")
+    .update(file.content)
+    .update("\0");
+  if (file.relative === "sw.js") continue;
+
+  const url = file.relative.endsWith("index.html")
+    ? file.relative.slice(0, -"index.html".length)
+    : file.relative;
+  resources.push({ url, bytes: file.content.byteLength });
+}
+resources.push({ url: "assets/offline-files.json", bytes: 0 });
+resources.sort((left, right) =>
+  left.url < right.url ? -1 : left.url > right.url ? 1 : 0,
 );
-const script = `self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET'||new URL(r.url).origin!==location.origin)return;e.respondWith((async()=>{try{const a=await fetch(r);if(a.ok)return a;throw Error(String(a.status));}catch{const names=(await caches.keys()).filter(k=>k.startsWith('sales-os-offline-')).reverse();for(const n of names){const a=await(await caches.open(n)).match(r);if(a)return a;}return Response.error()}})())});`;
-await writeAtomic(path.join(root, "sw.js"), script);
+
+const contentManifest = JSON.parse(
+  await readFile("src/generated/content-manifest.json", "utf8"),
+);
+const modules = Object.values(contentManifest.entries)
+  .filter((entry) => entry.kind === "module")
+  .sort((left, right) => left.module.localeCompare(right.module))
+  .map((entry) => ({
+    id: entry.module,
+    title: entry.title,
+    url: `module/${entry.id}/`,
+  }));
+
+const version = fingerprint.digest("hex").slice(0, 12);
+const manifest = {
+  schemaVersion: 2,
+  version,
+  estimatedBytes: resources.reduce(
+    (total, resource) => total + resource.bytes,
+    0,
+  ),
+  modules,
+  resources,
+  urls: resources.map((resource) => resource.url),
+};
+await writeAtomic(offlineManifestPath, JSON.stringify(manifest));
+
 console.log(
   "Offline manifest rebuilt:",
-  urls.length,
+  resources.length,
   "resources; build version:",
   version,
 );

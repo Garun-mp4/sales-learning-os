@@ -33,12 +33,17 @@ search_index = []
 for entry in entries.values():
     raw = (CONTENT / entry["path"]).read_text(encoding="utf-8").split("---", 2)[2]
     text = re.sub(r"\[([^]]+)\]\([^)]*\)", r"\1", raw)
+    route_kind = {"module": "module", "theory": "lesson", "practice": "practice"}[entry["kind"]]
     search_index.append(
         {
-            key: entry[key]
-            for key in ("id", "kind", "module", "title")
+            "id": entry["id"],
+            "kind": entry["kind"],
+            "level": entry["level"],
+            "module": entry["module"],
+            "title": entry["title"],
+            "url": f"{route_kind}/{entry['id']}/",
         }
-        | {"text": text[:20000]}
+        | {"text": text}
     )
 
 library_pages = {
@@ -54,7 +59,23 @@ for identifier, (title, filename) in library_pages.items():
     body = parts[2]
     text = re.sub(r"\[([^]]+)\]\([^)]*\)", r"\1", body)
     search_index.append(
-        {"id": identifier, "kind": "library", "module": "Справочник", "title": title, "text": text[:20000]}
+        {"id": identifier, "kind": "library", "level": "extra", "module": "extra", "title": title, "url": f"library/{identifier}/", "text": text}
+    )
+
+final_project_text = re.sub(
+    r"\[([^]]+)\]\([^)]*\)",
+    r"\1",
+    (CONTENT / "FINAL_PROJECT.md").read_text(encoding="utf-8"),
+)
+search_index.append(
+    {"id": "FINAL_PROJECT", "kind": "final_project", "level": "extra", "module": "extra", "title": "От первого клиента до сделки", "url": "final-project/", "text": final_project_text}
+)
+for source in manifest["sources"]:
+    source_text = " ".join(
+        part for part in (source["id"], source["title"], source.get("author", ""), source.get("description", ""), source.get("type", "")) if part
+    )
+    search_index.append(
+        {"id": source["id"], "kind": "source", "level": "extra", "module": "extra", "title": source["title"], "url": f"source/{source['id']}/", "text": source_text}
     )
 
 final_markdown = (CONTENT / "FINAL_PROJECT.md").read_text(encoding="utf-8")
@@ -81,7 +102,6 @@ app_js = (ROOT / "src/scripts/app.js").read_bytes()
 user_store_js = (ROOT / "src/scripts/user-store.js").read_bytes()
 app_css = (ROOT / "src/styles/app.css").read_bytes()
 client_index = (ROOT / "src/generated/client-index.json").read_bytes()
-manifest_bytes = MANIFEST_PATH.read_bytes()
 for name, content in (
     ("user-store.js", user_store_js),
     ("app.js", app_js),
@@ -94,7 +114,6 @@ for name, content in (
 route_kinds = {"module": "module", "theory": "lesson", "practice": "practice"}
 urls = {
     "",
-    "404.html",
     "roadmap/",
     "practice/",
     "sources/",
@@ -130,13 +149,9 @@ urls.update(
     f"{route_kinds[entry['kind']]}/{identifier}/"
     for identifier, entry in entries.items()
 )
-search_index_bytes = json.dumps(search_index, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-library_bytes = b"".join((CONTENT / filename).read_bytes() for _, filename in library_pages.values())
-version = hashlib.sha256(user_store_js + app_js + manifest_bytes + search_index_bytes + library_bytes).hexdigest()[:12]
-write_if_changed(
-    ASSETS / "offline-files.json",
-    json.dumps({"version": version, "urls": sorted(urls)}, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
-)
+for public_file in (ROOT / "public").rglob("*"):
+    if public_file.is_file() and public_file.name != "sw.js":
+        urls.add(public_file.relative_to(ROOT / "public").as_posix())
 
 app_manifest = {
     "name": "Sales OS — база знаний по продажам",
@@ -171,9 +186,63 @@ write_if_changed(
     ROOT / "public/manifest.webmanifest",
     json.dumps(app_manifest, ensure_ascii=False).encode("utf-8"),
 )
-worker = "self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET'||new URL(r.url).origin!==self.location.origin)return;e.respondWith((async()=>{try{return await fetch(r)}catch{const names=(await caches.keys()).filter(k=>k.startsWith('sales-os-offline-')).reverse();for(const name of names){const hit=await(await caches.open(name)).match(r);if(hit)return hit;}return Response.error()}})())});"
-write_if_changed(ROOT / "public/sw.js", worker.encode("utf-8"))
+write_if_changed(ROOT / "public/sw.js", (ROOT / "scripts/service-worker.js").read_bytes())
+
+# Development routes are rendered on demand, so estimate their bytes from the
+# source Markdown and fingerprint all source inputs that shape the app.
+search_index_bytes = json.dumps(search_index, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+fingerprint_paths = [path for path in CONTENT.rglob("*") if path.is_file()]
+fingerprint_paths += [
+    MANIFEST_PATH,
+    ROOT / "src/generated/client-index.json",
+    ROOT / "src/scripts/app.js",
+    ROOT / "src/scripts/user-store.js",
+    ROOT / "src/styles/app.css",
+]
+fingerprint_paths += [path for path in (ROOT / "public").rglob("*") if path.is_file() and path.name != "offline-files.json"]
+fingerprint = hashlib.sha256()
+for input_path in sorted(set(fingerprint_paths), key=lambda item: item.relative_to(ROOT).as_posix()):
+    fingerprint.update(input_path.relative_to(ROOT).as_posix().encode("utf-8") + b"\0")
+    fingerprint.update(input_path.read_bytes() + b"\0")
+fingerprint.update(search_index_bytes)
+version = fingerprint.hexdigest()[:12]
+
+resource_sizes = {}
+for entry in entries.values():
+    route_kind = route_kinds[entry["kind"]]
+    resource_sizes[f"{route_kind}/{entry['id']}/"] = (CONTENT / entry["path"]).stat().st_size
+for source in manifest["sources"]:
+    resource_sizes[f"source/{source['id']}/"] = len(
+        (source["title"] + source.get("description", "") + source.get("author", "") + source.get("type", "")).encode("utf-8")
+    )
+for identifier, (_, filename) in library_pages.items():
+    resource_sizes[f"library/{identifier}/"] = (CONTENT / filename).stat().st_size
+resource_sizes["final-project/"] = (CONTENT / "FINAL_PROJECT.md").stat().st_size
+for url in urls:
+    public_path = ROOT / "public" / url
+    if public_path.is_file():
+        resource_sizes[url] = public_path.stat().st_size
+modules = [
+    {"id": entry["module"], "title": entry["title"], "url": f"module/{entry['id']}/"}
+    for entry in entries.values() if entry["kind"] == "module"
+]
+resources = [
+    {"url": url, "bytes": resource_sizes.get(url, 0)}
+    for url in sorted(urls) if url != "sw.js"
+]
+offline_manifest = {
+    "schemaVersion": 2,
+    "version": version,
+    "estimatedBytes": sum(resource["bytes"] for resource in resources),
+    "modules": modules,
+    "resources": resources,
+    "urls": [resource["url"] for resource in resources],
+}
+write_if_changed(
+    ASSETS / "offline-files.json",
+    json.dumps(offline_manifest, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
+)
 print(
-    f"PASS: prepared {len(search_index)} search records, "
-    f"{len(urls)} development offline URLs and final-project article"
+    f"PASS: prepared {len(search_index)} full-corpus search records, "
+    f"{len(resources)} development offline URLs, {len(modules)} modules, and final-project article"
 )

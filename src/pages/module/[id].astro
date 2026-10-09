@@ -18,7 +18,7 @@ const {Content}=await render(moduleDocs[0]);
     <div class="row wrap"><span class="badge warning">Редакционный черновик</span><span class="badge">{theory.length} тем</span><span class="badge">{practice.length} практик</span><span class="badge">{entry.time}</span></div>
   </PageHeading>
 <div class="module-summary"><strong>Результат изучения</strong><p>{entry.outcome}</p><div class="progress" style="margin-top:14px" role="progressbar" aria-label={`Прогресс модуля ${entry.module}`} aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0%" data-module-progress={entry.module}><span data-module-fill={entry.module}></span></div><p data-module-pct={entry.module}>0%</p></div>
-  <article class="article module-reading" data-pagefind-body><Content /></article>
+  <article class="article module-reading" data-pagefind-body data-search-id={entry.id} data-search-level={entry.level} data-search-module={entry.module} data-search-kind="module" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]"><Content /></article>
   <div class="section-head"><h2 class="h2">Теория</h2><span class="small muted">По порядку, от основ к практике</span></div>
   {groups.map(group=><section class="module-section"><h2>{group} <span class="badge">{theory.filter(x=>x.group===group).length}</span></h2><div class="stack">{theory.filter(x=>x.group===group).map(x=><EntryRow entry={x}/>)}</div></section>)}
   <div class="section-head"><h2 class="h2">Практика</h2></div><div class="stack">{practice.map(x=><EntryRow entry={x}/>)}</div>

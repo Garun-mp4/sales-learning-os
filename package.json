@@ -18,6 +18,7 @@
     "lint": "npm run prepare:content && node --check astro.config.mjs && node --check src/scripts/user-store.js && node --check src/scripts/app.js && node --check src/lib/remark-course-links.mjs && node --check src/lib/remark-module-reading-body.mjs && node --check src/lib/rehype-wrap-tables.mjs && node --check scripts/after-build.mjs && node tests/test_astro_source_integrity.mjs && node tests/test_module_body_plugin.mjs && prettier --check astro.config.mjs \"src/**/*.{css,js,ts,tsx}\" \"scripts/**/*.{js,mjs}\" \"tests/**/*.{js,mjs}\"",
     "test": "python tests/test_static.py && python tests/test_browser_embedded.py && python tests/test_final_project_embedded.py",
     "test:e2e": "playwright test",
+    "test:preview": "playwright test tests/e2e/production-preview.spec.ts",
     "test:static": "python tests/test_static.py",
     "build:fallback": "python scripts/audit.py && python scripts/build.py --out-dir dist-fallback",
     "precheck": "npm run prepare:content",

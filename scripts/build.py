@@ -126,7 +126,7 @@ def render_module(e):
  txt+=header(f'МОДУЛЬ {mod} · УРОВЕНЬ {stage}',e['title'],e.get('description',''),f'<div class="row wrap">{editorial_badge()}<span class="badge">{len(theory)} тем</span><span class="badge">{len(practice)} практик</span><span class="badge">{h(e.get("time",""))}</span></div>')
  txt+=f'<div class="module-summary"><strong>Результат изучения</strong><p>{h(e.get("outcome", ""))}</p></div>'
  module_body,_=md_html(e,depth)
- txt+='<article class="article module-reading" data-pagefind-body>'+module_body+'</article>'
+ txt+=f'<article class="article module-reading" data-pagefind-body data-search-id="{e["id"]}" data-search-level="{e["level"]}" data-search-module="{mod}" data-search-kind="module" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]">'+module_body+'</article>'
  txt+='<div class="section-head"><h2 class="h2">Теория</h2><span class="small muted">По порядку, от основ к практике</span></div>'
  for k,items in g.items():txt+=f'<section class="module-section"><h2>{h(k)} <span class="badge">{len(items)}</span></h2><div class="stack">'+''.join(list_item(x,depth) for x in items)+'</div></section>'
  txt+='<div class="section-head"><h2 class="h2">Практика</h2><span class="small muted">Применить знания</span></div><div class="stack">'+''.join(list_item(x,depth) for x in practice)+'</div>'
@@ -167,7 +167,7 @@ def render_document(e):
   text+=''.join(f'<a class="depth{3 if node=="h3" else 2}" href="#{h(slug)}">{h(label)}</a>' for label,slug,node in toc)
   text+='</nav></details>'
  notes_title='Мой ответ на задание' if isprac else 'Мои заметки по теме'
- text+='<div class="reader-grid"><div class="reader"><article class="article" data-pagefind-body>'+mark+'</article>'+related_libraries(e,depth)+sources_chips(e,depth)
+ text+=f'<div class="reader-grid"><div class="reader"><article class="article" data-pagefind-body data-search-id="{e["id"]}" data-search-level="{e["level"]}" data-search-module="{e["module"]}" data-search-kind="{kind}" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]">'+mark+'</article>'+related_libraries(e,depth)+sources_chips(e,depth)
  if not isprac:text+=related_links(e,depth)
  else:
   text+='<div class="notice">Практическое задание оценивается самостоятельно. Отметка «Выполнено» не является независимой проверкой работы.</div>'
@@ -202,7 +202,7 @@ def render_library(identifier):
  crumb=breadcrumb([('Обзор',''),('Справочники','library/'),(title,None)],depth)
  text=crumb+header('СПРАВОЧНЫЙ МАТЕРИАЛ · РЕДАКЦИОННЫЙ ЧЕРНОВИК',title,description)
  copy=' data-template-copy=""' if identifier=='templates' else ''
- text+=f'<article class="article library-content" data-pagefind-body{copy}>{soup}</article><a class="btn" href="{link("library/",depth)}">← Ко всем справочникам</a>'
+ text+=f'<article class="article library-content" data-pagefind-body data-search-id="{identifier}" data-search-level="extra" data-search-module="extra" data-search-kind="library" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]"{copy}>{soup}</article><a class="btn" href="{link("library/",depth)}">← Ко всем справочникам</a>'
  return page_shell(text,title,depth,'library')
 
 def render_editorial_review():
@@ -293,7 +293,9 @@ def build_pages(output_dir=DEFAULT_OUT):
  for s in SOURCES:
   text=breadcrumb([('Источники','sources/'),(s['id'],None)],2)+header('ИСТОЧНИК · '+s['id'],s['title'],s.get('author') or '')
   text+='<div class="notice">Описание и ссылка перенесены из каталога Markdown. Полная самостоятельная проверка текста, видео или издания не заявляется.</div>'
+  text+=f'<article class="article source-content" data-pagefind-body data-search-id="{s["id"]}" data-search-level="extra" data-search-module="extra" data-search-kind="source" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]"><p class="small muted">{h(s.get("author", ""))} · {h(s.get("type", ""))}</p>'
   if s.get('description'):text+='<p class="intro">'+h(s['description'])+'</p>'
+  text+='</article>'
   url=s.get('url')
   if url and urlparse(url).scheme in ('http','https'):text+=f'<p><a href="{h(url)}" target="_blank" rel="noopener noreferrer" class="btn primary">Открыть первоисточник ↗</a></p>'
   connected=[x for x in ENTRIES.values() if s['id'] in x['sources'] and x['kind']=='theory']
@@ -339,7 +341,8 @@ def build_pages(output_dir=DEFAULT_OUT):
  text=breadcrumb([('Обзор',''),('Закладки',None)],1)+header('ЛИЧНАЯ БИБЛИОТЕКА','Закладки','Сохранённые уроки и упражнения. Все данные остаются в браузере.')+'<section data-bookmark-results role="region" aria-label="Закладки" aria-busy="true"><div class="notice" data-bookmark-status role="status" aria-live="polite" aria-atomic="true">Загрузка закладок…</div><div class="stack" data-bookmark-list></div></section>'
  save('bookmarks/index.html',page_shell(text,'Закладки',1,'bookmarks'))
  # Search
- text=breadcrumb([('Обзор',''),('Поиск',None)],1)+header('ПОИСК ПО КУРСУ','Найти материал','Поиск по всему тексту уроков, практики и модулей. Результаты открываются отдельно.')+'<label class="small muted" for="search-input">Поисковый запрос</label><input class="search-field" id="search-input" name="q" type="search" data-search-input autocomplete="off" placeholder="Например, возражения, SPIN, обмен ценностью"/><div class="notice search-status" data-search-status role="status" aria-live="polite" aria-atomic="true" aria-busy="true">Загрузка поиска…</div><div class="stack" style="margin-top:24px" data-search-results role="region" aria-label="Результаты поиска" aria-busy="true"></div>'
+ text=breadcrumb([('Обзор',''),('Поиск',None)],1)+header('ПОИСК ПО КУРСУ','Найти материал','Единый поиск по курсу, итоговому проекту, справочникам и карточкам источников.')
+ text+='<div class="search-controls"><label class="small muted" for="search-input">Поисковый запрос</label><input class="search-field" id="search-input" name="q" type="search" data-search-input autocomplete="off" placeholder="Например, возражения, SPIN, обмен ценностью"/><div class="search-filters" aria-label="Фильтры результатов"><label><span>Уровень</span><select class="status-select" data-search-level aria-label="Фильтр по уровню"><option value="">Любой</option><option value="required">Обязательный</option><option value="advanced">Продвинутый</option><option value="extra">Дополнительные материалы</option></select></label><label><span>Модуль</span><select class="status-select" data-search-module aria-label="Фильтр по модулю"><option value="">Все модули</option>'+''.join(f'<option value="{number}">{number} · Модуль {number}</option>' for number in (f'{i:02}' for i in range(1,23)))+'<option value="extra">Без модуля</option></select></label><label><span>Тип</span><select class="status-select" data-search-kind aria-label="Фильтр по типу материала"><option value="">Все типы</option><option value="theory">Теория</option><option value="practice">Практика</option><option value="module">Глава модуля</option><option value="final_project">Итоговый проект</option><option value="library">Справочник</option><option value="source">Источник</option></select></label></div><label class="search-private"><input type="checkbox" data-search-private/><span><strong>Искать в моих заметках и закладках</strong><span>Только локально на этом устройстве. Поисковая фраза не добавляется в адрес страницы.</span></span></label></div><div class="notice search-status" data-search-status role="status" aria-live="polite" aria-atomic="true" aria-busy="true">Загрузка поиска…</div><div class="stack search-results" data-search-results role="region" aria-label="Результаты поиска" aria-busy="true"></div>'
  save('search/index.html',page_shell(text,'Поиск',1,'search'))
  # Final project
  final_path=CONTENT/'FINAL_PROJECT.md'
@@ -347,7 +350,7 @@ def build_pages(output_dir=DEFAULT_OUT):
  markup=MarkdownIt('default',{'html':False}).enable('table').render(raw)
  soup=BeautifulSoup(markup,'html.parser')
  for t in soup.select('table'):t.wrap(soup.new_tag('div',attrs={'class':'table-wrap','role':'group','tabindex':'0','aria-label':'Широкая таблица. Используйте горизонтальную прокрутку, чтобы увидеть все столбцы.'}))
- text=breadcrumb([('Практика','practice/'),('Итоговый проект',None)],1)+header('СКВОЗНАЯ ПРАКТИКА','От первого клиента до сделки','Практический маршрут, объединяющий навыки из разных модулей. Если реальной сделки пока нет, пройдите его как учебную симуляцию.')+'<div class="article" data-pagefind-body>'+str(soup)+'</div><div class="editbox"><strong>Мой итоговый проект</strong><textarea data-note="FINAL_PROJECT" aria-label="Заметки итогового проекта" placeholder="Цели, результаты, ссылки на документы и выводы..."></textarea><p class="hint" data-save-hint>Данные остаются в браузере</p></div>'
+ text=breadcrumb([('Практика','practice/'),('Итоговый проект',None)],1)+header('СКВОЗНАЯ ПРАКТИКА','От первого клиента до сделки','Практический маршрут, объединяющий навыки из разных модулей. Если реальной сделки пока нет, пройдите его как учебную симуляцию.')+'<article class="article" data-pagefind-body data-search-id="FINAL_PROJECT" data-search-level="extra" data-search-module="extra" data-search-kind="final_project" data-pagefind-filter="level[data-search-level], module[data-search-module], kind[data-search-kind]" data-pagefind-meta="id[data-search-id], level[data-search-level], module[data-search-module], kind[data-search-kind]">'+str(soup)+'</article><div class="editbox"><strong>Мой итоговый проект</strong><textarea data-note="FINAL_PROJECT" aria-label="Заметки итогового проекта" placeholder="Цели, результаты, ссылки на документы и выводы..."></textarea><p class="hint" data-save-hint>Данные остаются в браузере</p></div>'
  save('final-project/index.html',page_shell(text,'Итоговый проект',1,'practice'))
  # Settings
  text=breadcrumb([('Обзор',''),('Настройки',None)],1)+header('ПРИЛОЖЕНИЕ','Настройки и данные','Все ответы, заметки и прогресс хранятся локально. Регистрация и сервер не требуются.')
@@ -355,8 +358,7 @@ def build_pages(output_dir=DEFAULT_OUT):
  text+='<div class="settings-row"><div><strong>Резервная копия</strong><p>Экспорт текущего прогресса, заметок и закладок в JSON</p></div><button class="btn" data-export>'+icon('download')+' Экспортировать</button></div>'
  text+='<div class="settings-row"><div><strong>Импорт данных</strong><p>Поддерживаются Sales OS v2 и экспорт предыдущего index.html (v1)</p></div><label class="btn">Выбрать JSON <input data-import type="file" accept=".json,application/json" style="width:1px;position:absolute;opacity:0"/></label></div>'
  text+='<div class="notice"><strong>Важно о миграции:</strong> новый сайт не может сам читать localStorage старого файла, открытого через file://. Сначала экспортируйте JSON из предыдущего проекта, затем импортируйте его здесь. Старые отметки не становятся автоматически подтверждением уровня «мастер».</div>'
- text+='<div class="settings-row"><div><strong>Сохранить контент офлайн</strong><p>Загружает все страницы и поисковый индекс в кэш браузера. Нужен HTTPS или localhost.</p><p data-offline-status>Пакет ещё не установлен</p></div><button class="btn primary" data-offline-install>Загрузить офлайн-пакет</button></div>'
- text+='<div class="settings-row"><div><strong>Очистить офлайн-кэш</strong><p>Не удаляет ваши заметки, прогресс или закладки</p></div><button class="btn" data-offline-clear>Удалить кэш</button></div>'
+ text+='<section class="offline-manager" aria-labelledby="offline-title"><div class="section-head"><h2 class="h2" id="offline-title">Офлайн-пакет</h2></div><p class="muted">Полный учебный корпус сохраняется в кэш этого браузера. Установка продолжается после ошибки с повтором недостающих файлов; личные записи остаются в локальном хранилище.</p><div class="offline-summary" data-offline-summary aria-live="polite"><span data-offline-status>Проверяем доступность пакета…</span><span data-offline-meta></span></div><progress class="offline-progress" data-offline-progress max="1" value="0" aria-label="Загрузка офлайн-пакета" hidden></progress><div class="offline-actions"><button class="btn primary" type="button" data-offline-install disabled>Загрузить офлайн-пакет</button><button class="btn" type="button" data-offline-cancel hidden>Отменить загрузку</button><button class="btn" type="button" data-offline-clear disabled>Удалить офлайн-пакет</button></div><p class="small muted" data-offline-storage></p><details class="offline-modules"><summary data-offline-module-summary>Состав пакета</summary><ul data-offline-modules></ul></details><section class="offline-failures" data-offline-failures hidden aria-labelledby="offline-failures-title"><h3 id="offline-failures-title">Недоступные ресурсы</h3><p>Пакет неполный. Повтор загрузки проверит и добавит только отсутствующие материалы.</p><ul></ul></section></section>'
  save('settings/index.html',page_shell(text,'Настройки',1,'settings'))
  # 404
  save('404.html',page_shell(header('ОШИБКА 404','Страница не найдена','Проверьте адрес или вернитесь к карте знаний.')+'<a class="btn primary" href="./roadmap/">К roadmap →</a>','Не найдено',0))
@@ -365,25 +367,44 @@ def build_pages(output_dir=DEFAULT_OUT):
  for e in ENTRIES.values():
   raw=(CONTENT/e['path']).read_text(encoding='utf-8').split('---',2)[2]
   text=re.sub(r'\[([^]]+)\]\([^)]*\)',r'\1',raw)
-  index.append({'id':e['id'],'kind':e['kind'],'module':e['module'],'title':e['title'],'text':text[:20000]})
+  index.append({'id':e['id'],'kind':e['kind'],'level':e['level'],'module':e['module'],'title':e['title'],'url':f'{route(e)}','text':text})
  for identifier,(title,_,_,filename) in LIBRARIES.items():
   raw=(CONTENT/filename).read_text(encoding='utf-8').split('---',2)[2]
   text=re.sub(r'\[([^]]+)\]\([^)]*\)',r'\1',raw)
-  index.append({'id':identifier,'kind':'library','module':'Справочник','title':title,'text':text[:20000]})
+  index.append({'id':identifier,'kind':'library','level':'extra','module':'extra','title':title,'url':f'library/{identifier}/','text':text})
+ final_raw=(CONTENT/'FINAL_PROJECT.md').read_text(encoding='utf-8')
+ final_text=re.sub(r'\[([^]]+)\]\([^)]*\)',r'\1',final_raw)
+ index.append({'id':'FINAL_PROJECT','kind':'final_project','level':'extra','module':'extra','title':'От первого клиента до сделки','url':'final-project/','text':final_text})
+ for source in SOURCES:
+  source_text=' '.join(part for part in (source['id'],source['title'],source.get('author',''),source.get('description',''),source.get('type','')) if part)
+  index.append({'id':source['id'],'kind':'source','level':'extra','module':'extra','title':source['title'],'url':f'source/{source["id"]}/','text':source_text})
  save('assets/search-index.json',json.dumps(index,ensure_ascii=False,separators=(',',':')))
  # Manifest + offline installation list
  save('manifest.webmanifest',json.dumps({'name':'Sales OS — база знаний по продажам','short_name':'Sales OS','lang':'ru','start_url':'./','display':'standalone','background_color':'#ffffff','theme_color':'#000000','icons':[{'src':'assets/brand/app-icon-192.png','sizes':'192x192','type':'image/png','purpose':'any'},{'src':'assets/brand/app-icon-512.png','sizes':'512x512','type':'image/png','purpose':'any'},{'src':'assets/brand/app-icon-512-maskable.png','sizes':'512x512','type':'image/png','purpose':'maskable'}]},ensure_ascii=False))
- srcs=['index.html','roadmap/index.html','settings/index.html','sources/index.html','search/index.html','bookmarks/index.html','practice/index.html','final-project/index.html','assets/user-store.js','assets/app.js','assets/app.css','assets/client-index.json','assets/search-index.json','assets/offline-files.json','manifest.webmanifest']
- srcs += [p.relative_to(out).as_posix() for asset_dir in ('brand','fonts') for p in (out/'assets'/asset_dir).rglob('*') if p.is_file()]
- urls=sorted(set((u[:-len('index.html')] if u.endswith('index.html') else u) for u in srcs+[p.relative_to(out).as_posix() for p in out.rglob('*.html')]))
- version=hashlib.sha256((ROOT/'src/styles/app.css').read_bytes()+(ROOT/'src/scripts/user-store.js').read_bytes()+(ROOT/'src/scripts/app.js').read_bytes()+b''.join((CONTENT/e['path']).read_bytes() for e in sorted(ENTRIES.values(),key=lambda e:e['id']))+b''.join((CONTENT/filename).read_bytes() for _,_,_,filename in LIBRARIES.values())+json.dumps(index,ensure_ascii=False,separators=(',',':')).encode('utf-8')).hexdigest()[:12]
- save('assets/offline-files.json',json.dumps({'version':version,'urls':urls},ensure_ascii=False))
- # Worker standard network-first; cache all on explicit command from settings. Same-origin only.
- save('sw.js',f'''self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{{const req=e.request;if(req.method!=='GET'||new URL(req.url).origin!==self.location.origin)return;e.respondWith((async()=>{{try{{return await fetch(req)}}catch{{const names=(await caches.keys()).filter(k=>k.startsWith('sales-os-offline-')).reverse();for(const name of names){{const c=await caches.open(name);const hit=await c.match(req);if(hit)return hit;}}return Response.error()}}}})());}});''')
+ save('sw.js',(ROOT/'scripts/service-worker.js').read_text(encoding='utf-8'))
+ resources=[]
+ fingerprint=hashlib.sha256()
+ for file in sorted((item for item in out.rglob('*') if item.is_file() and item.name!='assets/offline-files.json'),key=lambda item:item.relative_to(out).as_posix()):
+  relative=file.relative_to(out).as_posix()
+  content=file.read_bytes()
+  fingerprint.update(relative.encode('utf-8')+b'\0'+content+b'\0')
+  if relative=='sw.js':continue
+  if relative.endswith('/index.html') or relative=='index.html':
+   parent=pathlib.PurePosixPath(relative).parent
+   url='' if str(parent)=='.' else parent.as_posix()+'/'
+  else:url=relative
+  resources.append({'url':url,'bytes':len(content)})
+ resources.append({'url':'assets/offline-files.json','bytes':0})
+ urls=sorted({resource['url'] for resource in resources})
+ resources.sort(key=lambda resource:resource['url'])
+ module_list=[{'id':entry['module'],'title':entry['title'],'url':f'module/{entry["id"]}/'} for entry in ENTRIES.values() if entry['kind']=='module']
+ version=fingerprint.hexdigest()[:12]
+ offline={'schemaVersion':2,'version':version,'estimatedBytes':sum(resource['bytes'] for resource in resources),'modules':module_list,'resources':resources,'urls':[resource['url'] for resource in resources]}
+ save('assets/offline-files.json',json.dumps(offline,ensure_ascii=False,separators=(',',':')))
  # sitemap useful for generated static hosting
  urls_count=len(list(out.rglob('index.html')))
- print('PASS: rendered',urls_count,'HTML documents; search records',len(index),'offline resources',len(urls),'build hash',version)
- return {'html':urls_count,'offline':len(urls),'search':len(index)}
+ print('PASS: rendered',urls_count,'HTML documents; full-corpus search records',len(index),'offline resources',len(resources),'build hash',version)
+ return {'html':urls_count,'offline':len(resources),'search':len(index)}
 
 if __name__=='__main__':
  import argparse

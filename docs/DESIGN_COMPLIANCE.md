@@ -10,6 +10,7 @@
 - После M5 реальные Astro preview-кадры покрывают home, module, practice, library hub, template library и editorial review при тех же пяти ширинах и двух темах — 60 кадров в [m5-learning/](screenshots/m5-learning/). Дополнительно сохранены раскрытые mobile состояния практической рубрики и таблицы редакционного реестра.
 - Встроенная Chromium responsive suite прошла 175 репрезентативных представлений 35 маршрутов × 5 ширин, плюс 144 состояния всех 72 упражнений на 320/390 px; document-level overflow не выявлен. Таблицы остаются локально прокручиваемыми и имеют клавиатурно доступные области прокрутки.
 - Production build и browser smoke подтвердили загрузку локального шрифта, ассетов бренда, 481 статического маршрута и отсутствие pageerror на M5 screenshot matrix. `npm run check` завершился без ошибок и предупреждений; остались три существовавших deprecated hints `BeforeUnloadEvent.returnValue`.
+- M6 добавил production-preview matrix для `/search/` и `/settings/`: 2 страницы × 5 ширин × 2 темы = 20 кадров в [m6-search-offline/](screenshots/m6-search-offline/). Все размеры прошли проверку document-level overflow; отдельно просмотрены узкий mobile search/settings и широкий dark search/settings. Offline manager использует существующие control/border/surface tokens и явные ready/partial/quota/error states.
 
 ### Сигналы детектора и исключения
 
