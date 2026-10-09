@@ -36,8 +36,8 @@
 
   function defaultState() {
     return {
-      format: "sales-os-v7",
-      version: 7,
+      format: "sales-os-v8",
+      version: 8,
       lessonStatuses: {},
       practiceStatuses: {},
       bookmarks: [],
@@ -47,6 +47,7 @@
       today: window.SalesOSToday.empty(),
       knowledgeReview: window.SalesOSKnowledge.empty(),
       projects: window.SalesOSProjects.empty(),
+      personalTemplates: window.SalesOSTemplates.empty(),
       revisitQueue: {},
       revisitHistory: [],
       noteMergeSources: {},
@@ -85,6 +86,9 @@
         ? window.SalesOSTrainer.validateSessions(value.trainerSessions)
         : {};
     state.projects = window.SalesOSProjects.validate(value.projects);
+    state.personalTemplates = window.SalesOSTemplates.validate(
+      value.personalTemplates,
+    );
     state.today = window.SalesOSToday.validate(value.today);
     state.knowledgeReview = window.SalesOSKnowledge.validate(
       value.knowledgeReview,
@@ -1243,6 +1247,10 @@
     merged.projects = window.SalesOSProjects.merge(
       current.projects,
       incoming.projects,
+    );
+    merged.personalTemplates = window.SalesOSTemplates.merge(
+      current.personalTemplates,
+      incoming.personalTemplates,
     );
     merged.today = window.SalesOSToday.merge(current.today, incoming.today);
     merged.knowledgeReview = window.SalesOSKnowledge.merge(

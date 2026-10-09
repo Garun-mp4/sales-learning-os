@@ -1,0 +1,270 @@
+<section
+  class="template-library"
+  data-template-library
+  data-pagefind-ignore
+  aria-labelledby="template-library-title"
+>
+  <div class="template-library-heading">
+    <div>
+      <span class="eyebrow">ЛИЧНАЯ БИБЛИОТЕКА</span>
+      <h2 class="h2" id="template-library-title">Мои заготовки</h2>
+      <p class="muted">
+        Шаблоны и заметки хранятся только в этом браузере. Ничего не
+        отправляется и не публикуется автоматически.
+      </p>
+    </div>
+    <button class="btn" type="button" data-template-new>Создать шаблон</button>
+  </div>
+  <p
+    class="small muted template-global-status"
+    data-template-save-status
+    role="status"
+    aria-live="polite"
+  ></p>
+  <div class="template-library-grid">
+    <aside class="template-catalog" aria-label="Мои личные шаблоны">
+      <label class="template-search-label" for="template-search"
+        >Поиск по моим шаблонам</label
+      >
+      <input
+        id="template-search"
+        type="search"
+        data-template-search
+        autocomplete="off"
+        placeholder="Название, текст или тег"
+      />
+      <div
+        class="template-filter-row"
+        role="group"
+        aria-label="Фильтр личных шаблонов"
+      >
+        <button
+          class="btn smallbtn"
+          type="button"
+          data-template-filter="active"
+          aria-pressed="true"
+        >
+          Все</button
+        ><button
+          class="btn smallbtn"
+          type="button"
+          data-template-filter="favorites"
+          aria-pressed="false"
+        >
+          Избранное</button
+        ><button
+          class="btn smallbtn"
+          type="button"
+          data-template-filter="archived"
+          aria-pressed="false"
+        >
+          Архив
+        </button>
+      </div>
+      <p class="small muted" data-template-count aria-live="polite"></p>
+      <div class="template-list" data-template-list></div>
+      <details class="template-starter-picker">
+        <summary>Добавить стартовую заготовку</summary>
+        <p class="small muted">
+          Редакционные черновики: проверьте каждый факт, границы работ и
+          уместность контакта перед использованием.
+        </p>
+        <div data-template-starters-list></div>
+      </details>
+    </aside>
+    <div class="template-editor">
+      <div class="template-editor-empty" data-template-empty>
+        <h3 class="h2">Выберите шаблон</h3>
+        <p class="muted">
+          Создайте заготовку с нуля, возьмите стартовый текст или сохраните
+          личную копию из справочника ниже.
+        </p>
+      </div>
+      <form data-template-form hidden novalidate>
+        <div class="template-editor-heading">
+          <div>
+            <span class="eyebrow">РЕДАКТОР</span>
+            <h3 class="h2" data-template-editor-heading>Новый шаблон</h3>
+          </div>
+          <button class="btn smallbtn" type="button" data-template-reset>
+            Сбросить правки
+          </button>
+        </div>
+        <p class="small muted" data-template-source hidden></p>
+        <div class="template-form-grid">
+          <label for="template-title"
+            >Название<input
+              id="template-title"
+              name="title"
+              maxlength="120"
+              required
+          /></label>
+          <label for="template-category"
+            >Категория<select id="template-category" name="category">
+              <option value="first_message">Первое сообщение</option>
+              <option value="discovery">Выяснение задачи</option>
+              <option value="proposal">Предложение</option>
+              <option value="objection">Возражение</option>
+              <option value="follow_up">Follow-up</option>
+              <option value="other">Другое</option>
+            </select></label
+          >
+        </div>
+        <label class="template-field" for="template-body"
+          >Текст<textarea
+            id="template-body"
+            name="body"
+            rows="9"
+            maxlength="50000"
+            required
+            placeholder="Напишите текст или используйте {{service}}, {{client}}, {{context}}, {{next_step}}…"
+          ></textarea>
+        </label>
+        <label class="template-field" for="template-tags"
+          >Теги<span class="small muted"
+            >Разделяйте запятыми · до 20 тегов по 40 символов</span
+          ><input
+            id="template-tags"
+            name="tags"
+            maxlength="900"
+            placeholder="например: первое сообщение, IT"
+        /></label>
+        <label class="template-field" for="template-usage"
+          >Когда применять<textarea
+            id="template-usage"
+            name="whenToUse"
+            rows="3"
+            maxlength="3000"
+            placeholder="Контекст и условия, при которых текст уместен"
+          ></textarea>
+        </label>
+        <label class="template-field" for="template-result-note"
+          >Моя заметка о фактическом результате<textarea
+            id="template-result-note"
+            name="resultNote"
+            rows="3"
+            maxlength="5000"
+            placeholder="Ваши наблюдения. Это личная заметка, а не доказательство конверсии."
+          ></textarea>
+        </label>
+        <section
+          class="template-variables"
+          aria-labelledby="template-variables-title"
+        >
+          <div class="section-head">
+            <div>
+              <h4 class="h2" id="template-variables-title">
+                Переменные и предпросмотр
+              </h4>
+              <p class="small muted">
+                Поддерживаются только четыре подписанные переменные. Пустые и
+                неизвестные маркеры блокируют копирование.
+              </p>
+            </div>
+          </div>
+          <label class="template-project-fill" for="template-project"
+            ><span
+              >Подставить из выбранного проекта
+              <span class="small muted">· только для предпросмотра</span></span
+            ><select id="template-project" data-template-project>
+              <option value="">Не использовать проект</option>
+            </select></label
+          >
+          <div class="template-variable-grid">
+            <label for="template-var-service"
+              >Услуга<textarea
+                id="template-var-service"
+                data-template-variable="service"
+                rows="2"
+                maxlength="10000"
+              ></textarea></label
+            ><label for="template-var-client"
+              >Клиент<textarea
+                id="template-var-client"
+                data-template-variable="client"
+                rows="2"
+                maxlength="10000"
+              ></textarea></label
+            ><label for="template-var-context"
+              >Контекст<textarea
+                id="template-var-context"
+                data-template-variable="context"
+                rows="2"
+                maxlength="30000"
+              ></textarea></label
+            ><label for="template-var-next-step"
+              >Следующий шаг<textarea
+                id="template-var-next-step"
+                data-template-variable="next_step"
+                rows="2"
+                maxlength="10000"
+              ></textarea>
+            </label>
+          </div>
+          <p
+            class="template-preview-status"
+            data-template-preview-status
+            role="status"
+            aria-live="polite"
+          ></p>
+          <pre class="template-preview" data-template-preview></pre>
+          <textarea
+            class="template-copy-fallback"
+            data-template-copy-fallback
+            aria-label="Текст шаблона для ручного копирования"
+            readonly
+            hidden
+          ></textarea>
+          <button class="btn" type="button" data-template-copy-preview disabled>
+            Копировать готовый текст
+          </button>
+        </section>
+        <label class="template-favorite"
+          ><input type="checkbox" name="favorite" /> В избранном</label
+        >
+        <div class="template-editor-actions">
+          <button class="btn primary" type="submit" data-template-save>
+            Сохранить шаблон</button
+          ><button class="btn" type="button" data-template-fork hidden>
+            Сохранить отдельную копию моего текста
+          </button>
+        </div>
+        <details class="template-versions" data-template-versions hidden>
+          <summary>
+            Сохранённые версии <span data-template-version-count></span>
+          </summary>
+          <p class="small muted">
+            Версии неизменяемы. Восстановление сначала сохраняет текущий
+            вариант.
+          </p>
+          <div class="template-version-save">
+            <label for="template-version-name"
+              >Название новой версии<input
+                id="template-version-name"
+                data-template-version-name
+                maxlength="120"
+                placeholder="Например: После уточнения оффера" /></label
+            ><button
+              class="btn smallbtn"
+              type="button"
+              data-template-save-version
+            >
+              Сохранить версию
+            </button>
+          </div>
+          <div data-template-version-list></div>
+        </details>
+        <button
+          class="btn template-archive-action"
+          type="button"
+          data-template-archive
+        >
+          Переместить в архив
+        </button>
+      </form>
+    </div>
+  </div>
+  <script type="application/json" data-template-starters>
+    __TEMPLATE_STARTERS_JSON__
+  </script>
+</section>

@@ -19,8 +19,8 @@ let pendingImport = null;
 let pendingRestore = null;
 function defaultState() {
   return {
-    format: "sales-os-v7",
-    version: 7,
+    format: "sales-os-v8",
+    version: 8,
     lessonStatuses: {},
     practiceStatuses: {},
     bookmarks: [],
@@ -30,6 +30,7 @@ function defaultState() {
     today: window.SalesOSToday.empty(),
     knowledgeReview: window.SalesOSKnowledge.empty(),
     projects: window.SalesOSProjects.empty(),
+    personalTemplates: window.SalesOSTemplates.empty(),
     revisitQueue: {},
     revisitHistory: [],
     noteMergeSources: {},
@@ -1685,8 +1686,8 @@ async function exportData() {
   const sizeBytes = await downloadJSON(
     {
       ...exportedState,
-      format: "sales-os-v7",
-      version: 7,
+      format: "sales-os-v8",
+      version: 8,
       notes,
       exportedAt: new Date(exportedAt).toISOString(),
     },
@@ -1746,7 +1747,8 @@ function validateBackupState(obj, idx) {
       (obj.format === "sales-os-v4" && obj.version === 4) ||
       (obj.format === "sales-os-v5" && obj.version === 5) ||
       (obj.format === "sales-os-v6" && obj.version === 6) ||
-      (obj.format === "sales-os-v7" && obj.version === 7)
+      (obj.format === "sales-os-v7" && obj.version === 7) ||
+      (obj.format === "sales-os-v8" && obj.version === 8)
     ) ||
     !isRecord(obj.lessonStatuses) ||
     !isRecord(obj.practiceStatuses) ||
@@ -1814,7 +1816,7 @@ function validateBackupState(obj, idx) {
     );
   else if (obj.trainerSessions !== undefined)
     throw Error("Сессии тренажёра требуют формат sales-os-v4");
-  if (obj.version === 7)
+  if (obj.version >= 7)
     next.projects = window.SalesOSProjects.validate(obj.projects);
   else if (obj.projects !== undefined)
     throw Error("Проекты требуют формат sales-os-v7");
@@ -1827,6 +1829,12 @@ function validateBackupState(obj, idx) {
   if (obj.version >= 5) next.today = window.SalesOSToday.validate(obj.today);
   else if (obj.today !== undefined)
     throw Error("Занятия требуют формат sales-os-v5 или новее");
+  if (obj.version === 8)
+    next.personalTemplates = window.SalesOSTemplates.validate(
+      obj.personalTemplates,
+    );
+  else if (obj.personalTemplates !== undefined)
+    throw Error("Личные шаблоны требуют формат sales-os-v8");
   return next;
 }
 function isWorkspaceId(id, idx) {
@@ -2083,6 +2091,7 @@ function renderImportPreview(preview) {
     ["Записи в очереди повтора", preview.totals.revisit],
     ["Сохранённые занятия", preview.totals.today],
     ["Проекты (включая архив)", preview.totals.projects],
+    ["Личные шаблоны (включая архив и версии)", preview.totals.templates],
     ["Ответы и архивы проверки понимания", preview.totals.knowledge],
   ];
   meta.textContent = `${preview.format} · ${formatBytes(preview.bytes)}${preview.exportedAt ? ` · экспортировано ${preview.exportedAt}` : ""}`;
@@ -2204,6 +2213,7 @@ async function prepareImport(file) {
     revisit: Object.keys(next.revisitQueue).length,
     today: Object.keys(next.today.plans).length,
     projects: Object.keys(next.projects.items).length,
+    templates: Object.keys(next.personalTemplates.items).length,
     knowledge: Object.keys(next.knowledgeReview.attempts).length,
     trainer: Object.keys(next.trainerSessions).length,
   };
@@ -2618,6 +2628,22 @@ if (searchInput) {
             ].join("\n"),
             bookmarked: false,
           }));
+        const templateRecords = Object.values(
+          savedState.personalTemplates.items,
+        )
+          .filter((item) => !item.archived)
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            kind: "personal_template",
+            module: "extra",
+            level: "extra",
+            url: `library/templates/?template=${encodeURIComponent(item.id)}`,
+            note: [item.body, item.whenToUse, item.resultNote, ...item.tags].join(
+              "\n",
+            ),
+            bookmarked: false,
+          }));
         const localRecords = [...ids]
           .map((id) => {
             const entry = entries[id];
@@ -2647,6 +2673,7 @@ if (searchInput) {
           })
           .filter(Boolean)
           .concat(projectRecords)
+          .concat(templateRecords)
           .filter((item) =>
             Object.entries(selectedFilters).every(
               ([key, value]) => item[key] === value,
@@ -2678,6 +2705,7 @@ if (searchInput) {
       module: "Глава модуля",
       final_project: "Итоговый проект",
       project: "Личный проект",
+      personal_template: "Личный шаблон",
       library: "Справочник",
       source: "Источник",
     };
@@ -3384,45 +3412,6 @@ if (offlineBtn) {
     toast("Офлайн-пакеты Sales OS удалены. Личные записи сохранены.");
   });
   void refreshOfflineManager();
-}
-
-const templateLibrary = document.querySelector("[data-template-copy]");
-if (templateLibrary) {
-  for (const heading of templateLibrary.querySelectorAll("h2")) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "btn smallbtn template-copy";
-    button.textContent = "Скопировать";
-    button.setAttribute(
-      "aria-label",
-      `Скопировать шаблон «${heading.textContent.trim()}»`,
-    );
-    heading.append(button);
-    button.addEventListener("click", async () => {
-      const chunks = [
-        heading.textContent.replace(button.textContent, "").trim(),
-      ];
-      for (
-        let sibling = heading.nextElementSibling;
-        sibling;
-        sibling = sibling.nextElementSibling
-      ) {
-        if (sibling.matches("h1, h2")) break;
-        chunks.push(sibling.innerText || sibling.textContent || "");
-      }
-      const text = chunks.filter(Boolean).join("\n\n").trim();
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          throw new Error("Clipboard API unavailable");
-        }
-        toast("Текст шаблона скопирован");
-      } catch {
-        toast("Не удалось скопировать. Выделите текст шаблона вручную.");
-      }
-    });
-  }
 }
 
 // A single passive handler keeps both desktop and mobile contents in sync.

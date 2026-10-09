@@ -13,6 +13,7 @@ from trainer_content import load_scenarios, render_trainer
 from projects_content import project_data, render_projects
 from today_content import render_today
 from knowledge_content import load_questions, render_knowledge
+from template_content import load_starters, render_manager
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CONTENT = ROOT / "sales-knowledge-base"
@@ -39,10 +40,12 @@ write_if_changed(ROOT / "src/generated/projects.html", render_projects(entries).
 write_if_changed(ROOT / "src/generated/projects-data.json", json.dumps(project_data(entries),ensure_ascii=False).encode("utf-8"))
 write_if_changed(ROOT / "src/generated/knowledge.html", render_knowledge(questions).encode("utf-8"))
 write_if_changed(ROOT / "src/generated/today.html", render_today(entries, questions).encode("utf-8"))
+starters = load_starters()
+write_if_changed(ROOT / "src/generated/template-manager.html", render_manager(starters).encode("utf-8"))
 guides = load_guides(entries)
 scenarios = load_scenarios(entries)
 write_if_changed(ROOT / 'src/generated/trainer-pages.json', json.dumps({'index': render_trainer(scenarios), **{s['id']:render_trainer(scenarios,s['id']) for s in scenarios}},ensure_ascii=False).encode('utf-8'))
-for script in ('trainer-core.js', 'trainer.js', 'today-core.js', 'today.js', 'knowledge-core.js', 'knowledge.js', 'projects-core.js', 'projects.js'):
+for script in ('trainer-core.js', 'trainer.js', 'today-core.js', 'today.js', 'knowledge-core.js', 'knowledge.js', 'projects-core.js', 'projects.js', 'templates-core.js', 'templates.js'):
     write_if_changed(ASSETS / script, (ROOT / 'src/scripts' / script).read_bytes())
 search_index = []
 for entry in entries.values():
@@ -147,6 +150,8 @@ urls = {
     "editorial-review/",
     "settings/",
     "assets/app.js",
+    "assets/templates-core.js",
+    "assets/templates.js",
     "assets/practice-feedback.js",
     "assets/user-store.js",
     "assets/app.css",
@@ -167,7 +172,7 @@ old_favicon = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rec
 if legacy_favicon.is_file() and legacy_favicon.read_bytes() == old_favicon:
     legacy_favicon.unlink()
 urls.update(f"level/{stage['id']}/" for stage in manifest["stages"])
-urls.update(['projects/', 'assets/projects-core.js', 'assets/projects.js', 'review/check/', 'assets/knowledge-core.js', 'assets/knowledge.js', 'today/', 'assets/today-core.js', 'assets/today.js', 'trainer/', 'assets/trainer-core.js', 'assets/trainer.js', *(f'trainer/{s["id"]}/' for s in scenarios)])
+urls.update(['projects/', 'assets/projects-core.js', 'assets/projects.js', 'review/check/', 'assets/knowledge-core.js', 'assets/knowledge.js', 'today/', 'assets/today-core.js', 'assets/today.js', 'trainer/', 'assets/trainer-core.js', 'assets/trainer.js', 'assets/templates-core.js', 'assets/templates.js', *(f'trainer/{s["id"]}/' for s in scenarios)])
 urls.update(f"source/{source['id']}/" for source in manifest["sources"])
 urls.update(f"library/{identifier}/" for identifier in library_pages)
 urls.update(

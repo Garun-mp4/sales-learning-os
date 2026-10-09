@@ -106,11 +106,13 @@ const currentSection = active ?? (
   <script src="/assets/trainer-core.js" defer is:inline></script>
   <script src="/assets/knowledge-core.js" defer is:inline></script>
   <script src="/assets/projects-core.js" defer is:inline></script>
+  <script src="/assets/templates-core.js" defer is:inline></script>
   <script src="/assets/user-store.js" defer is:inline></script>
   <script src="/assets/app.js" defer is:inline></script>
   {(documentKind==='practice'||pathname==='/final-project/')&&<script src="/assets/practice-feedback.js" defer is:inline></script>}
   {pathname==='/review/check/'&&<script src="/assets/knowledge.js" defer is:inline></script>}
   {currentSection==='projects'&&<script src="/assets/projects.js" defer is:inline></script>}
+  {libraryId==='templates'&&<script src="/assets/templates.js" defer is:inline></script>}
   {currentSection==='today'&&<script src="/assets/today.js" defer is:inline></script>}
   {currentSection==='trainer'&&<script src="/assets/trainer.js" defer is:inline></script>}
 </body>

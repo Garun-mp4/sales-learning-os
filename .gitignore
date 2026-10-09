@@ -43,3 +43,7 @@ __pycache__/
 /src/generated/projects-data.json
 /public/assets/projects-core.js
 /public/assets/projects.js
+
+/src/generated/template-manager.html
+/public/assets/templates-core.js
+/public/assets/templates.js

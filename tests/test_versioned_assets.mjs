@@ -32,6 +32,8 @@ try {
       "knowledge.js",
       "projects-core.js",
       "projects.js",
+      "templates-core.js",
+      "templates.js",
       "trainer-core.js",
       "trainer.js",
     ])
@@ -41,14 +43,14 @@ try {
       );
     await writeFile(
       path.join(cwd, "dist/index.html"),
-      '<link href="/assets/app.css"><script src="/assets/user-store.js"></script><script src="/assets/app.js"></script>',
+      '<link href="/assets/app.css"><script src="/assets/user-store.js"></script><script src="/assets/app.js"></script><script src="/assets/templates-core.js"></script><script src="/assets/templates.js"></script>',
     );
     execFileSync(process.execPath, [script], { cwd, stdio: "pipe" });
     const html = await readFile(path.join(cwd, "dist/index.html"), "utf8");
     const refs = [...html.matchAll(/assets\/versioned\/[^"]+/g)].map(
       (match) => match[0],
     );
-    assert.equal(refs.length, 3);
+    assert.equal(refs.length, 5);
     const manifest = JSON.parse(
       await readFile(path.join(cwd, "dist/assets/offline-files.json"), "utf8"),
     );

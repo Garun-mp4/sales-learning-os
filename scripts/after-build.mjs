@@ -40,6 +40,8 @@ for (const name of [
   "knowledge.js",
   "projects-core.js",
   "projects.js",
+  "templates-core.js",
+  "templates.js",
   "trainer-core.js",
   "trainer.js",
 ]) {
