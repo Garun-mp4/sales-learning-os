@@ -34,6 +34,8 @@ for (const name of [
   "app.js",
   "user-store.js",
   "practice-feedback.js",
+  "trainer-core.js",
+  "trainer.js",
 ]) {
   const content = await readFile(path.join(root, "assets", name));
   const extension = path.extname(name);

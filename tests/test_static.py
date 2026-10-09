@@ -26,6 +26,8 @@ links = 0
 html_files = list(DIST.rglob("*.html"))
 route_kinds = {"theory": "lesson", "practice": "practice", "module": "module"}
 expected = {f"{route_kinds[entry['kind']]}/{identifier}/index.html" for identifier, entry in entries.items()}
+scenarios = json.loads((ROOT / "sales-knowledge-base/trainer-scenarios.json").read_text(encoding="utf-8"))["scenarios"]
+expected.update({"trainer/index.html", *(f"trainer/{s['id']}/index.html" for s in scenarios)})
 expected.update(
     {
         "index.html",

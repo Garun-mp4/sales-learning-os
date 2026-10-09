@@ -7,6 +7,7 @@ type SalesOSProgressState = {
   practiceStatuses: Record<string, string>;
   bookmarks: string[];
   practiceDrafts: Record<string, SalesOSPracticeDraft>;
+  trainerSessions: Record<string, SalesOSTrainerSession>;
   practiceAttempts: Record<
     string,
     Array<{
@@ -54,6 +55,8 @@ type SalesOSUserDataStore = {
   initialState: SalesOSProgressState;
   ready: Promise<{ state: SalesOSProgressState; mode: string }>;
   getState: () => Promise<SalesOSProgressState>;
+  getMode: () => string;
+  getAllNotes: () => Promise<Record<string, string>>;
   updateState: (
     mutator: (current: SalesOSProgressState) => SalesOSProgressState,
   ) => Promise<{
@@ -95,5 +98,22 @@ type SalesOSUserDataStore = {
 declare global {
   interface Window {
     SalesOSUserStore: SalesOSUserDataStore;
+    SalesOSTrainer: {
+      validateSessions: (raw: unknown) => Record<string, SalesOSTrainerSession>;
+    };
   }
 }
+
+type SalesOSTrainerSession = {
+  id: string;
+  scenarioId: string;
+  scenarioVersion: number;
+  scenario: Record<string, unknown>;
+  revision: number;
+  createdAt: number;
+  updatedAt: number;
+  steps: Array<{ nodeId: string; choiceId: string; text: string; at: number }>;
+  draft: { text: string; choiceId: string };
+  deletedAt: number | null;
+  conflictOf?: string;
+};

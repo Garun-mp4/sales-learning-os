@@ -63,7 +63,7 @@ test("M1 ten guides have progressive hints, rubric explanations and honest statu
   await expect(page.locator("[data-practice-form]")).toBeVisible();
 });
 
-test("M1 answer, guide, second iteration, comparison and v3 backup round trip", async ({
+test("M1 answer, guide, second iteration, comparison and current backup round trip", async ({
   page,
   browser,
 }) => {

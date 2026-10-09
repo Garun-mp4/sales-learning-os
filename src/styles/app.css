@@ -232,6 +232,124 @@ summary:focus-visible,
   stroke-width: 1.7;
 }
 
+/* Scenario exercises reuse the same quiet surfaces and form controls. */
+.trainer-context,
+.trainer-history,
+.trainer-compare,
+[data-trainer-workspace] {
+  margin-block: 32px;
+  min-width: 0;
+}
+.trainer-context dl {
+  margin: 20px 0;
+}
+.trainer-context dt {
+  font-weight: 600;
+  margin-top: 16px;
+}
+.trainer-context dd {
+  margin: 6px 0 0;
+}
+.trainer-catalog article,
+.trainer-history-row {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.trainer-catalog h3 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+.trainer-catalog h3 a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.trainer-catalog p {
+  margin: 8px 0;
+}
+.trainer-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.trainer-form > label {
+  font-weight: 600;
+}
+.trainer-choices {
+  border: 0;
+  margin: 4px 0 16px;
+  padding: 0;
+  min-width: 0;
+}
+.trainer-choices legend {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.trainer-choices label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-block: 8px;
+  cursor: pointer;
+}
+.trainer-choices label:has(:checked) {
+  background: var(--bg2);
+  border-color: var(--fg);
+}
+.trainer-choices input {
+  flex: 0 0 auto;
+  margin-top: 4px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--fg);
+}
+.trainer-transcript ol {
+  padding: 0;
+  list-style: none;
+}
+.trainer-transcript li {
+  border-bottom: 1px solid var(--border);
+  padding: 20px 0;
+}
+.trainer-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.trainer-action {
+  font-weight: 600;
+}
+.trainer-feedback {
+  color: var(--muted);
+  line-height: 1.65;
+}
+.trainer-summary {
+  border-top: 1px solid var(--border);
+  margin: 28px 0;
+  padding-top: 20px;
+}
+.trainer-summary h3 {
+  font-size: 20px;
+}
+.trainer-summary h4 {
+  font-size: 15px;
+  margin: 24px 0 8px;
+}
+.trainer-compare .comparison-columns {
+  margin-top: 24px;
+}
+@media (max-width: 640px) {
+  .trainer-form .btn {
+    width: 100%;
+    white-space: normal;
+  }
+  .trainer-history-row > a {
+    overflow-wrap: anywhere;
+  }
+}
+
 /* Practice feedback stays readable alongside the existing local editor. */
 .practice-feedback,
 .practice-comparison {
@@ -2151,7 +2269,8 @@ summary:focus-visible,
   font-weight: 550;
 }
 .practice-workspace textarea,
-.revisit-card textarea {
+.revisit-card textarea,
+.trainer-form textarea {
   width: 100%;
   min-height: 92px;
   padding: 10px 12px;

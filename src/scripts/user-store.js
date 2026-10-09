@@ -36,13 +36,14 @@
 
   function defaultState() {
     return {
-      format: "sales-os-v3",
-      version: 3,
+      format: "sales-os-v4",
+      version: 4,
       lessonStatuses: {},
       practiceStatuses: {},
       bookmarks: [],
       practiceDrafts: {},
       practiceAttempts: {},
+      trainerSessions: {},
       revisitQueue: {},
       revisitHistory: [],
       noteMergeSources: {},
@@ -76,6 +77,10 @@
       : [];
     state.practiceDrafts = normalizePracticeDrafts(value.practiceDrafts);
     state.practiceAttempts = normalizePracticeAttempts(value.practiceAttempts);
+    state.trainerSessions =
+      value.trainerSessions && Object.keys(value.trainerSessions).length
+        ? window.SalesOSTrainer.validateSessions(value.trainerSessions)
+        : {};
     state.revisitQueue = normalizeRevisitQueue(value.revisitQueue);
     state.revisitHistory = Array.isArray(value.revisitHistory)
       ? value.revisitHistory
@@ -823,6 +828,7 @@
   async function updateState(mutator) {
     await ready;
     let nextState = null;
+    let mutationError = null;
 
     if (storageMode === "indexeddb" && database) {
       try {
@@ -838,6 +844,12 @@
                 nextState = normalizeState(
                   mutator(normalizeState(request.result)),
                 );
+              } catch (error) {
+                mutationError = error;
+                abort(error);
+                return;
+              }
+              try {
                 store.put(nextState, STATE_KEY);
               } catch (error) {
                 abort(error);
@@ -856,6 +868,7 @@
           mode: storageMode,
         };
       } catch {
+        if (mutationError) throw mutationError;
         // Degrade to the explicit fallback instead of silently dropping the failed write.
         if (!nextState)
           nextState = normalizeState(mutator(cloneState(stateCache)));
@@ -1277,6 +1290,18 @@
       merged.noteMergeSources[id] = [
         ...new Set([...(merged.noteMergeSources[id] || []), ...hashes]),
       ].slice(-100);
+    }
+    for (const [id, session] of Object.entries(incoming.trainerSessions)) {
+      const local = merged.trainerSessions[id];
+      if (!local) merged.trainerSessions[id] = session;
+      else if (JSON.stringify(local) !== JSON.stringify(session)) {
+        const copyId = `${id.slice(0, 70)}-import-${fingerprintText(JSON.stringify(session))}`;
+        merged.trainerSessions[copyId] = {
+          ...session,
+          id: copyId,
+          conflictOf: id,
+        };
+      }
     }
     merged.lastExport =
       !current.lastExport ||

@@ -56,6 +56,7 @@ async function useShortManifest(
             versionedAsset("app", "css"),
             versionedAsset("app", "js"),
             versionedAsset("user-store", "js"),
+            versionedAsset("trainer-core", "js"),
             "assets/client-index.json",
             "assets/search-index.json",
             "lesson/01-001/",
@@ -186,7 +187,7 @@ test("A complete offline pack survives reload and opens lessons and private note
     };
   }, testModeKey);
   expect(installed.fullManifestTotal).toBeGreaterThan(450);
-  expect(installed.total).toBe(8);
+  expect(installed.total).toBe(9);
   expect(installed.ready).toBe(true);
   expect(installed.keys).toContain("sales-os-offline-000000000005");
 

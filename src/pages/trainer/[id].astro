@@ -1,0 +1,10 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import pages from '../../generated/trainer-pages.json';
+import catalog from '../../../sales-knowledge-base/trainer-scenarios.json';
+export function getStaticPaths() {return catalog.scenarios.map(s=>({params:{id:s.id},props:{scenario:s}}));}
+const {scenario}=Astro.props;
+---
+<Shell title={scenario.title} active="trainer" description={`${scenario.title}: учебный диалог, выбор действий и объяснение последствий. Сохранение и сравнение попыток на устройстве.`}>
+  <Fragment set:html={pages[scenario.id as keyof typeof pages]}/>
+</Shell>

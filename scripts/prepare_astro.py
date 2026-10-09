@@ -9,6 +9,7 @@ import re
 from bs4 import BeautifulSoup
 from markdown_it import MarkdownIt
 from practice_feedback import load_guides, render_feedback
+from trainer_content import load_scenarios, render_trainer
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CONTENT = ROOT / "sales-knowledge-base"
@@ -31,6 +32,10 @@ def write_if_changed(path: pathlib.Path, content: bytes) -> None:
 manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
 entries = manifest["entries"]
 guides = load_guides(entries)
+scenarios = load_scenarios(entries)
+write_if_changed(ROOT / 'src/generated/trainer-pages.json', json.dumps({'index': render_trainer(scenarios), **{s['id']:render_trainer(scenarios,s['id']) for s in scenarios}},ensure_ascii=False).encode('utf-8'))
+for script in ('trainer-core.js', 'trainer.js'):
+    write_if_changed(ASSETS / script, (ROOT / 'src/scripts' / script).read_bytes())
 search_index = []
 for entry in entries.values():
     raw = (CONTENT / entry["path"]).read_text(encoding="utf-8").split("---", 2)[2]
@@ -154,6 +159,7 @@ old_favicon = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rec
 if legacy_favicon.is_file() and legacy_favicon.read_bytes() == old_favicon:
     legacy_favicon.unlink()
 urls.update(f"level/{stage['id']}/" for stage in manifest["stages"])
+urls.update(['trainer/', 'assets/trainer-core.js', 'assets/trainer.js', *(f'trainer/{s["id"]}/' for s in scenarios)])
 urls.update(f"source/{source['id']}/" for source in manifest["sources"])
 urls.update(f"library/{identifier}/" for identifier in library_pages)
 urls.update(

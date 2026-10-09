@@ -26,6 +26,8 @@ try {
       "app.js",
       "user-store.js",
       "practice-feedback.js",
+      "trainer-core.js",
+      "trainer.js",
     ])
       await writeFile(
         path.join(cwd, "dist/assets", name),

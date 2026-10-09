@@ -1,0 +1,7 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import pages from '../../generated/trainer-pages.json';
+---
+<Shell title="Тренажёр переписки" active="trainer" description="Шесть учебных сценариев переписки с клиентом: решения, последствия, история и сравнение попыток. Работает локально без AI.">
+  <Fragment set:html={pages.index}/>
+</Shell>

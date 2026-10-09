@@ -62,6 +62,7 @@ const currentSection = active ?? (
         <a class:list={['nav-item',currentSection==='home'&&'active']} href="/" aria-label="Обзор" aria-current={currentSection==='home'?'page':undefined} title="Обзор"><Icon name="home"/><span>Обзор</span></a>
         <a class:list={['nav-item',currentSection==='roadmap'&&'active']} href="/roadmap/" aria-label="Roadmap" aria-current={currentSection==='roadmap'?'page':undefined} title="Roadmap"><Icon name="map"/><span>Roadmap</span></a>
         <a class:list={['nav-item',currentSection==='practice'&&'active']} href="/practice/" aria-label="Практика" aria-current={currentSection==='practice'?'page':undefined} title="Практика"><Icon name="practice"/><span>Практика</span></a>
+        <a class:list={['nav-item',currentSection==='trainer'&&'active']} href="/trainer/" aria-current={currentSection==='trainer'?'page':undefined}><Icon name="message"/><span>Тренажёр переписки</span></a>
         <a class:list={['nav-item',currentSection==='review'&&'active']} href="/review/" aria-label="Очередь повтора" aria-current={currentSection==='review'?'page':undefined} title="Очередь повтора"><Icon name="clock"/><span>Очередь повтора</span><span class="nav-count" data-review-count hidden></span></a>
         <a class:list={['nav-item',currentSection==='search'&&'active']} href="/search/" aria-label="Поиск" aria-current={currentSection==='search'?'page':undefined} title="Поиск"><Icon name="search"/><span>Поиск</span></a>
         <a class:list={['nav-item',currentSection==='sources'&&'active']} href="/sources/" aria-label="Источники" aria-current={currentSection==='sources'?'page':undefined} title="Источники"><Icon name="library"/><span>Источники</span></a>
@@ -99,8 +100,10 @@ const currentSection = active ?? (
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <template id="ui-row-chevron"><Icon name="chevron"/></template>
+  <script src="/assets/trainer-core.js" defer is:inline></script>
   <script src="/assets/user-store.js" defer is:inline></script>
   <script src="/assets/app.js" defer is:inline></script>
   {(documentKind==='practice'||pathname==='/final-project/')&&<script src="/assets/practice-feedback.js" defer is:inline></script>}
+  {currentSection==='trainer'&&<script src="/assets/trainer.js" defer is:inline></script>}
 </body>
 </html>

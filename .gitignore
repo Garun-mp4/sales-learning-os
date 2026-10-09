@@ -26,3 +26,7 @@ __pycache__/
 /public/sw.js
 /public/manifest.webmanifest
 /docs/LOCAL_QA_LOG.txt
+
+/src/generated/trainer-pages.json
+/public/assets/trainer-core.js
+/public/assets/trainer.js

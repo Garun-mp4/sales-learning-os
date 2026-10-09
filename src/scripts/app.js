@@ -19,13 +19,14 @@ let pendingImport = null;
 let pendingRestore = null;
 function defaultState() {
   return {
-    format: "sales-os-v3",
-    version: 3,
+    format: "sales-os-v4",
+    version: 4,
     lessonStatuses: {},
     practiceStatuses: {},
     bookmarks: [],
     practiceDrafts: {},
     practiceAttempts: {},
+    trainerSessions: {},
     revisitQueue: {},
     revisitHistory: [],
     noteMergeSources: {},
@@ -1664,8 +1665,8 @@ async function exportData() {
   const sizeBytes = await downloadJSON(
     {
       ...exportedState,
-      format: "sales-os-v3",
-      version: 3,
+      format: "sales-os-v4",
+      version: 4,
       notes,
       exportedAt: new Date(exportedAt).toISOString(),
     },
@@ -1721,7 +1722,8 @@ function validateBackupState(obj, idx) {
     !obj ||
     !(
       (obj.format === "sales-os-v2" && obj.version === 2) ||
-      (obj.format === "sales-os-v3" && obj.version === 3)
+      (obj.format === "sales-os-v3" && obj.version === 3) ||
+      (obj.format === "sales-os-v4" && obj.version === 4)
     ) ||
     !isRecord(obj.lessonStatuses) ||
     !isRecord(obj.practiceStatuses) ||
@@ -1775,7 +1777,7 @@ function validateBackupState(obj, idx) {
       ? obj.lastVisited
       : null;
   next.legacyImported = obj.legacyImported === true;
-  if (obj.version === 3) {
+  if (obj.version >= 3) {
     next.practiceDrafts = validatePracticeDrafts(obj.practiceDrafts, idx);
     next.practiceAttempts = validatePracticeAttempts(obj.practiceAttempts, idx);
     next.revisitQueue = validateRevisitQueue(obj.revisitQueue, idx);
@@ -1783,6 +1785,12 @@ function validateBackupState(obj, idx) {
     next.noteMergeSources = validateNoteMergeSources(obj.noteMergeSources, idx);
     next.lastExport = validateLastExport(obj.lastExport);
   }
+  if (obj.version === 4)
+    next.trainerSessions = window.SalesOSTrainer.validateSessions(
+      obj.trainerSessions,
+    );
+  else if (obj.trainerSessions !== undefined)
+    throw Error("Сессии тренажёра требуют формат sales-os-v4");
   return next;
 }
 function isWorkspaceId(id, idx) {
@@ -2035,6 +2043,7 @@ function renderImportPreview(preview) {
     ["Закладки", preview.totals.bookmarks],
     ["Заметки", preview.totals.notes],
     ["Итерации ответов", preview.totals.attempts],
+    ["Сессии тренажёра (включая удалённые)", preview.totals.trainer],
     ["Записи в очереди повтора", preview.totals.revisit],
   ];
   meta.textContent = `${preview.format} · ${formatBytes(preview.bytes)}${preview.exportedAt ? ` · экспортировано ${preview.exportedAt}` : ""}`;
@@ -2154,6 +2163,7 @@ async function prepareImport(file) {
       0,
     ),
     revisit: Object.keys(next.revisitQueue).length,
+    trainer: Object.keys(next.trainerSessions).length,
   };
   const bytes = new TextEncoder().encode(JSON.stringify(obj)).byteLength;
   if (bytes > 8_000_000) throw Error("Backup too large");
