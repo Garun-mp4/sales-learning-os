@@ -1208,7 +1208,7 @@ test("Structured practice drafts, rubric self-review and iteration history survi
   const backup = await page.evaluate(async () =>
     JSON.parse(await window.__backupBlob!.text()),
   );
-  expect(backup.format).toBe("sales-os-v5");
+  expect(backup.format).toBe("sales-os-v6");
   expect(backup.practiceDrafts["01-P01"].answers["criterion-1"]).toContain(
     "Путь клиента",
   );

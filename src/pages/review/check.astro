@@ -1,0 +1,5 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import html from '../../generated/knowledge.html?raw';
+---
+<Shell title="Проверка понимания" description="Вопросы с разбором и добровольными интервалами повторения. Ответы хранятся на устройстве." active="review"><Fragment set:html={html}/></Shell>

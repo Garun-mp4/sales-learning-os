@@ -19,8 +19,8 @@ let pendingImport = null;
 let pendingRestore = null;
 function defaultState() {
   return {
-    format: "sales-os-v5",
-    version: 5,
+    format: "sales-os-v6",
+    version: 6,
     lessonStatuses: {},
     practiceStatuses: {},
     bookmarks: [],
@@ -28,6 +28,7 @@ function defaultState() {
     practiceAttempts: {},
     trainerSessions: {},
     today: window.SalesOSToday.empty(),
+    knowledgeReview: window.SalesOSKnowledge.empty(),
     revisitQueue: {},
     revisitHistory: [],
     noteMergeSources: {},
@@ -1666,8 +1667,8 @@ async function exportData() {
   const sizeBytes = await downloadJSON(
     {
       ...exportedState,
-      format: "sales-os-v5",
-      version: 5,
+      format: "sales-os-v6",
+      version: 6,
       notes,
       exportedAt: new Date(exportedAt).toISOString(),
     },
@@ -1725,7 +1726,8 @@ function validateBackupState(obj, idx) {
       (obj.format === "sales-os-v2" && obj.version === 2) ||
       (obj.format === "sales-os-v3" && obj.version === 3) ||
       (obj.format === "sales-os-v4" && obj.version === 4) ||
-      (obj.format === "sales-os-v5" && obj.version === 5)
+      (obj.format === "sales-os-v5" && obj.version === 5) ||
+      (obj.format === "sales-os-v6" && obj.version === 6)
     ) ||
     !isRecord(obj.lessonStatuses) ||
     !isRecord(obj.practiceStatuses) ||
@@ -1793,9 +1795,15 @@ function validateBackupState(obj, idx) {
     );
   else if (obj.trainerSessions !== undefined)
     throw Error("Сессии тренажёра требуют формат sales-os-v4");
-  if (obj.version === 5) next.today = window.SalesOSToday.validate(obj.today);
+  if (obj.version === 6)
+    next.knowledgeReview = window.SalesOSKnowledge.validate(
+      obj.knowledgeReview,
+    );
+  else if (obj.knowledgeReview !== undefined)
+    throw Error("Проверка понимания требует формат sales-os-v6");
+  if (obj.version >= 5) next.today = window.SalesOSToday.validate(obj.today);
   else if (obj.today !== undefined)
-    throw Error("Занятия требуют формат sales-os-v5");
+    throw Error("Занятия требуют формат sales-os-v5 или новее");
   return next;
 }
 function isWorkspaceId(id, idx) {
@@ -2051,6 +2059,7 @@ function renderImportPreview(preview) {
     ["Сессии тренажёра (включая удалённые)", preview.totals.trainer],
     ["Записи в очереди повтора", preview.totals.revisit],
     ["Сохранённые занятия", preview.totals.today],
+    ["Ответы и архивы проверки понимания", preview.totals.knowledge],
   ];
   meta.textContent = `${preview.format} · ${formatBytes(preview.bytes)}${preview.exportedAt ? ` · экспортировано ${preview.exportedAt}` : ""}`;
   list.replaceChildren();
@@ -2170,6 +2179,7 @@ async function prepareImport(file) {
     ),
     revisit: Object.keys(next.revisitQueue).length,
     today: Object.keys(next.today.plans).length,
+    knowledge: Object.keys(next.knowledgeReview.attempts).length,
     trainer: Object.keys(next.trainerSessions).length,
   };
   const bytes = new TextEncoder().encode(JSON.stringify(obj)).byteLength;

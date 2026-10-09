@@ -4,9 +4,15 @@
   if (!root) return;
   const core = window.SalesOSToday,
     store = window.SalesOSUserStore;
-  const entries = JSON.parse(
-    root.querySelector("[data-today-data]").textContent,
-  ).entries;
+  const data = JSON.parse(root.querySelector("[data-today-data]").textContent);
+  const entries = data.entries;
+  const withReviews = (current) => ({
+    ...current,
+    reviewPriorities: window.SalesOSKnowledge.priorityForToday(
+      current.knowledgeReview,
+      data.questions || [],
+    ),
+  });
   const work = root.querySelector("[data-today-workspace]"),
     notice = root.querySelector("[data-today-notice]");
   const goalNames = {
@@ -50,8 +56,8 @@
         try {
           const data = {
             ...(await store.getState()),
-            format: "sales-os-v5",
-            version: 5,
+            format: "sales-os-v6",
+            version: 6,
             exportedAt: new Date().toISOString(),
             notes: await store.getAllNotes(),
           };
@@ -62,7 +68,7 @@
             ),
             a = el("a");
           a.href = url;
-          a.download = "sales-os-backup-v5.json";
+          a.download = "sales-os-backup-v6.json";
           a.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (e) {
@@ -144,7 +150,7 @@
               throw Error(
                 "Достигнут лимит 365 занятий. Сохраните копию; история не удаляется автоматически.",
               );
-            const p = core.create(entries, current, budget, goal);
+            const p = core.create(entries, withReviews(current), budget, goal);
             today.preferences = { budget, goal, updatedAt: Date.now() };
             today.plans[p.id] = p;
             select(p.id);
@@ -304,7 +310,7 @@
                 latest,
                 item.id,
                 entries,
-                current,
+                withReviews(current),
               );
             }),
           ),

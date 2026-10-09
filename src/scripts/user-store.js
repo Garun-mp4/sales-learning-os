@@ -36,8 +36,8 @@
 
   function defaultState() {
     return {
-      format: "sales-os-v5",
-      version: 5,
+      format: "sales-os-v6",
+      version: 6,
       lessonStatuses: {},
       practiceStatuses: {},
       bookmarks: [],
@@ -45,6 +45,7 @@
       practiceAttempts: {},
       trainerSessions: {},
       today: window.SalesOSToday.empty(),
+      knowledgeReview: window.SalesOSKnowledge.empty(),
       revisitQueue: {},
       revisitHistory: [],
       noteMergeSources: {},
@@ -83,6 +84,9 @@
         ? window.SalesOSTrainer.validateSessions(value.trainerSessions)
         : {};
     state.today = window.SalesOSToday.validate(value.today);
+    state.knowledgeReview = window.SalesOSKnowledge.validate(
+      value.knowledgeReview,
+    );
     state.revisitQueue = normalizeRevisitQueue(value.revisitQueue);
     state.revisitHistory = Array.isArray(value.revisitHistory)
       ? value.revisitHistory
@@ -1235,6 +1239,10 @@
       }
     }
     merged.today = window.SalesOSToday.merge(current.today, incoming.today);
+    merged.knowledgeReview = window.SalesOSKnowledge.merge(
+      current.knowledgeReview,
+      incoming.knowledgeReview,
+    );
     merged.bookmarks = [
       ...new Set([...current.bookmarks, ...incoming.bookmarks]),
     ];

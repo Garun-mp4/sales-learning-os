@@ -58,6 +58,9 @@ async function useShortManifest(
             versionedAsset("user-store", "js"),
             versionedAsset("trainer-core", "js"),
             versionedAsset("today-core", "js"),
+            versionedAsset("knowledge-core", "js"),
+            versionedAsset("knowledge", "js"),
+            "review/check/",
             "assets/client-index.json",
             "assets/search-index.json",
             "lesson/01-001/",
@@ -188,7 +191,7 @@ test("A complete offline pack survives reload and opens lessons and private note
     };
   }, testModeKey);
   expect(installed.fullManifestTotal).toBeGreaterThan(450);
-  expect(installed.total).toBe(10);
+  expect(installed.total).toBe(13);
   expect(installed.ready).toBe(true);
   expect(installed.keys).toContain("sales-os-offline-000000000005");
 
@@ -204,6 +207,20 @@ test("A complete offline pack survives reload and opens lessons and private note
   await page.locator("[data-search-private]").check();
   await expect(page.locator(".search-private-result a")).toContainText(
     "offline-private-note-314159",
+  );
+  await page.goto("/review/check/");
+  await page
+    .locator("[data-knowledge-catalog]")
+    .getByRole("button", { name: "Ценность функции", exact: true })
+    .click();
+  await page.locator("[data-knowledge-answer] input").first().check();
+  await page.getByRole("button", { name: "Ответить и открыть разбор" }).click();
+  await expect(page.locator("[data-knowledge-work]")).toContainText(
+    "Проверка по ключу: правильно",
+  );
+  await page.reload();
+  await expect(page.locator("[data-knowledge-work]")).toContainText(
+    "Проверка по ключу: правильно",
   );
   expect(pageErrors).toEqual([]);
 });

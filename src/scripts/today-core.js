@@ -67,8 +67,14 @@
           !item.title.trim() ||
           !text(item.reason) ||
           !text(item.step) ||
-          !/^\/(lesson|practice)\/[a-zA-Z0-9_-]+\/$/.test(item.url) ||
-          !item.url.endsWith(`/${item.entryId}/`) ||
+          !(
+            (/^\/(lesson|practice)\/[a-zA-Z0-9_-]+\/$/.test(item.url) &&
+              item.url.endsWith(`/${item.entryId}/`) &&
+              item.questionId === undefined) ||
+            (item.kind === "review" &&
+              id(item.questionId) &&
+              item.url === `/review/check/?question=${item.questionId}`)
+          ) ||
           !Array.isArray(item.minutes) ||
           item.minutes.length !== 2 ||
           !Number.isSafeInteger(item.minutes[0]) ||
@@ -134,6 +140,7 @@
         .sort(leastRecent);
       return [
         ...new Set([
+          ...(state.reviewPriorities || []).map((q) => q.entryId),
           ...due.map((q) => q.entryId),
           ...reviewable.map((e) => e.id),
         ]),
@@ -149,23 +156,31 @@
   }
   function itemFor(entry, kind, state, minutes, slot, now, excluded = []) {
     const isDone = completed(entry, state);
+    const priority =
+      kind === "review" &&
+      state.reviewPriorities?.find((q) => q.entryId === entry.id);
     const queueDue = state.revisitQueue?.[entry.id]?.dueAt <= now;
     return {
       id: slot,
       entryId: entry.id,
       title: entry.title,
       kind,
-      url: `/${entry.kind === "theory" ? "lesson" : "practice"}/${entry.id}/`,
-      reason:
-        kind === "review"
+      ...(priority ? { questionId: priority.questionId } : {}),
+      url: priority
+        ? priority.url
+        : `/${entry.kind === "theory" ? "lesson" : "practice"}/${entry.id}/`,
+      reason: priority
+        ? priority.reason
+        : kind === "review"
           ? queueDue
             ? "Вы вручную назначили повтор; его срок наступил. Срок в очереди останется прежним."
             : "Материал отмечен пройденным — восстановим главную мысль."
           : isDone
             ? "Материал уже пройден: применим его к новой ситуации."
             : "Следующий доступный материал по выбранной цели и порядку программы.",
-      step:
-        kind === "review"
+      step: priority
+        ? "Ответьте на вопрос самостоятельно, затем сверьтесь с разбором. Открытый ответ оцените по рубрике отдельно."
+        : kind === "review"
           ? "Перед открытием вспомните главную мысль и один пример. Затем сверьтесь с материалом. Повтор в очереди завершайте отдельно."
           : entry.kind === "practice"
             ? "Откройте условия. Выберите один критерий, запишите исходную ситуацию и черновой ответ на него. Полное задание можно продолжить позже."

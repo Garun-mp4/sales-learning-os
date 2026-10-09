@@ -34,3 +34,7 @@ __pycache__/
 /src/generated/today.html
 /public/assets/today-core.js
 /public/assets/today.js
+
+/src/generated/knowledge.html
+/public/assets/knowledge-core.js
+/public/assets/knowledge.js

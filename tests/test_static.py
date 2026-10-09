@@ -35,6 +35,7 @@ expected.update(
         "roadmap/index.html",
         "practice/index.html",
         "review/index.html",
+        "review/check/index.html",
         "today/index.html",
         "sources/index.html",
         "search/index.html",

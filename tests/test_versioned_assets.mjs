@@ -28,6 +28,8 @@ try {
       "practice-feedback.js",
       "today-core.js",
       "today.js",
+      "knowledge-core.js",
+      "knowledge.js",
       "trainer-core.js",
       "trainer.js",
     ])
