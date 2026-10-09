@@ -38,3 +38,8 @@ __pycache__/
 /src/generated/knowledge.html
 /public/assets/knowledge-core.js
 /public/assets/knowledge.js
+
+/src/generated/projects.html
+/src/generated/projects-data.json
+/public/assets/projects-core.js
+/public/assets/projects.js

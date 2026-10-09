@@ -38,6 +38,8 @@ for (const name of [
   "today.js",
   "knowledge-core.js",
   "knowledge.js",
+  "projects-core.js",
+  "projects.js",
   "trainer-core.js",
   "trainer.js",
 ]) {

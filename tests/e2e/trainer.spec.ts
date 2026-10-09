@@ -112,7 +112,7 @@ test("M2 draft resume, single submit, compare, recover deletion and backup v4", 
   await page.locator("[data-export]").click();
   const file = await (await downloadPromise).path();
   const backup = JSON.parse(await readFile(file!, "utf8"));
-  expect(backup.format).toBe("sales-os-v6");
+  expect(backup.format).toBe("sales-os-v7");
   const clean = await browser.newContext();
   const restored = await clean.newPage();
   await restored.goto(new URL("/settings/", page.url()).href);
@@ -162,7 +162,7 @@ test("M2 preserve old versions and reject malformed/future backups", async ({
     window.SalesOSUserStore.getState(),
   );
   for (const bad of [
-    { ...state, format: "sales-os-v7", version: 7, notes: {} },
+    { ...state, format: "sales-os-v8", version: 8, notes: {} },
     { ...state, notes: {}, trainerSessions: { broken: { id: "broken" } } },
   ]) {
     await page.locator("[data-import]").setInputFiles({

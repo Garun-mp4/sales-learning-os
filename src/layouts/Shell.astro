@@ -5,7 +5,7 @@ import Icon from '../components/Icon.astro';
 interface Props { title: string; description?: string; active?: string; module?: string; documentId?: string; documentKind?: string; libraryId?: string; reading?: boolean }
 const {title, description, active, module, documentId, documentKind, libraryId, reading=false}=Astro.props;
 const pathname = Astro.url.pathname;
-const privateUtility = /^\/(?:settings|bookmarks|review|search|today)(?:\/|$)/.test(pathname) || /^\/404(?:\.html|\/|$)/.test(pathname);
+const privateUtility = /^\/(?:settings|bookmarks|review|search|today|projects)(?:\/|$)/.test(pathname) || /^\/404(?:\.html|\/|$)/.test(pathname);
 const metaDescription = (description || (documentId
   ? `${title} — ${documentKind === 'practice' ? 'практическое задание' : 'учебный материал'} модуля ${module}. Самостоятельное обучение продажам в Sales OS.`
   : module
@@ -63,6 +63,7 @@ const currentSection = active ?? (
         <a class:list={['nav-item',currentSection==='roadmap'&&'active']} href="/roadmap/" aria-label="Roadmap" aria-current={currentSection==='roadmap'?'page':undefined} title="Roadmap"><Icon name="map"/><span>Roadmap</span></a>
         <a class:list={['nav-item',currentSection==='practice'&&'active']} href="/practice/" aria-label="Практика" aria-current={currentSection==='practice'?'page':undefined} title="Практика"><Icon name="practice"/><span>Практика</span></a>
         <a class:list={['nav-item',currentSection==='today'&&'active']} href="/today/" aria-current={currentSection==='today'?'page':undefined}><Icon name="clock"/><span>Занятие на сегодня</span></a>
+        <a class:list={['nav-item',currentSection==='projects'&&'active']} href="/projects/" aria-current={currentSection==='projects'?'page':undefined}><Icon name="book"/><span>Мои проекты</span></a>
         <a class:list={['nav-item',currentSection==='trainer'&&'active']} href="/trainer/" aria-current={currentSection==='trainer'?'page':undefined}><Icon name="message"/><span>Тренажёр переписки</span></a>
         <a class:list={['nav-item',currentSection==='review'&&'active']} href="/review/" aria-label="Очередь повтора" aria-current={currentSection==='review'?'page':undefined} title="Очередь повтора"><Icon name="clock"/><span>Очередь повтора</span><span class="nav-count" data-review-count hidden></span></a>
         <a class:list={['nav-item',currentSection==='search'&&'active']} href="/search/" aria-label="Поиск" aria-current={currentSection==='search'?'page':undefined} title="Поиск"><Icon name="search"/><span>Поиск</span></a>
@@ -104,10 +105,12 @@ const currentSection = active ?? (
   <script src="/assets/today-core.js" defer is:inline></script>
   <script src="/assets/trainer-core.js" defer is:inline></script>
   <script src="/assets/knowledge-core.js" defer is:inline></script>
+  <script src="/assets/projects-core.js" defer is:inline></script>
   <script src="/assets/user-store.js" defer is:inline></script>
   <script src="/assets/app.js" defer is:inline></script>
   {(documentKind==='practice'||pathname==='/final-project/')&&<script src="/assets/practice-feedback.js" defer is:inline></script>}
   {pathname==='/review/check/'&&<script src="/assets/knowledge.js" defer is:inline></script>}
+  {currentSection==='projects'&&<script src="/assets/projects.js" defer is:inline></script>}
   {currentSection==='today'&&<script src="/assets/today.js" defer is:inline></script>}
   {currentSection==='trainer'&&<script src="/assets/trainer.js" defer is:inline></script>}
 </body>

@@ -185,7 +185,7 @@ test("M4 backup v6 restore, v5 compatibility and invalid result rejection", asyn
   await page.locator("[data-export]").click();
   const download = await dl;
   const backup = JSON.parse(await readFile((await download.path())!, "utf8"));
-  expect(backup.format).toBe("sales-os-v6");
+  expect(backup.format).toBe("sales-os-v7");
   expect(Object.keys(backup.knowledgeReview.attempts)).toHaveLength(1);
   const upload = async (value: any) => {
     await page.locator("input[type=file]").setInputFiles({
@@ -215,6 +215,7 @@ test("M4 backup v6 restore, v5 compatibility and invalid result rejection", asyn
     .toBe(1);
   const legacy = { ...backup, format: "sales-os-v5", version: 5 };
   delete legacy.knowledgeReview;
+  delete legacy.projects;
   await upload(legacy);
   await expect(page.locator("[data-import-merge]")).toBeEnabled();
   await page.locator("[data-import-merge]").click();
@@ -371,6 +372,6 @@ test("M4 limits retain current answer and temporary storage exports answers in p
   const backup = JSON.parse(
     await readFile((await (await download).path())!, "utf8"),
   );
-  expect(backup.format).toBe("sales-os-v6");
+  expect(backup.format).toBe("sales-os-v7");
   expect(backup.knowledgeReview).toEqual(before.knowledgeReview);
 });

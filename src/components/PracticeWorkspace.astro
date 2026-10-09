@@ -1,7 +1,7 @@
 ---
 import feedback from '../generated/practice-feedback.json';
-interface Props { id: string; title: string; rubric: Array<{id:string;label:string;description:string}> }
-const {id,title,rubric:practiceRubric}=Astro.props;
+interface Props { id: string; title: string; rubric: Array<{id:string;label:string;description:string}>; showFeedback?: boolean }
+const {id,title,rubric:practiceRubric,showFeedback=true}=Astro.props;
 const d={id,title};
 ---
 <section class="practice-workspace" id={`workspace-${id}`} aria-labelledby={`practice-workspace-${d.id}`}>
@@ -9,7 +9,7 @@ const d={id,title};
       <p class="muted">Ответьте по критериям самого задания. Черновик хранится только в этом браузере; в каждой итерации сохраняется снимок ответа и самооценки.</p>
       <nav class="criterion-nav" aria-label="Критерии ответа">{practiceRubric.map((criterion,index)=><a href={`#criterion-${id}-${criterion.id}`} title={criterion.label}>{index+1}. {criterion.label}</a>)}</nav>
       <p class="small muted" data-criteria-progress role="status" aria-live="polite">Заполнено 0 из {practiceRubric.length}</p>
-      <p><button class="btn" type="submit" form={`form-${id}`} data-practice-save-top>Сохранить итерацию</button> <a class="btn" href={`#history-${id}`}>История итераций</a> <a class="btn" href={`#feedback-${id}`}>Подсказки и разбор</a> <a class="btn" href={`#comparison-${id}`}>Сравнить итерации</a></p>
+      <p><button class="btn" type="submit" form={`form-${id}`} data-practice-save-top>Сохранить итерацию</button> <a class="btn" href={`#history-${id}`}>История итераций</a> {showFeedback&&<><a class="btn" href={`#feedback-${id}`}>Подсказки и разбор</a> <a class="btn" href={`#comparison-${id}`}>Сравнить итерации</a></>}</p>
       <form id={`form-${id}`} data-practice-form={d.id} data-practice-title={d.title}>
         {practiceRubric.map((criterion,index)=><fieldset class="practice-criterion" id={`criterion-${id}-${criterion.id}`} data-practice-criterion={criterion.id} data-practice-label={criterion.label} data-practice-description={criterion.description}>
           <legend><span class="criterion-number">{String(index+1).padStart(2,'0')}</span>{criterion.label}</legend>
@@ -27,5 +27,5 @@ const d={id,title};
       </form>
       <section class="practice-draft-versions" data-practice-versions hidden aria-labelledby={`draft-versions-${d.id}`}><h3 id={`draft-versions-${d.id}`}>Другие черновики из объединённых копий</h3><div data-practice-versions-list></div></section>
       <section class="practice-history" id={`history-${id}`} aria-labelledby={`practice-history-${d.id}`}><div class="section-head"><h3 class="h2" id={`practice-history-${d.id}`}>История итераций</h3><span class="small muted" data-practice-history-count>0 сохранено</span></div><div data-practice-history-list><p class="muted">Сохранённых итераций пока нет.</p></div></section>
-      <Fragment set:html={feedback[id as keyof typeof feedback]}/>
+      {showFeedback&&<Fragment set:html={feedback[id as keyof typeof feedback]}/>}
     </section>

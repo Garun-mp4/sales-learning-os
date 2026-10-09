@@ -1,0 +1,10 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import PracticeWorkspace from '../../components/PracticeWorkspace.astro';
+import html from '../../generated/projects.html?raw';
+import data from '../../generated/projects-data.json';
+---
+<Shell title="Мои проекты" description="Личная рабочая тетрадь: контекст, десять этапов, снимки практики и экспорт проекта." active="projects">
+  <Fragment set:html={html}/>
+  <template data-project-template><PracticeWorkspace id="PROJECT_WORKBOOK" title="Рабочая тетрадь проекта" rubric={data.rubric} showFeedback={false}/></template>
+</Shell>

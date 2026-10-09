@@ -19,8 +19,8 @@ let pendingImport = null;
 let pendingRestore = null;
 function defaultState() {
   return {
-    format: "sales-os-v6",
-    version: 6,
+    format: "sales-os-v7",
+    version: 7,
     lessonStatuses: {},
     practiceStatuses: {},
     bookmarks: [],
@@ -29,6 +29,7 @@ function defaultState() {
     trainerSessions: {},
     today: window.SalesOSToday.empty(),
     knowledgeReview: window.SalesOSKnowledge.empty(),
+    projects: window.SalesOSProjects.empty(),
     revisitQueue: {},
     revisitHistory: [],
     noteMergeSources: {},
@@ -958,7 +959,18 @@ function updateCriteriaProgress(form) {
     if (link) link.dataset.filled = String(Boolean(field.value.trim()));
   }
 }
-function createPracticeFormEditor(form) {
+function createPracticeFormEditor(form, adapter = null) {
+  const draftOf = (s) => (adapter ? adapter.draft(s) : s.practiceDrafts?.[id]);
+  const attemptsOf = (s) =>
+    adapter ? adapter.attempts(s) : s.practiceAttempts?.[id];
+  const putDraft = (s, draft) =>
+    adapter
+      ? adapter.writeDraft(s, draft)
+      : { ...s, practiceDrafts: { ...s.practiceDrafts, [id]: draft } };
+  const putAttempts = (s, attempts) =>
+    adapter
+      ? adapter.writeAttempts(s, attempts)
+      : { ...s, practiceAttempts: { ...s.practiceAttempts, [id]: attempts } };
   const id = form.dataset.practiceForm;
   const workspace = form.closest(".practice-workspace");
   const status = form.querySelector("[data-practice-draft-status]");
@@ -1015,7 +1027,7 @@ function createPracticeFormEditor(form) {
         hydratePracticeForm(form, version);
         dirty = true;
         editVersion++;
-        baseUpdatedAt = state.practiceDrafts?.[id]?.updatedAt || baseUpdatedAt;
+        baseUpdatedAt = draftOf(state)?.updatedAt || baseUpdatedAt;
         status.textContent =
           "Загружен сохранённый вариант — проверьте и сохраните";
         scheduleSave();
@@ -1091,9 +1103,9 @@ function createPracticeFormEditor(form) {
   }
 
   function receiveState(nextState, replaced = false) {
-    const remote = nextState.practiceDrafts?.[id];
+    const remote = draftOf(nextState);
     renderVersions(remote);
-    renderHistory(nextState.practiceAttempts?.[id] || []);
+    renderHistory(attemptsOf(nextState) || []);
     if (!dirty) {
       hydratePracticeForm(form, remote);
       baseUpdatedAt = remote?.updatedAt || 0;
@@ -1134,11 +1146,11 @@ function createPracticeFormEditor(form) {
       ...practiceDraftFromForm(form),
       updatedAt: Date.now(),
       writerId: userStore.clientId,
-      versions: state.practiceDrafts?.[id]?.versions || [],
+      versions: draftOf(state)?.versions || [],
     };
     saving = userStore
       .updateState((current) => {
-        const latest = current.practiceDrafts?.[id];
+        const latest = draftOf(current);
         if (
           latest &&
           latest.updatedAt !== baseUpdatedAt &&
@@ -1147,10 +1159,7 @@ function createPracticeFormEditor(form) {
           conflictDraft = latest;
           return current;
         }
-        return {
-          ...current,
-          practiceDrafts: { ...current.practiceDrafts, [id]: candidate },
-        };
+        return putDraft(current, candidate);
       })
       .then((result) => {
         state = result.state;
@@ -1204,7 +1213,7 @@ function createPracticeFormEditor(form) {
       writerId: userStore.clientId,
     };
     const result = await userStore.updateState((current) => {
-      const latest = current.practiceDrafts?.[id] || conflictDraft;
+      const latest = draftOf(current) || conflictDraft;
       const versions = [...(latest.versions || [])];
       if (
         !versions.some(
@@ -1212,13 +1221,12 @@ function createPracticeFormEditor(form) {
         )
       )
         versions.push(local);
-      return {
-        ...current,
-        practiceDrafts: {
-          ...current.practiceDrafts,
-          [id]: { ...latest, versions: versions.slice(-20) },
-        },
-      };
+      if (adapter && versions.length > 100)
+        throw Error("Достигнут лимит вариантов проекта; данные не изменены");
+      return putDraft(current, {
+        ...latest,
+        versions: adapter ? versions : versions.slice(-20),
+      });
     });
     state = result.state;
     dirty = false;
@@ -1229,7 +1237,7 @@ function createPracticeFormEditor(form) {
   }
 
   useRemote.addEventListener("click", () => {
-    const latest = state.practiceDrafts?.[id] || conflictDraft;
+    const latest = draftOf(state) || conflictDraft;
     hydratePracticeForm(form, latest);
     baseUpdatedAt = latest?.updatedAt || 0;
     dirty = false;
@@ -1287,7 +1295,7 @@ function createPracticeFormEditor(form) {
         ...snapshot,
       };
       const result = await userStore.updateState((current) => {
-        const history = current.practiceAttempts?.[id] || [];
+        const history = attemptsOf(current) || [];
         const previous = history[history.length - 1];
         const signature = (item) =>
           JSON.stringify({
@@ -1297,16 +1305,10 @@ function createPracticeFormEditor(form) {
           });
         if (previous && signature(previous) === signature(attempt))
           return current;
-        return {
-          ...current,
-          practiceAttempts: {
-            ...current.practiceAttempts,
-            [id]: [...history, attempt],
-          },
-        };
+        return putAttempts(current, [...history, attempt]);
       });
       state = result.state;
-      renderHistory(state.practiceAttempts?.[id] || []);
+      renderHistory(attemptsOf(state) || []);
       status.textContent = result.durable
         ? "Итерация сохранена в истории на этом устройстве"
         : "Итерация доступна только во временной памяти";
@@ -1323,6 +1325,9 @@ function createPracticeFormEditor(form) {
     }
   });
   const editor = {
+    dispose() {
+      clearTimeout(timer);
+    },
     get dirty() {
       return dirty;
     },
@@ -1338,6 +1343,19 @@ function createPracticeFormEditor(form) {
     });
   return editor;
 }
+window.SalesOSPractice = {
+  register(form, adapter) {
+    const editor = createPracticeFormEditor(form, adapter);
+    if (editor) practiceEditors.set(form.dataset.practiceForm, editor);
+    return editor;
+  },
+  unregister(form) {
+    const key = form.dataset.practiceForm;
+    practiceEditors.get(key)?.dispose();
+    practiceEditors.delete(key);
+  },
+};
+
 for (const form of document.querySelectorAll("[data-practice-form]")) {
   const editor = createPracticeFormEditor(form);
   if (editor) practiceEditors.set(form.dataset.practiceForm, editor);
@@ -1667,8 +1685,8 @@ async function exportData() {
   const sizeBytes = await downloadJSON(
     {
       ...exportedState,
-      format: "sales-os-v6",
-      version: 6,
+      format: "sales-os-v7",
+      version: 7,
       notes,
       exportedAt: new Date(exportedAt).toISOString(),
     },
@@ -1727,7 +1745,8 @@ function validateBackupState(obj, idx) {
       (obj.format === "sales-os-v3" && obj.version === 3) ||
       (obj.format === "sales-os-v4" && obj.version === 4) ||
       (obj.format === "sales-os-v5" && obj.version === 5) ||
-      (obj.format === "sales-os-v6" && obj.version === 6)
+      (obj.format === "sales-os-v6" && obj.version === 6) ||
+      (obj.format === "sales-os-v7" && obj.version === 7)
     ) ||
     !isRecord(obj.lessonStatuses) ||
     !isRecord(obj.practiceStatuses) ||
@@ -1795,12 +1814,16 @@ function validateBackupState(obj, idx) {
     );
   else if (obj.trainerSessions !== undefined)
     throw Error("Сессии тренажёра требуют формат sales-os-v4");
-  if (obj.version === 6)
+  if (obj.version === 7)
+    next.projects = window.SalesOSProjects.validate(obj.projects);
+  else if (obj.projects !== undefined)
+    throw Error("Проекты требуют формат sales-os-v7");
+  if (obj.version >= 6)
     next.knowledgeReview = window.SalesOSKnowledge.validate(
       obj.knowledgeReview,
     );
   else if (obj.knowledgeReview !== undefined)
-    throw Error("Проверка понимания требует формат sales-os-v6");
+    throw Error("Проверка понимания требует формат sales-os-v6 или новее");
   if (obj.version >= 5) next.today = window.SalesOSToday.validate(obj.today);
   else if (obj.today !== undefined)
     throw Error("Занятия требуют формат sales-os-v5 или новее");
@@ -2059,6 +2082,7 @@ function renderImportPreview(preview) {
     ["Сессии тренажёра (включая удалённые)", preview.totals.trainer],
     ["Записи в очереди повтора", preview.totals.revisit],
     ["Сохранённые занятия", preview.totals.today],
+    ["Проекты (включая архив)", preview.totals.projects],
     ["Ответы и архивы проверки понимания", preview.totals.knowledge],
   ];
   meta.textContent = `${preview.format} · ${formatBytes(preview.bytes)}${preview.exportedAt ? ` · экспортировано ${preview.exportedAt}` : ""}`;
@@ -2179,6 +2203,7 @@ async function prepareImport(file) {
     ),
     revisit: Object.keys(next.revisitQueue).length,
     today: Object.keys(next.today.plans).length,
+    projects: Object.keys(next.projects.items).length,
     knowledge: Object.keys(next.knowledgeReview.attempts).length,
     trainer: Object.keys(next.trainerSessions).length,
   };
@@ -2571,6 +2596,28 @@ if (searchInput) {
           ...Object.keys(notes).filter((id) => notes[id]?.trim()),
           ...Object.keys(answers).filter((id) => answers[id]?.trim()),
         ]);
+        const projectRecords = Object.values(savedState.projects.items)
+          .filter((p) => !p.archived)
+          .map((p) => ({
+            id: p.id,
+            title: "Мой проект: " + p.name,
+            kind: "project",
+            module: "extra",
+            level: "extra",
+            url: "projects/?project=" + p.id,
+            note: [
+              ...Object.values(p.context),
+              ...Object.values(p.draft.answers),
+              p.draft.nextStep,
+              ...Object.values(p.stages).flatMap((stage) =>
+                stage.attachments.flatMap((a) => [
+                  a.sourceTitle,
+                  ...Object.values(a.attempt.answers),
+                ]),
+              ),
+            ].join("\n"),
+            bookmarked: false,
+          }));
         const localRecords = [...ids]
           .map((id) => {
             const entry = entries[id];
@@ -2599,6 +2646,7 @@ if (searchInput) {
             };
           })
           .filter(Boolean)
+          .concat(projectRecords)
           .filter((item) =>
             Object.entries(selectedFilters).every(
               ([key, value]) => item[key] === value,
@@ -2629,6 +2677,7 @@ if (searchInput) {
       practice: "Практика",
       module: "Глава модуля",
       final_project: "Итоговый проект",
+      project: "Личный проект",
       library: "Справочник",
       source: "Источник",
     };

@@ -36,8 +36,8 @@
 
   function defaultState() {
     return {
-      format: "sales-os-v6",
-      version: 6,
+      format: "sales-os-v7",
+      version: 7,
       lessonStatuses: {},
       practiceStatuses: {},
       bookmarks: [],
@@ -46,6 +46,7 @@
       trainerSessions: {},
       today: window.SalesOSToday.empty(),
       knowledgeReview: window.SalesOSKnowledge.empty(),
+      projects: window.SalesOSProjects.empty(),
       revisitQueue: {},
       revisitHistory: [],
       noteMergeSources: {},
@@ -83,6 +84,7 @@
       value.trainerSessions && Object.keys(value.trainerSessions).length
         ? window.SalesOSTrainer.validateSessions(value.trainerSessions)
         : {};
+    state.projects = window.SalesOSProjects.validate(value.projects);
     state.today = window.SalesOSToday.validate(value.today);
     state.knowledgeReview = window.SalesOSKnowledge.validate(
       value.knowledgeReview,
@@ -1238,6 +1240,10 @@
           merged[field][id] = status;
       }
     }
+    merged.projects = window.SalesOSProjects.merge(
+      current.projects,
+      incoming.projects,
+    );
     merged.today = window.SalesOSToday.merge(current.today, incoming.today);
     merged.knowledgeReview = window.SalesOSKnowledge.merge(
       current.knowledgeReview,

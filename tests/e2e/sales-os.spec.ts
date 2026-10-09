@@ -483,43 +483,48 @@ test("Practice filters explain and recover from an empty result", async ({
   await expect(page.locator("[data-filter-count]")).toHaveText("72");
   await expect(page.locator("[data-filter-empty]")).toBeHidden();
 });
-test("Search distinguishes no results from a recoverable load error", async ({
-  page,
-}) => {
-  const pageErrors: string[] = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  let searchIndexRequests = 0;
-  let failFirstRequest = true;
-  await page.route("**/*", (route) => {
-    const pathname = new URL(route.request().url()).pathname;
-    if (pathname.endsWith("/pagefind/pagefind.js")) return route.abort();
-    if (pathname.endsWith("/assets/search-index.json")) {
-      searchIndexRequests++;
-      if (failFirstRequest) {
-        failFirstRequest = false;
-        return route.fulfill({ status: 503, body: "unavailable" });
+test.describe("Direct search request recovery", () => {
+  // A controlling worker bypasses page.route; offline behavior has separate real-worker coverage.
+  test.use({ serviceWorkers: "block" });
+  test("Search distinguishes no results from a recoverable load error", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    let searchIndexRequests = 0;
+    let failFirstRequest = true;
+    await page.route("**/*", (route) => {
+      const pathname = new URL(route.request().url()).pathname;
+      if (pathname.endsWith("/pagefind/pagefind.js")) return route.abort();
+      if (pathname.endsWith("/assets/search-index.json")) {
+        searchIndexRequests++;
+        if (failFirstRequest) {
+          failFirstRequest = false;
+          return route.fulfill({ status: 503, body: "unavailable" });
+        }
       }
-    }
-    return route.continue();
+      return route.continue();
+    });
+    await page.goto("/search/");
+    const results = page.locator("[data-search-results]");
+    await expect(results.locator('[role="alert"]')).toContainText(
+      "Не удалось загрузить индекс поиска",
+    );
+    expect(searchIndexRequests).toBe(1);
+    await results.locator("[data-search-retry]").click();
+    await expect(results.locator('[role="alert"]')).toHaveCount(0);
+    await expect(page.locator("[data-search-status]")).toContainText(
+      "Введите запрос, выберите фильтр",
+    );
+    expect(pageErrors).toEqual([]);
+    await page.locator("[data-search-input]").fill("zzzz-sales-os-no-match");
+    await expect(page.locator("[data-search-status]")).toContainText(
+      "Совпадений в материалах нет.",
+    );
+    await expect(results.locator('[role="alert"]')).toHaveCount(0);
   });
-  await page.goto("/search/");
-  const results = page.locator("[data-search-results]");
-  await expect(results.locator('[role="alert"]')).toContainText(
-    "Не удалось загрузить индекс поиска",
-  );
-  expect(searchIndexRequests).toBe(1);
-  await results.locator("[data-search-retry]").click();
-  await expect(results.locator('[role="alert"]')).toHaveCount(0);
-  await expect(page.locator("[data-search-status]")).toContainText(
-    "Введите запрос, выберите фильтр",
-  );
-  expect(pageErrors).toEqual([]);
-  await page.locator("[data-search-input]").fill("zzzz-sales-os-no-match");
-  await expect(page.locator("[data-search-status]")).toContainText(
-    "Совпадений в материалах нет.",
-  );
-  await expect(results.locator('[role="alert"]')).toHaveCount(0);
 });
+
 test("Search shows real documents", async ({ page }) => {
   await page.goto("/search/?q=возражения");
   await expect(page.locator("[data-search-results] a").first()).toBeVisible();
@@ -1208,7 +1213,7 @@ test("Structured practice drafts, rubric self-review and iteration history survi
   const backup = await page.evaluate(async () =>
     JSON.parse(await window.__backupBlob!.text()),
   );
-  expect(backup.format).toBe("sales-os-v6");
+  expect(backup.format).toBe("sales-os-v7");
   expect(backup.practiceDrafts["01-P01"].answers["criterion-1"]).toContain(
     "Путь клиента",
   );

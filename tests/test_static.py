@@ -36,6 +36,7 @@ expected.update(
         "practice/index.html",
         "review/index.html",
         "review/check/index.html",
+        "projects/index.html",
         "today/index.html",
         "sources/index.html",
         "search/index.html",
@@ -79,6 +80,7 @@ for path in html_files:
     private_utility = name == "404.html" or name.split("/", 1)[0] in {
         "settings",
         "today",
+        "projects",
         "bookmarks",
         "review",
         "search",

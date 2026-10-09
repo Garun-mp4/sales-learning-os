@@ -59,7 +59,10 @@ async function useShortManifest(
             versionedAsset("trainer-core", "js"),
             versionedAsset("today-core", "js"),
             versionedAsset("knowledge-core", "js"),
+            versionedAsset("projects-core", "js"),
             versionedAsset("knowledge", "js"),
+            versionedAsset("projects", "js"),
+            "projects/",
             "review/check/",
             "assets/client-index.json",
             "assets/search-index.json",
@@ -191,7 +194,7 @@ test("A complete offline pack survives reload and opens lessons and private note
     };
   }, testModeKey);
   expect(installed.fullManifestTotal).toBeGreaterThan(450);
-  expect(installed.total).toBe(13);
+  expect(installed.total).toBe(16);
   expect(installed.ready).toBe(true);
   expect(installed.keys).toContain("sales-os-offline-000000000005");
 
@@ -222,6 +225,19 @@ test("A complete offline pack survives reload and opens lessons and private note
   await expect(page.locator("[data-knowledge-work]")).toContainText(
     "Проверка по ключу: правильно",
   );
+  await page.goto("/projects/");
+  await page.locator("[data-project-name]").fill("Офлайн-проект");
+  await page.locator("[data-project-create]").click();
+  await page
+    .locator('[data-project-context] [name="service"]')
+    .fill("Без сети");
+  await expect(page.locator("[data-projects-notice]")).toContainText(
+    "Сохранено",
+  );
+  await page.reload();
+  await expect(
+    page.locator('[data-project-context] [name="service"]'),
+  ).toHaveValue("Без сети");
   expect(pageErrors).toEqual([]);
 });
 

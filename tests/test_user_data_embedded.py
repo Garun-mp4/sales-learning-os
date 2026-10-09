@@ -10,7 +10,7 @@ import json,re
 from playwright.sync_api import sync_playwright
 CSS=(ROOT/'src/styles/app.css').read_text(encoding='utf-8')
 JS=(ROOT/'src/scripts/app.js').read_text(encoding='utf-8')
-STORE_JS=(ROOT/'src/scripts/knowledge-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/today-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/trainer-core.js').read_text(encoding='utf-8')+'\n'+(ROOT/'src/scripts/user-store.js').read_text(encoding='utf-8')
+STORE_JS=(ROOT/'src/scripts/projects-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/knowledge-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/today-core.js').read_text(encoding='utf-8') + '\n' + (ROOT/'src/scripts/trainer-core.js').read_text(encoding='utf-8')+'\n'+(ROOT/'src/scripts/user-store.js').read_text(encoding='utf-8')
 INDEX=json.loads((SITE/'assets/client-index.json').read_text(encoding='utf-8'))
 SEARCH=json.loads((SITE/'assets/search-index.json').read_text(encoding='utf-8'))
 
@@ -123,12 +123,12 @@ def main():
       page.locator('[data-export]').click()
       page.wait_for_timeout(200)
       saved_backup=page.evaluate('''async()=>JSON.parse(await window.__downloadedBackup.text())''')
-      assert saved_backup['format']=='sales-os-v6'
+      assert saved_backup['format']=='sales-os-v7'
       assert saved_backup['notes']['01-MODULE']=='Историческая заметка к модулю 01'
       assert saved_backup['lessonStatuses']['01-001']=='theory_completed'
       assert page.evaluate('window.__downloadName')=='sales-os-backup.json'
-      assert saved_backup['version']==6
-      print('PASS: v6 backup export includes imported notes and statuses with a valid filename')
+      assert saved_backup['version']==7
+      print('PASS: v7 backup export includes imported notes and statuses with a valid filename')
 
       # Preserve clean state on broken JSON, bogus IDs and forbidden module bookmarks.
       for bad in [
