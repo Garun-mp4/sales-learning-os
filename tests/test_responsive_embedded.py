@@ -88,6 +88,19 @@ def main():
         assert contrast(colors['inverted'],colors['foreground'])>=4.5,(theme,'inverted',colors)
         logo=page.locator('.side-top .brand-logo-dark' if theme=='dark' else '.side-top .brand-logo-light')
         assert logo.evaluate("el=>getComputedStyle(el).display")!='none',f'{theme} brand logo hidden'
+      for width,uses_compact_mark in ((390,False),(1024,True),(1440,False)):
+        page.set_viewport_size({'width':width,'height':900})
+        render(page,'lesson/01-001')
+        for theme in ('light','dark'):
+          page.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')")
+          logo=page.locator(f'.side-top .brand-logo-{theme}')
+          mark=page.locator(f'.side-top .brand-symbol-{theme}')
+          logo_visible=logo.evaluate("el=>getComputedStyle(el).display!='none'")
+          mark_visible=mark.evaluate("el=>getComputedStyle(el).display!='none'")
+          assert logo_visible != uses_compact_mark,(width,theme,'wordmark visibility',logo_visible)
+          assert mark_visible == uses_compact_mark,(width,theme,'compact mark visibility',mark_visible)
+          if width==1440:
+            assert logo.evaluate('el=>parseFloat(getComputedStyle(el).width)')<=138.1,(theme,'wordmark size')
       page.set_viewport_size({'width':320,'height':900})
       render(page,'practice/01-P01')
       table=page.evaluate('''()=>{const table=document.querySelector('.article table');const wrapper=table?.parentElement;return {table:!!table,wrapped:wrapper?.classList.contains('table-wrap')||false,client:wrapper?.clientWidth||0,scroll:wrapper?.scrollWidth||0,overflow:getComputedStyle(wrapper||document.body).overflowX}}''')

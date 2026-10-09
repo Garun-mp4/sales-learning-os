@@ -153,7 +153,7 @@ summary:focus-visible,
 }
 .brand-logo {
   display: block;
-  width: min(100%, 150px);
+  width: min(100%, 138px);
   height: auto;
 }
 .brand-symbol {
@@ -166,14 +166,10 @@ summary:focus-visible,
 .brand-symbol-dark {
   display: none;
 }
-:root[data-theme="dark"] .brand-logo-light,
-:root[data-theme="dark"] .brand-symbol-light {
+:root[data-theme="dark"] .brand-logo-light {
   display: none;
 }
 :root[data-theme="dark"] .brand-logo-dark {
-  display: block;
-}
-:root[data-theme="dark"] .brand-symbol-dark {
   display: block;
 }
 .brand-compact {
@@ -1305,6 +1301,9 @@ summary:focus-visible,
   .side .nav-group,
   .side .nav-sub,
   .side .side-body .small-label {
+    display: none;
+  }
+  :root[data-theme="dark"] .side .brand-logo-dark {
     display: none;
   }
   .side-body {
